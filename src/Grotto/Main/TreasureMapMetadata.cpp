@@ -80,7 +80,7 @@ unsigned short GenerateNewMapQuality()
 
     unsigned short quality;
     // Probably checking if regular map or legacy boss map?
-    if (grotto->unknown2[1] == 2)
+    if (grotto->unknown_09 == 2)
     {
         quality = maxCharLevel + maxNumRevocs * 5 + grotto->activeMapLevel;
     }
@@ -88,7 +88,7 @@ unsigned short GenerateNewMapQuality()
     {
         quality = (unsigned short)(1.5f * (float)maxCharLevel + 5.0f * (float)maxNumRevocs);
     }
-    grotto->unknown2[1] = 0;
+    grotto->unknown_09 = 0;
     float tenth = 0.1f * (float)quality;
     int quotient = 2 * (int)tenth + 1;
     quality += (int)((float)(rand() % quotient) - tenth);

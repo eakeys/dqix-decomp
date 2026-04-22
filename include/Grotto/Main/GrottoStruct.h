@@ -7,17 +7,24 @@
 // which only holds data about a single grotto while you're inside it.
 struct GrottoStruct
 {
-    unsigned char unknown1[5];
+    unsigned char unknown_0[5];
     // still a bit unsure of these, though seems correct.
     unsigned char activeEnviron;
     unsigned char activeStartingMonsterRank;
     unsigned char activeMapLevel;
 
+    unsigned char unknown_08, unknown_09;
+    unsigned short unknown_0A; // might be two chars
+
+    unsigned short entranceZoneId;
+    int entranceX, entranceY, entranceZ; // centre of the grotto entrance model
+    char activeMapImageName[16]; // e.g. tmap_005
 #ifdef jpn
-    unsigned char unknown2[0x44];
-#else
-    unsigned char unknown2[0x64];
+    char activeMapNameNoLevel[32]; // e.g. Granite Tunnel of Woe
+#else                              // (this is the string that appears
+    char activeMapNameNoLevel[64]; // on the top screen in overworld)
 #endif
+
     TreasureMapMetadata activeMapData;
     char unknown3[0x7c]; // not sure about this part for jpn version
     unsigned char numMaps;

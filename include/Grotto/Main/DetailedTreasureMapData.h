@@ -1,6 +1,7 @@
 #pragma once
 
 #include <globaldefs.h>
+#include "TreasureMapMetadata.h"
 
 struct DetailedTreasureMapData
 {
@@ -30,19 +31,19 @@ struct DetailedTreasureMapData
     {
         short seed; // might technically be unsigned
         unsigned char quality;
-        char padding_4F[1];
+        char unknown_4F; // has something to do with unknown_66
         // the rest of these are probably unsigned too
         char environ; // caves, ruins, ice, water, fire as 1,2,3,4,5 resp.
         unsigned char floorCount;
         char startingMonsterRank;
         char bossID; // 1 to 12
-        // these are probably chars, or maybe a short followed by 12 chars.
-        // the first byte is typically quite large (0xD8 in usugura)
-        // and the rest are around 1-10
-        char unknown_54[14];
+        unsigned short bossEnemyId; // the number in square brackets in yabd's bestiary
+        // looks like it gets populated with a random valid chest rank
+        // for each monster rank, but never gets used
+        char unknown_56[12];
         char prefix;
         char suffix;
-        char maybeLocale; // needs more checking
+        char locale;
         unsigned char level;
         char unknown_66; // was always 1 in the grottos I checked
 
@@ -61,13 +62,17 @@ struct DetailedTreasureMapData
         // buffers are resized or there are some extra ones.
         char unknownJpnBuffers[0xC8];
         char popupName[64];
+        char extraUnknownJpnBuffer[64];
 #endif
     } regular;
 
     struct LegacyBossMapData
     {
         char bossID;
-        short unknown_4E[4];
+        unsigned short bossEnemyID; 
+        // each boss appears 3+ times in yabd's bestiary, this seems to store
+        // three of those (specifically the A versions)
+        short unknown_50[3];
         unsigned char level;
         unsigned short minTurns;
         char bossName[26]; // unsure of length, could be zeros at end for another reason
@@ -80,7 +85,7 @@ struct DetailedTreasureMapData
         unsigned short bossAttack;
         unsigned short bossDefense;
         char padding_82[2];
-        int unknown_84;
+        int unknown_84; // used to index into unknown_4E in func_020a40c0
         int rewardExp;
         unsigned short rewardGold;
         char unknown_8E[0x2E];

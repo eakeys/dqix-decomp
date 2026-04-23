@@ -43,7 +43,7 @@ public:
     const char* GetPopupName() const;
 
     unsigned short GetActiveGrottoSeed() const;
-    void BlankFunction() const; // does literally nothing. why does this exist
+    DetailedTreasureMapData* GetDetailedData();
 
     // func_02090294 belongs here. I have no clue what it does, but it seems
     // to run only when you start following a treasure map. It writes to byte

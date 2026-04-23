@@ -5,6 +5,10 @@
     .data       start:0x020eeb40 end:0x020f2e60 kind:data align:32
     .bss        start:0x020f2e60 end:0x02154e60 kind:bss align:32
 
+src/Grotto/Main/GrottoNameDataFile.cpp:
+    complete
+    .text start:0x020113b4 end:0x020113cc
+
 src/Grotto/Main/GrottoStruct.c:
     complete
     .text start:0x020114a8 end:0x020114b4
@@ -24,6 +28,10 @@ src/Grotto/Main/FloorMapGenerator.c:
 src/Grotto/Main/FloorMap.c:
     complete
     .text start:0x02092f64 end:0x02093394
+
+src/Grotto/Main/TreasureMapStructConversions.cpp:
+    complete
+    .text start:0x020a5770 end:0x020a5aa4
 
 src/Grotto/Main/RandATRangeModular.c:
     complete

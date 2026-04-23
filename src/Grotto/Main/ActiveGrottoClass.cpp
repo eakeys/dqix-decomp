@@ -1,5 +1,6 @@
 #include "Grotto/Main/ActiveGrottoClass.h"
 #include "Combat/Main/BattleList.h"
+#include "Grotto/Main/TreasureMapStructConversions.h"
 #include <globaldefs.h>
 
 #ifdef jpn
@@ -29,12 +30,6 @@ extern "C"
     // each call to func_020a3a34.
     void func_020a3720();
     void func_020a395c();
-
-    // Not sure about the last two parameters. This 'exports' a TreasureMapMetadata
-    // out to the detailed struct. Somewhere in this it's running the code to
-    // generate map names. Needs some closer investigation. (Probably a member
-    // function of TreasureMapMetadata)
-    bool func_020a3a34(TreasureMapMetadata*, DetailedTreasureMapData*, bool, void*);
 }
 
 // USA: func_0209fe68
@@ -174,7 +169,7 @@ int ActiveGrottoClass::GetFloorCount() const
     {
         func_020a3720();
         DetailedTreasureMapData data;
-        func_020a3a34(&grotto->activeMapData, &data, true, NULL);
+        ExportDetailedTreasureMapData(&grotto->activeMapData, &data, 1, 0);
         func_020a395c();
         return data.regular.floorCount;
     }
@@ -199,7 +194,7 @@ const char* ActiveGrottoClass::GetPopupName() const
     // Would have to call another function after this which uses the stack.
     func_020a3720();
     DetailedTreasureMapData data;
-    func_020a3a34(&grotto->activeMapData, &data, true, NULL);
+    ExportDetailedTreasureMapData(&grotto->activeMapData, &data, 1, 0);
     func_020a395c();
 
     if (data.mapType == TreasureMapType_Legacy)
@@ -222,6 +217,7 @@ unsigned short ActiveGrottoClass::GetActiveGrottoSeed() const
 
 // USA: func_02090290
 // JPN: func_02090bb0
-void ActiveGrottoClass::BlankFunction() const
+DetailedTreasureMapData* ActiveGrottoClass::GetDetailedData()
 {
+    return &overallMapData;
 }

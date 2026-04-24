@@ -15,8 +15,7 @@ public:
         // to be 1-12 based on the seed (but in practice the chance is 0%).
         // I don't know what it does if it's nonzero.
         char unknown_4F;
-        // the rest of these are probably unsigned too
-        char environ; // caves, ruins, ice, water, fire as 1,2,3,4,5 resp.
+        unsigned char environ; // caves, ruins, ice, water, fire as 1,2,3,4,5 resp.
         unsigned char floorCount;
         unsigned char startingMonsterRank;
         unsigned char bossID; // 1 to 12

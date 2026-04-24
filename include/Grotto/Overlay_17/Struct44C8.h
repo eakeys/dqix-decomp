@@ -25,7 +25,7 @@ struct TreasureMapLanguageDataOffsets
     unsigned int prefixRangesByMonsterRank;
     unsigned int prefixNames;
     unsigned int floorRangesByQuality;
-    unsigned int unknown_18; // 12 entries of a byte and a short (5,5,3,2,3,3,2,2,3,2,2,2)
+    unsigned int unknown_18; 
     unsigned int startingMonsterRanksByQuality;
     unsigned int mapLocations;
     unsigned int seeminglyChestRanksByMonsterRank;

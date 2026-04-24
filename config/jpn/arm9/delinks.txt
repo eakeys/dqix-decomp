@@ -31,7 +31,7 @@ src/Grotto/Main/FloorMap.c:
 
 src/Grotto/Main/TreasureMapStructConversions.cpp:
     complete
-    .text start:0x020a5770 end:0x020a5aa4
+    .text start:0x020a5770 end:0x020a5bfc
 
 src/Grotto/Main/RandATRangeModular.c:
     complete

@@ -15,11 +15,6 @@
 
 extern "C"
 {
-    // populates regular map data
-    void func_020a3fd8(void*, unsigned short, unsigned char);
-    // populates legacy map data
-    void func_020a425c(void*, unsigned int, unsigned int, unsigned int);
-
     // unknown
     void func_020a1df8(unsigned int);
     // if the data is for a legacy map, loads the boss' stats
@@ -92,12 +87,12 @@ bool ExportDetailedTreasureMapData(const TreasureMapMetadata* from, DetailedTrea
     if (to->mapType == TreasureMapType_Regular)
     {
         VectorizedMemset(&to->regular, 0, sizeof(to->regular));
-        func_020a3fd8(&to->regular, from->SeedOrMinTurns, from->QualityOrLegacyBossID);
+        to->regular.Populate(from->SeedOrMinTurns, from->QualityOrLegacyBossID);
     }
     else if (to->mapType == TreasureMapType_Legacy)
     {
         VectorizedMemset(&to->legacy, 0, sizeof(to->legacy));
-        func_020a425c(&to->legacy, from->QualityOrLegacyBossID, from->LegacyBossLevel, from->SeedOrMinTurns);
+        to->legacy.Populate(from->QualityOrLegacyBossID, from->LegacyBossLevel, from->SeedOrMinTurns);
     }
 
     func_020a1df8(4);
@@ -121,5 +116,55 @@ bool ExportDetailedTreasureMapData(const TreasureMapMetadata* from, DetailedTrea
             to->discoveredTreasures[i] = true;
     }
     
+    return true;
+}
+
+bool ExportTreasureMapMetadata(const DetailedTreasureMapData* from, TreasureMapMetadata* to)
+{
+    if (from == NULL || to == NULL)
+        return false;
+
+    VectorizedMemset(to, 0, sizeof(TreasureMapMetadata));
+
+    if (from->discoveryState == DiscoveryState_Undiscovered)
+        to->DiscoveryStateAndMapTypeAndUnknown |= 0x01;
+    else if (from->discoveryState == DiscoveryState_Discovered)
+        to->DiscoveryStateAndMapTypeAndUnknown |= 0x02;
+    else if (from->discoveryState == DiscoveryState_Cleared)
+        to->DiscoveryStateAndMapTypeAndUnknown |= 0x04;
+    else
+        return false;
+
+    if (from->mapType == TreasureMapType_Regular)
+        to->DiscoveryStateAndMapTypeAndUnknown |= 0x08;
+    else if (from->mapType == TreasureMapType_Legacy)
+        to->DiscoveryStateAndMapTypeAndUnknown |= 0x10;
+    else
+        return false;
+
+    VectorizedInvertedMemcpy(from->discoveredBy, to->DiscoveredBy, 10);
+    VectorizedInvertedMemcpy(from->clearedBy, to->ClearedBy, 10);
+    to->Location = from->mapLocation;
+
+    if (from->discoveredTreasures[0])
+        to->TreasureDiscoveryFlags |= 0x01;
+    if (from->discoveredTreasures[1])
+        to->TreasureDiscoveryFlags |= 0x02;
+    if (from->discoveredTreasures[2])
+        to->TreasureDiscoveryFlags |= 0x04;
+
+    if (from->mapType == TreasureMapType_Regular)
+    {
+        to->QualityOrLegacyBossID = from->regular.quality;
+        to->LegacyBossLevel = 0;
+        to->SeedOrMinTurns = from->regular.seed;
+    }
+    else if (from->mapType == TreasureMapType_Legacy)
+    {
+        to->QualityOrLegacyBossID = from->legacy.bossID;
+        to->LegacyBossLevel = from->legacy.level;
+        to->SeedOrMinTurns = from->legacy.minTurns;
+    }
+
     return true;
 }

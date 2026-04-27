@@ -4191,8 +4191,8 @@ _ZN23DetailedTreasureMapData14RegularMapData24GenerateUnusedChestRanksEv kind:fu
 _ZN23DetailedTreasureMapData14RegularMapData14GeneratePrefixEv kind:function(arm,size=0x138) addr:0x020a4e08
 _ZN23DetailedTreasureMapData14RegularMapData14GenerateSuffixEv kind:function(arm,size=0x138) addr:0x020a4f40
 _ZN23DetailedTreasureMapData14RegularMapData18GenerateLocaleRankEv kind:function(arm,size=0x138) addr:0x020a5078
-func_020a51b0 kind:function(arm,size=0x320) addr:0x020a51b0
-func_020a54d0 kind:function(arm,size=0x314) addr:0x020a54d0
+_ZN23DetailedTreasureMapData14RegularMapData19GenerateNameBuffersEv kind:function(arm,size=0x320) addr:0x020a51b0
+_ZN23DetailedTreasureMapData14RegularMapData17GeneratePopupNameEv kind:function(arm,size=0x314) addr:0x020a54d0
 func_020a57e4 kind:function(arm,size=0x338) addr:0x020a57e4
 func_020a5b1c kind:function(arm,size=0x19c) addr:0x020a5b1c
 _Z21GenerateNewMapQualityv kind:function(arm,size=0x158) addr:0x020a5cb8

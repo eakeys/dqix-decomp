@@ -12,11 +12,6 @@ extern "C"
     void func_020a1df8(unsigned int);
     void func_020a1e54(int);
 
-    // generates the name string for a regular map
-    void func_020a51b0(DetailedTreasureMapData::RegularMapData*);
-    // generates the popup name for a regular map
-    void func_020a54d0(DetailedTreasureMapData::RegularMapData*);
-
     unsigned int func_0200fdcc(BattleStruct*);
     // zeroes out memory
     void func_0200f374(void* where, unsigned int len);
@@ -30,6 +25,11 @@ extern "C"
     // Based on where it's called, this is probably returning a language-
     // dependent string for "Lv. " (at least, if called with 1011 as arg)
     const char* func_020e51cc(int);
+
+    // seems to get the game language. In the USA version, if it would
+    // return a value other than 2 or 5, it returns 1, which seems to reflect
+    // lack of support for German & Italian.
+    int func_0200fb08(BattleStruct*);
 }
 
 #define TMAPLANGDATA_READ(offset, into, len) \
@@ -62,8 +62,8 @@ void DetailedTreasureMapData::RegularMapData::Populate(unsigned short newseed, u
     else
         level = unclampedLevel;
 
-    func_020a51b0(this);
-    func_020a54d0(this);
+    GenerateNameBuffers();
+    GeneratePopupName();
     
     func_020a1e54(1);
 }
@@ -578,4 +578,234 @@ void DetailedTreasureMapData::RegularMapData::GenerateLocaleRank()
             return;
         }
     }
+}
+
+extern const char data_020f1ad0[]; // "%s%d"
+extern const char data_020f1ad5[]; // "%s %s"
+extern const unsigned char data_020e9074[]; // { 4, 13, 11 }
+
+// USA: func_020a51b0
+void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
+{    
+    if (prefix == 0 || suffix == 0 || localeRank == 0 || level == 0)
+        return;
+
+    if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
+        return;
+
+    nameNoLevel[0] = '\0';
+
+    // quantities read repeatedly from the binary file
+    unsigned short numEntries = 0;
+    unsigned char readIndex = 0;
+    unsigned short stringUnknown = 0;
+    unsigned short stringLength = 0;
+
+    // Important for register nonsense to declare these here
+    int nameIdx;
+    int readOffset;
+    
+    unsigned char* langData = GetTreasureMapLanguageData(GetBattleStruct());
+    int* offsetArray = (int*)(func_ov017_0218b5b0()->pTMapLanguageOffsets);   
+
+    // choose the order of the words based on the language
+    unsigned char partOrder[3]; 
+    switch (func_0200fb08(GetBattleStruct()))
+    {
+    // English & German
+    // e.g. Granite (0) Tunnel (2) of Woe (1)
+    case 1:
+    case 3:
+        partOrder[0] = 0;
+        partOrder[1] = 2;
+        partOrder[2] = 1;
+        break;
+    // French, Italian, Spanish
+    // e.g. Tunnel (2) of Granite (0) of Woe (1)
+    case 2:
+    case 4:
+    case 5:
+        partOrder[0] = 2;
+        partOrder[1] = 0;
+        partOrder[2] = 1;
+        break;
+    // Japanese
+    case 0:
+    default:
+        partOrder[0] = 0;
+        partOrder[1] = 2;
+        partOrder[2] = 1;
+        break;
+    }
+    
+    unsigned char indices[3];
+    indices[0] = prefix;
+    indices[1] = suffix;
+    indices[2] = localeRank;
+
+    char tempBuffer[256];
+    
+    for (int i = 0; i < 3; i++)
+    {
+        int currentNamePart = partOrder[i];
+        int ptrListIndex = data_020e9074[currentNamePart];
+        
+        readOffset = offsetArray[ptrListIndex];
+        
+        TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+         
+        for (unsigned short entryLoop = 0; entryLoop < numEntries; entryLoop++)
+        {
+            nameIdx = indices[currentNamePart];
+            if (ptrListIndex == 11)
+            {
+                TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+                for (unsigned short loopEnviron = 1; loopEnviron <= 5; loopEnviron++)
+                {
+                    TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+                    TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+                    if (environ == loopEnviron && nameIdx == readIndex)
+                    {
+                        VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+                        tempBuffer[stringLength] = '\0';
+                        strcat(nameNoLevel, tempBuffer);
+                        entryLoop = numEntries; // hack to escape the j-level loop
+                        break;
+                    }
+                    readOffset += stringLength;
+                }
+            }
+            else
+            {
+                TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+                TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+                TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+                if (nameIdx == readIndex)
+                {
+                    VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+                    tempBuffer[stringLength] = '\0';
+                    strcat(nameNoLevel, tempBuffer);
+                    break;
+                }
+                readOffset += stringLength;
+            }
+        }
+    }
+
+    func_02003ce8(levelString, data_020f1ad0, func_020e51cc(1011), level);
+    func_02003ce8(fullName, data_020f1ad5, nameNoLevel, levelString);
+}
+
+extern const char data_020f1adb[]; // "%s%d"
+extern const unsigned char data_020e9077[]; // { 4, 13, 11 }
+
+void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
+{    
+    if (prefix == 0 || suffix == 0 || localeRank == 0 || level == 0)
+        return;
+
+    if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
+        return;
+
+    popupName[0] = '\0';
+
+    // quantities read repeatedly from the binary file
+    unsigned short numEntries = 0;
+    unsigned char readIndex = 0;
+    unsigned short stringUnknown = 0;
+    unsigned short stringLength = 0;
+
+    // Important for register nonsense to declare these here
+    int nameIdx;
+    int readOffset;
+    
+    unsigned char* langData = GetTreasureMapLanguageData(GetBattleStruct());
+    int* offsetArray = (int*)(func_ov017_0218b5b0()->pTMapLanguageOffsets);   
+
+    // choose the order of the words based on the language
+    unsigned char partOrder[3]; 
+    switch (func_0200fb08(GetBattleStruct()))
+    {
+    // English & German
+    // e.g. Granite (0) Tunnel (2) of Woe (1)
+    case 1:
+    case 3:
+        partOrder[0] = 0;
+        partOrder[1] = 2;
+        partOrder[2] = 1;
+        break;
+    // French, Italian, Spanish
+    // e.g. Tunnel (2) of Granite (0) of Woe (1)
+    case 2:
+    case 4:
+    case 5:
+        partOrder[0] = 2;
+        partOrder[1] = 0;
+        partOrder[2] = 1;
+        break;
+    // Japanese
+    case 0:
+    default:
+        partOrder[0] = 0;
+        partOrder[1] = 2;
+        partOrder[2] = 1;
+        break;
+    }
+    
+    unsigned char indices[3];
+    indices[0] = prefix;
+    indices[1] = suffix;
+    indices[2] = localeRank;
+
+    char tempBuffer[64];
+    
+    for (int i = 0; i < 3; i++)
+    {
+        int currentNamePart = partOrder[i];
+        int ptrListIndex = data_020e9077[currentNamePart];
+        
+        readOffset = offsetArray[ptrListIndex];
+        
+        TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+         
+        for (unsigned short entryLoop = 0; entryLoop < numEntries; entryLoop++)
+        {
+            nameIdx = indices[currentNamePart];
+            if (ptrListIndex == 11)
+            {
+                TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+                for (unsigned short loopEnviron = 1; loopEnviron <= 5; loopEnviron++)
+                {
+                    TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+                    TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+                    if (environ == loopEnviron && nameIdx == readIndex)
+                    {
+                        VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+                        tempBuffer[stringLength] = '\0';
+                        strcat(popupName, tempBuffer);
+                        entryLoop = numEntries; // hack to escape the j-level loop
+                        break;
+                    }
+                    readOffset += stringLength;
+                }
+            }
+            else
+            {
+                TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+                TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+                TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+                if (nameIdx == readIndex)
+                {
+                    VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+                    tempBuffer[stringLength] = '\0';
+                    strcat(popupName, tempBuffer);
+                    break;
+                }
+                readOffset += stringLength;
+            }
+        }
+    }
+
+    func_02003ce8(tempBuffer, data_020f1adb, func_020e51cc(1011), level);
+    strcat(popupName, tempBuffer);
 }

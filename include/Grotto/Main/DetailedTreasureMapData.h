@@ -33,11 +33,13 @@ public:
         // This is still pretty speculative, but from a quick glance at
         // func_020a51b0 and looking at memory while in a grotto, I think
         // it's something like:
-        char buffer1[64]; // holds grotto name without level
-        char buffer2[8]; // level string, e.g. "Lv. 1"
-        char buffer3[64]; // full grotto name
-        char popupName[64]; // full grotto name but used in the popup msg
-                                // when you enter / load a quicksave
+        char nameNoLevel[64];
+        char levelString[8];
+        char fullName[64];
+        // This is identical to fullName, but is used in a call along lines of
+        //     sprintf(output, "%s<PAD_WAIT>", popupName)
+        // (see func_ov017_021bec00)
+        char popupName[64];
 #else
         // this is probably not what's actually going on, but it makes
         // this object the right size for memset calls. Probably either the
@@ -62,6 +64,7 @@ public:
         void GenerateLocaleRank();
 
         void GenerateNameBuffers();
+        void GeneratePopupName();
     };
 
     class LegacyBossMapData

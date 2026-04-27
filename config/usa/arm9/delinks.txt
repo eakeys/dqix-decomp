@@ -47,7 +47,7 @@ src/Grotto/Main/TreasureMapStructConversions.cpp:
 
 src/Grotto/Main/DetailedTreasureMapData.cpp:
     complete
-    .text start:0x020a3fd8 end:0x020a51b0
+    .text start:0x020a3fd8 end:0x020a57e4
 
 src/Grotto/Main/TreasureMapMetadata.c:
     complete

@@ -37,6 +37,10 @@ src/Grotto/Main/RandATRangeModular.c:
     complete
     .text start:0x020a5bfc end:0x020a5c20
 
+src/Grotto/Main/DetailedTreasureMapData.cpp:
+    complete
+    .text start:0x020a5df0 end:0x020a7588
+
 src/Grotto/Main/TileFeatures.c:
 	complete
 	.text start:0x0201e7e0 end:0x0201e950

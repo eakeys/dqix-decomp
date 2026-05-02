@@ -12,7 +12,7 @@ public:
         unsigned short seed;
         unsigned char quality;
         // Related to unknown_66. It's always 0 but the code allows a random chance
-        // to be 1-12 based on the seed (but in practice the chance is 0%).
+        // to be 1-12 based on the seed (but in practice the chance is 0% for each).
         // I don't know what it does if it's nonzero.
         char unknown_4F;
         unsigned char environ; // caves, ruins, ice, water, fire as 1,2,3,4,5 resp.
@@ -29,24 +29,20 @@ public:
         unsigned char level;
         char unknown_66; // was always 1 in the grottos I checked
 
-#ifndef jpn
-        // This is still pretty speculative, but from a quick glance at
-        // func_020a51b0 and looking at memory while in a grotto, I think
-        // it's something like:
+#if defined(usa)
         char nameNoLevel[64];
         char levelString[8];
-        char fullName[64];
-        // This is identical to fullName, but is used in a call along lines of
-        //     sprintf(output, "%s<PAD_WAIT>", popupName)
-        // (see func_ov017_021bec00)
+        char topScreenName[64];
+        // Does not include the <PAD_WAIT> command (that's added externally)
         char popupName[64];
-#else
-        // this is probably not what's actually going on, but it makes
-        // this object the right size for memset calls. Probably either the
-        // buffers are resized or there are some extra ones.
-        char unknownJpnBuffers[0xC8];
-        char popupName[64];
-        char extraUnknownJpnBuffer[64];
+#elif defined(jpn)
+        char nameNoLevel[32];
+        char prefixString[32];
+        char suffixString[32];
+        char localeString[32];
+        char levelString[8];
+        char topScreenName[64];
+        char popupName[128];
 #endif
 
     public:
@@ -76,7 +72,9 @@ public:
         unsigned short alternateVersionIDs[3];
         unsigned char level;
         unsigned short minTurns;
-        char bossName[26]; // unsure of length, could be zeros at end for another reason
+        // could be e.g. 24 bytes with padding
+        // in JPN version, this is stored *with* furigana decorations
+        char bossName[26];
         // amazingly these are actually used quantities, if you modify them
         // on entering the grotto with a cheat, it changes their stats
         // when you fight them 
@@ -101,26 +99,24 @@ public:
             bool announceLearn;
         } levelUpMoves[10];
 
-#ifndef jpn
-        // All stored in the 'markup' encoding, e.g. using <1> for apostrophe.
-        // Speculative based on looking at memory in a legacy grotto and
-        // a glance at func_020a425c
-        char mapNameNoLevel[64]; // e.g. "Estark<1>s Map"
+#if defined(usa)
+        // All stored in the 'markup' encoding, e.g. using <1> for apostrophe
+        char mapNameNoLevel[64]; // e.g. "Baramos<1>s Map"
         char mapNameNoLevel_v2[32]; // same as above, not sure what the difference is
         char seeminglyEmptyBuffer[32];
         char mapLevelString[8]; // e.g. "Lv. 99"
-        char mapName[64]; // "Estark<1>s Map Lv. 99"
-        char popupName[64]; // e.g. "Estark Lv. 99" (what pops up on entering the grotto)
-#else
-        // really no idea, I just looked at func_020a6050 (JPN) to guess
-        // the sizes and positions
-        char jpnBuffer1[32];
-        char jpnBuffer2[32];
-        char jpnBuffer3[32];
-        char jpnBuffer4[8];
-        char jpnBuffer5[64];
-        char popupName[64];
-        char jpnBuffer6[64];
+        char topScreenName[64]; // "Baramos<1>s Map Lv. 99"
+        char popupName[64]; // e.g. "Baramos Lv. 99" (what pops up on entering the grotto)
+#elif defined(jpn)
+        // The sizes are correct, but the interpretation is potentially dodgy -
+        // someone who actually knows Japanese should probably take a look (I
+        // deduced the linguistic purpose of these from Google Translate/Wikipedia)
+        char mapNameNoLevel[32]; // e.g. Baramos no chizu
+        char bossNameGenitive[32]; // e.g. Baramos no
+        char fixedStringChizu[32]; // always holds "chizu", which I gather means map
+        char mapLevelString[8]; // e.g. "Lv 99"
+        char topScreenName[64]; // e.g. Baramos no chizu Lv 99
+        char popupName[128]; // e.g. Baramos Lv 99 no chizu (pops up on entering the grotto)
 #endif
 
     public:

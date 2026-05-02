@@ -7,29 +7,39 @@
 #include "Grotto/Main/RandATRangeModular.h"
 #include "std_library_functions.h"
 
+#ifdef jpn
+#define func_020a1df8 func_020a3b70
+#define func_020a1e54 func_020a3bcc
+
+#define func_0200fdcc func_0200fc28
+#endif
+
 extern "C"
 {
     void func_020a1df8(unsigned int);
-    void func_020a1e54(int);
+    void func_020a1e54(unsigned int);
 
     unsigned int func_0200fdcc(BattleStruct*);
-    // zeroes out memory
+    // zeroes out memory (not used in jpn version)
     void func_0200f374(void* where, unsigned int len);
-    // copies character name into the buffer?
+    // copies character name into the buffer? (not used in jpn version)
     void func_020426bc(void*, char* buffer, int);
 
-    // looks like sprintf. It seems like variadic arguments still
-    // place the 2nd, 3rd, 4th parameter into r1, r2, r3
-    int func_02003ce8(char* buffer, const char* fmt, ...);
-
     // Based on where it's called, this is probably returning a language-
-    // dependent string for "Lv. " (at least, if called with 1011 as arg)
+    // dependent string for "Lv. " (at least, if called with 1011 as arg).
+    // Not used in jpn version
     const char* func_020e51cc(int);
 
     // seems to get the game language. In the USA version, if it would
     // return a value other than 2 or 5, it returns 1, which seems to reflect
     // lack of support for German & Italian.
+    // not used in jpn version
     int func_0200fb08(BattleStruct*);
+
+    // jpn exclusive:
+    // seems to remove Furigana decorations from a string. These are stored
+    // in the following format: [a/b] denotes the symbol a with b over the top
+    void func_020a5c20(const char* input, char* output);
 }
 
 #define TMAPLANGDATA_READ(offset, into, len) \
@@ -88,16 +98,23 @@ bool DetailedTreasureMapData::UpdateFollowingCompletion(bool levelledUp, unsigne
     if (mapType != TreasureMapType_Legacy)
         return false;
 
-    // Some stuff to get the player character name, most likely
+    // Retrieving the name of the player character I guess?
+#ifndef jpn
+    // Based on how the jpn version works, I would guess this is undoing the
+    // custom text encoding (e.g. lowercase a is 0x2A vs ascii 0x61)
     void* playerRelatedPtr = *(void**)(func_0200fdcc(GetBattleStruct()) + 0x134);
-    char nameBuffer[10]; // maybe 12
-    func_0200f374(nameBuffer, 10);
-    func_020426bc(playerRelatedPtr, nameBuffer, 1);
+    char asciiName[10]; // maybe 12
+    func_0200f374(asciiName, 10);
+    func_020426bc(playerRelatedPtr, asciiName, 1);
+#else
+    // 0200fc28 is the address in the japanese version
+    char* asciiName = *(char**)(func_0200fc28(GetBattleStruct()) + 0x134);
+#endif
 
     discoveryState = DiscoveryState_Cleared;
 
     VectorizedMemset(clearedBy, 0, 12);
-    VectorizedInvertedMemcpy(nameBuffer, clearedBy, 10);
+    VectorizedInvertedMemcpy(asciiName, clearedBy, 10);
 
     if (levelledUp && legacy.newDropListAtNextLevel)
     {
@@ -144,10 +161,24 @@ void GrottoStruct::LoadActiveMetadataFromDetailed(DetailedTreasureMapData* from)
     ExportTreasureMapMetadata(from, &activeMapData);
 }
 
+#if defined(usa)
+
 extern const char data_020f1ac0[]; // "%s"
 extern const char data_020f1ac3[]; // ""
 extern const char data_020f1ac4[]; // "%s%d"
 extern const char data_020f1ac9[]; // "%s %s"
+
+#elif defined(jpn)
+
+extern const char data_020f1c0c[]; // "%s no chizu"
+extern const char data_020f1c15[]; // "%s no"
+extern const char data_020f1c1a[]; // "[chizu/chizu]" (second is Furigana)
+extern const char data_020f1c26[]; // ""
+extern const char data_020f1c27[]; // "Lv %d"
+extern const char data_020f1c2c[]; // "%s<W=3>%s"
+extern const char data_020f1c36[]; // "%s Lv %d no [ma/ma]"
+
+#endif
 
 // USA: func_020a425c
 void DetailedTreasureMapData::LegacyBossMapData::Populate(
@@ -195,9 +226,16 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
                 alternateVersionIDs[j] = readAlternates[j];
             VectorizedInvertedMemcpy(dataPtr + readOffset, bossName, readStringLen);
             bossName[readStringLen] = '\0';
+#if defined(jpn)
+            break;
+#endif
         }
 
         readOffset += readStringLen;
+// in international versions, the binary file also stores strings such as
+// "Baramos's Map", presumably because grammatical differences between multiple
+// languages would be painful to implement in code
+#if defined(usa) 
         TMAPLANGDATA_READ(readOffset, &readUnknown, 2);
         TMAPLANGDATA_READ(readOffset, &readStringLen, 2);
 
@@ -208,6 +246,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
             break;
         }
         readOffset += readStringLen;
+#endif
     }
 
     if (bossEnemyID == 0)
@@ -215,21 +254,41 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
 
     level = newLevel;
     minTurns = newMinTurns;
-    func_02003ce8(mapNameNoLevel_v2, data_020f1ac0, mapNameNoLevel);
+
+#if defined(usa)
+    sprintf(mapNameNoLevel_v2, data_020f1ac0, mapNameNoLevel);
     strcpy(seeminglyEmptyBuffer, data_020f1ac3);
-    func_02003ce8(mapLevelString, data_020f1ac4, func_020e51cc(1011), level);
-    func_02003ce8(mapName, data_020f1ac9, mapNameNoLevel, mapLevelString);
-    func_02003ce8(popupName, data_020f1ac9, bossName, mapLevelString);
+    sprintf(mapLevelString, data_020f1ac4, func_020e51cc(1011), level);
+    sprintf(topScreenName, data_020f1ac9, mapNameNoLevel, mapLevelString);
+    sprintf(popupName, data_020f1ac9, bossName, mapLevelString);
+#elif defined(jpn)
+    char bossNameUndecorated[256];
+
+    func_020a5c20(bossName, bossNameUndecorated);
+    sprintf(mapNameNoLevel, data_020f1c0c, bossNameUndecorated);
+    sprintf(bossNameGenitive, data_020f1c15, bossName);
+    strcpy(fixedStringChizu, data_020f1c1a);
+    strcpy(mapLevelString, data_020f1c26);
+    sprintf(mapLevelString, data_020f1c27, level);
+    sprintf(topScreenName, data_020f1c2c, mapNameNoLevel, mapLevelString);
+    sprintf(popupName, data_020f1c36, bossName, level);
+#endif
 }
 
 // USA: func_020a451c
+// JPN: func_020a62c8
 void DetailedTreasureMapData::LegacyBossMapData::WriteMapLevelString()
 {
+#if defined(usa)
     const char* lvlPrefix = func_020e51cc(1011);
-    func_02003ce8(mapLevelString, data_020f1ac4, lvlPrefix, level);
+    sprintf(mapLevelString, data_020f1ac4, lvlPrefix, level);
+#elif defined(jpn)
+    sprintf(mapLevelString, data_020f1c27, level);
+#endif
 }
 
 // USA: func_020a454c
+// JPN: func_020a62e4
 bool DetailedTreasureMapData::LegacyBossMapData::CanUseLevelUpMove(unsigned short id)
 {
     for (int i = 0; i < numLevelUpMoves; i++)
@@ -244,6 +303,7 @@ bool DetailedTreasureMapData::LegacyBossMapData::CanUseLevelUpMove(unsigned shor
 }
 
 // USA: func_020a45a0
+// JPN: func_020a6338
 unsigned short DetailedTreasureMapData::LegacyBossMapData::GetLearnedMove(unsigned char atLevel, int filter)
 {
     for (int i = 0; i < numLevelUpMoves; i++)
@@ -271,6 +331,7 @@ unsigned short DetailedTreasureMapData::LegacyBossMapData::GetLearnedMove(unsign
 }
 
 // USA: func_020a4618
+// JPN: func_020a63b0
 void DetailedTreasureMapData::RegularMapData::GenerateUnknownData()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -306,6 +367,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateUnknownData()
 }
 
 // USA: func_020a4738
+// JPN: func_020a64d0
 void DetailedTreasureMapData::RegularMapData::GenerateEnviron()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -338,6 +400,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateEnviron()
 }
 
 // USA: func_020a4824
+// JPN: func_020a65bc
 void DetailedTreasureMapData::RegularMapData::GenerateFloorCount()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -368,6 +431,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateFloorCount()
 }
 
 // USA: func_020a495c
+// JPN: func_020a66f4
 void DetailedTreasureMapData::RegularMapData::GenerateMonsterRank()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -397,6 +461,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateMonsterRank()
     }
 }
 
+// JPN: func_020a682c
 void DetailedTreasureMapData::RegularMapData::GenerateBoss()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -460,6 +525,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateBoss()
 }
 
 // USA: func_020a4d08
+// JPN: func_020a6aa0
 void DetailedTreasureMapData::RegularMapData::GenerateUnusedChestRanks()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -488,6 +554,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateUnusedChestRanks()
 }
 
 // USA: func_020a4e08
+// JPN: func_020a5ba0
 void DetailedTreasureMapData::RegularMapData::GeneratePrefix()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -519,6 +586,7 @@ void DetailedTreasureMapData::RegularMapData::GeneratePrefix()
 }
 
 // USA: func_020a4f40
+// JPN: func_020a6cd8
 void DetailedTreasureMapData::RegularMapData::GenerateSuffix()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -550,6 +618,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateSuffix()
 }
 
 // USA: func_020a5078
+// JPN: func_020a6e10
 void DetailedTreasureMapData::RegularMapData::GenerateLocaleRank()
 {
     if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
@@ -579,6 +648,8 @@ void DetailedTreasureMapData::RegularMapData::GenerateLocaleRank()
         }
     }
 }
+
+#if defined(usa)
 
 extern const char data_020f1ad0[]; // "%s%d"
 extern const char data_020f1ad5[]; // "%s %s"
@@ -629,7 +700,6 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
         partOrder[1] = 0;
         partOrder[2] = 1;
         break;
-    // Japanese
     case 0:
     default:
         partOrder[0] = 0;
@@ -692,13 +762,14 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
         }
     }
 
-    func_02003ce8(levelString, data_020f1ad0, func_020e51cc(1011), level);
-    func_02003ce8(fullName, data_020f1ad5, nameNoLevel, levelString);
+    sprintf(levelString, data_020f1ad0, func_020e51cc(1011), level);
+    sprintf(topScreenName, data_020f1ad5, nameNoLevel, levelString);
 }
 
 extern const char data_020f1adb[]; // "%s%d"
 extern const unsigned char data_020e9077[]; // { 4, 13, 11 }
 
+// USA: func_
 void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
 {    
     if (prefix == 0 || suffix == 0 || localeRank == 0 || level == 0)
@@ -806,6 +877,166 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
         }
     }
 
-    func_02003ce8(tempBuffer, data_020f1adb, func_020e51cc(1011), level);
+    sprintf(tempBuffer, data_020f1adb, func_020e51cc(1011), level);
     strcat(popupName, tempBuffer);
 }
+
+#elif defined(jpn)
+
+extern const char data_020f1c48[];
+extern const char data_020f1c4d[];
+extern const char data_020f1c52[];
+
+// JPN: func_020a6f48
+void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
+{    
+    if (prefix == 0 || suffix == 0 || localeRank == 0 || level == 0)
+        return;
+
+    if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
+        return;
+
+    nameNoLevel[0] = '\0';
+
+    int readOffset;
+    
+    // quantities read repeatedly from the binary file
+    unsigned short numEntries = 0;
+    unsigned char readIndex = 0;
+    unsigned short stringUnknown = 0;
+    unsigned short stringLength = 0;
+    char tempBuffer[256];
+    
+    unsigned char* langData = GetTreasureMapLanguageData(GetBattleStruct());
+    TreasureMapLanguageDataOffsets* offsetArray = func_ov017_0218b5b0()->pTMapLanguageOffsets;
+    
+    readOffset = offsetArray->prefixNames;
+    TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+    for (unsigned short i = 0; i < numEntries; i++)
+    {
+        TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+        TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+        TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+        if (prefix == readIndex)
+        {
+            VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+            tempBuffer[stringLength] = '\0';
+            strcat(nameNoLevel, tempBuffer);
+            strcpy(prefixString, tempBuffer);
+            break;
+        }
+        readOffset += stringLength;
+    }
+
+    readOffset = offsetArray->suffixNames;
+    TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+    for (unsigned short i = 0; i < numEntries; i++)
+    {
+        TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+        TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+        TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+        if (suffix == readIndex)
+        {
+            VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+            tempBuffer[stringLength] = '\0';
+            strcat(nameNoLevel, tempBuffer);
+            strcpy(suffixString, tempBuffer);
+            break;
+        }
+        readOffset += stringLength;
+    }
+
+    char nameUndecorated[256];
+    func_020a5c20(nameNoLevel, nameUndecorated);
+    strcat(nameUndecorated, data_020f1c48);
+    strcpy(nameNoLevel, nameUndecorated);
+    sprintf(levelString, data_020f1c4d, level);
+    sprintf(topScreenName, data_020f1c52, nameNoLevel, levelString);
+}
+
+// JPN: func_020a71f8
+void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
+{    
+    if (prefix == 0 || suffix == 0 || localeRank == 0 || level == 0)
+        return;
+
+    if (GetTreasureMapLanguageData(GetBattleStruct()) == NULL)
+        return;
+
+    popupName[0] = '\0';
+
+    int readOffset;
+    
+    // quantities read repeatedly from the binary file
+    unsigned short numEntries = 0;
+    unsigned char readIndex = 0;
+    unsigned short stringUnknown = 0;
+    unsigned short stringLength = 0;
+    char tempBuffer[64];
+    
+    unsigned char* langData = GetTreasureMapLanguageData(GetBattleStruct());
+    TreasureMapLanguageDataOffsets* offsetArray = func_ov017_0218b5b0()->pTMapLanguageOffsets;
+
+    readOffset = offsetArray->prefixNames;
+    TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+    for (unsigned short i = 0; i < numEntries; i++)
+    {
+        TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+        TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+        TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+        if (prefix == readIndex)
+        {
+            VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+            tempBuffer[stringLength] = '\0';
+            strcat(popupName, tempBuffer);
+            strcpy(prefixString, tempBuffer);
+            break;
+        }
+        readOffset += stringLength;
+    }
+
+    readOffset = offsetArray->suffixNames;
+    TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+    for (unsigned short i = 0; i < numEntries; i++)
+    {
+        TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+        TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+        TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+        if (suffix == readIndex)
+        {
+            VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+            tempBuffer[stringLength] = '\0';
+            strcat(popupName, tempBuffer);
+            strcpy(suffixString, tempBuffer);
+            break;
+        }
+        readOffset += stringLength;
+    }
+
+    readOffset = offsetArray->localeNames;
+    TMAPLANGDATA_READ(readOffset, &numEntries, 2);
+    for (unsigned short i = 0; i < numEntries; i++)
+    {
+        TMAPLANGDATA_READ(readOffset, &readIndex, 1);
+        for (unsigned short loopEnviron = 1; loopEnviron <= 5; loopEnviron++)
+        {
+            TMAPLANGDATA_READ(readOffset, &stringUnknown, 2);
+            TMAPLANGDATA_READ(readOffset, &stringLength, 2);
+            if (environ == loopEnviron && localeRank == readIndex)
+            {
+                VectorizedInvertedMemcpy(langData + readOffset, tempBuffer, stringLength);
+                tempBuffer[stringLength] = '\0';
+                strcat(popupName, tempBuffer);
+                strcpy(localeString, tempBuffer);
+                i = numEntries; // hack to escape the outer loop
+                break;
+            }
+            readOffset += stringLength;
+        }
+    }
+
+    sprintf(tempBuffer, data_020f1c4d, level);
+    strcat(popupName, tempBuffer);
+}
+
+#endif

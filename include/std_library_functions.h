@@ -33,6 +33,9 @@ char* strchr(const char* str, int ch);
 char* strrchr(const char* str, int ch);
 char* strstr(const char* str, const char* substr);
 
+// stdio.h
+int sprintf(char* buffer, const char* format, ...);
+
 #ifdef __cplusplus
 }
 #endif

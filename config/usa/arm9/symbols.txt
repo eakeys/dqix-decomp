@@ -4169,8 +4169,8 @@ func_020a39d8 kind:function(arm,size=0x5c) addr:0x020a39d8
 _Z29ExportDetailedTreasureMapDataPK19TreasureMapMetadataP23DetailedTreasureMapDataii kind:function(arm,size=0x334) addr:0x020a3a34
 _Z25ExportTreasureMapMetadataPK23DetailedTreasureMapDataP19TreasureMapMetadata kind:function(arm,size=0x158) addr:0x020a3d68
 _Z18RandATRangeModularjj kind:function(arm,size=0x24) addr:0x020a3ec0
-func_020a3ee4 kind:function(arm,size=0x70) addr:0x020a3ee4
-func_020a3f54 kind:function(arm,size=0x84) addr:0x020a3f54
+_Z21IsMonsterIDLegacyBosst kind:function(arm,size=0x70) addr:0x020a3ee4
+_Z28GetTreasureMapTypeFromItemIDtPh kind:function(arm,size=0x84) addr:0x020a3f54
 _ZN23DetailedTreasureMapData14RegularMapData8PopulateEth kind:function(arm,size=0xe8) addr:0x020a3fd8
 _ZNK23DetailedTreasureMapData17LegacyBossMapData26MaybeGetCurrentAlternateIDEv kind:function(arm,size=0x28) addr:0x020a40c0
 _ZN23DetailedTreasureMapData5ClearEv kind:function(arm,size=0x14) addr:0x020a40e8
@@ -6447,7 +6447,7 @@ data_020e8ec4 kind:data(any) addr:0x020e8ec4
 data_020e8ed8 kind:data(any) addr:0x020e8ed8
 data_020e8f08 kind:data(any) addr:0x020e8f08
 data_020e8f20 kind:data(any) addr:0x020e8f20
-data_020e9038 kind:data(any) addr:0x020e9038
+treasureMapItemIDs kind:data(any) addr:0x020e9038
 data_020e9074 kind:data(any) addr:0x020e9074
 data_020e9077 kind:data(any) addr:0x020e9077
 data_020e907c kind:data(any) addr:0x020e907c

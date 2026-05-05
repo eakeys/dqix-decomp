@@ -19,7 +19,7 @@ public:
         unsigned char floorCount;
         unsigned char startingMonsterRank;
         unsigned char bossID; // 1 to 12
-        unsigned short bossEnemyId; // the number in square brackets in yabd's bestiary
+        unsigned short bossMonsterID; // the number in square brackets in yabd's bestiary
         // looks like it gets populated with a random valid chest rank
         // for each monster rank, but never gets used
         char maybeUnusedChestRanks[12];
@@ -67,7 +67,7 @@ public:
     {
     public:
         unsigned char bossID;
-        unsigned short bossEnemyID; 
+        unsigned short bossMonsterID; 
         // holds the ids of the 1A, 2A, 3A versions in yabd bestiary
         unsigned short alternateVersionIDs[3];
         unsigned char level;
@@ -156,7 +156,7 @@ public:
 
 public:
     void Clear();
-    void BlankFunction() const; // possibly returns this
+    void BlankFunction() const; // possibly returns this, but return value never used
 
     // Called on the overall struct, but only does anything for a legacy
     // boss map (and maybe only gets called then?)

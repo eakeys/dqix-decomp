@@ -35,11 +35,6 @@ extern "C"
     // lack of support for German & Italian.
     // not used in jpn version
     int func_0200fb08(BattleStruct*);
-
-    // jpn exclusive:
-    // seems to remove Furigana decorations from a string. These are stored
-    // in the following format: [a/b] denotes the symbol a with b over the top
-    void func_020a5c20(const char* input, char* output);
 }
 
 #define TMAPLANGDATA_READ(offset, into, len) \
@@ -187,7 +182,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
     if (GetTreasureMapLanguageData(GetBattleStruct()) == 0)
         return;
 
-    bossEnemyID = 0;
+    bossMonsterID = 0;
     bossID = newBossID;
 
     for (int i = 0; i < 3; i++)
@@ -196,7 +191,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
     unsigned short numEntries = 0;
 
     unsigned char readBossID = 0;
-    unsigned short readEnemyID = 0;
+    unsigned short readMonsterID = 0;
     unsigned short readAlternates[3];
     unsigned short readUnknown = 0; // seems to precede every string and always = 8
     unsigned short readStringLen = 0;
@@ -210,7 +205,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
     for (int i = 0; i < numEntries; i++)
     {
         TMAPLANGDATA_READ(readOffset, &readBossID, 2);
-        TMAPLANGDATA_READ(readOffset, &readEnemyID, 2);
+        TMAPLANGDATA_READ(readOffset, &readMonsterID, 2);
         for (int j = 0; j < 3; j++)
         {
             TMAPLANGDATA_READ(readOffset, &readAlternates[j], 2);
@@ -221,7 +216,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
 
         if (newBossID == readBossID)
         {
-            bossEnemyID = readEnemyID;
+            bossMonsterID = readMonsterID;
             for (int j = 0; j < 3; j++)
                 alternateVersionIDs[j] = readAlternates[j];
             VectorizedInvertedMemcpy(dataPtr + readOffset, bossName, readStringLen);
@@ -249,7 +244,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
 #endif
     }
 
-    if (bossEnemyID == 0)
+    if (bossMonsterID == 0)
         return;
 
     level = newLevel;
@@ -264,7 +259,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
 #elif defined(jpn)
     char bossNameUndecorated[256];
 
-    func_020a5c20(bossName, bossNameUndecorated);
+    RemoveFurigana(bossName, bossNameUndecorated);
     sprintf(mapNameNoLevel, data_020f1c0c, bossNameUndecorated);
     sprintf(bossNameGenitive, data_020f1c15, bossName);
     strcpy(fixedStringChizu, data_020f1c1a);
@@ -490,14 +485,14 @@ void DetailedTreasureMapData::RegularMapData::GenerateBoss()
         int weightReadOffset;
         unsigned short bossTotalWeight = 0;
         unsigned char readBossNumber = 0;
-        unsigned short readBossEnemyID = 0;
+        unsigned short readMonsterID = 0;
         unsigned char readBossWeight = 0;
 
         for (unsigned short i = readMinBoss; i <= readMaxBoss; i++)
         {
             weightReadOffset = (i - 1) * 4 + 2 + offsets->bossIDsAndWeights;
             TMAPLANGDATA_READ(weightReadOffset, &readBossNumber, 1);
-            TMAPLANGDATA_READ(weightReadOffset, &readBossEnemyID, 2);
+            TMAPLANGDATA_READ(weightReadOffset, &readMonsterID, 2);
             TMAPLANGDATA_READ(weightReadOffset, &readBossWeight, 1);
             bossTotalWeight += readBossWeight;
         }
@@ -509,13 +504,13 @@ void DetailedTreasureMapData::RegularMapData::GenerateBoss()
         {
             weightReadOffset = 4 * (i - 1) + 2 + offsets->bossIDsAndWeights;
             TMAPLANGDATA_READ(weightReadOffset, &readBossNumber, 1);
-            TMAPLANGDATA_READ(weightReadOffset, &readBossEnemyID, 2);
+            TMAPLANGDATA_READ(weightReadOffset, &readMonsterID, 2);
             TMAPLANGDATA_READ(weightReadOffset, &readBossWeight, 1);
 
             if (rng < readBossWeight + weightAccumulator)
             {
                 bossID = i;
-                bossEnemyId = readBossEnemyID;
+                bossMonsterID = readMonsterID;
                 return;
             }
 
@@ -947,7 +942,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
     }
 
     char nameUndecorated[256];
-    func_020a5c20(nameNoLevel, nameUndecorated);
+    RemoveFurigana(nameNoLevel, nameUndecorated);
     strcat(nameUndecorated, data_020f1c48);
     strcpy(nameNoLevel, nameUndecorated);
     sprintf(levelString, data_020f1c4d, level);

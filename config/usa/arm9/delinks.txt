@@ -31,7 +31,8 @@ src/Grotto/Main/FloorMap.c:
 
 src/Grotto/Main/RandATRangeModular.c:
     complete
-    .text start:0x020a3ec0 end:0x020a3ee4
+    .rodata start:0x020e9038 end:0x020e9074
+    .text start:0x020a3ec0 end:0x020a3fd8
 
 src/Grotto/Main/TileFeatures.c:
     complete

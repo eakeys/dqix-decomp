@@ -43,4 +43,6 @@ struct TreasureMapLanguageDataOffsets
 #define func_ov017_0218b5b0 func_ov017_0218c1d0
 #endif
 
+// This is the second function in overlay 17 (the first one stores this pointer).
+// So it's possible the struct is some sort of overall struct for the overlay.
 extern "C" Struct_ov017_44C8* func_ov017_0218b5b0();

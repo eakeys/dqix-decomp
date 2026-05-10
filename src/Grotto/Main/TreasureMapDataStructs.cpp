@@ -1,12 +1,11 @@
-#include "Grotto/Main/TreasureMapStructConversions.h"
+#include "Grotto/Main/TreasureMapDataStructs.h"
+#include "std_library_functions.h"
 #include "Grotto/Main/GrottoStruct.h"
 #include "Combat/Main/BattleList.h"
 #include "System/Memory.h"
 #include "Grotto/Overlay_17/Struct44C8.h"
 
 #ifdef jpn
-#define func_020a3fd8 func_020a5df0
-#define func_020a425c func_020a6050
 #define func_020a1df8 func_020a3b70
 #define func_020a57e4 func_020a7588
 #define func_020a5b1c func_020a78c0
@@ -15,20 +14,15 @@
 
 extern "C"
 {
-    // unknown
     void func_020a1df8(unsigned int);
-    // if the data is for a legacy map, loads the boss' stats
-    void func_020a57e4(DetailedTreasureMapData*, int, int);
-    // loads loot data for the map
-    void func_020a5b1c(DetailedTreasureMapData*);
-    // unknown
     void func_020a1e54(int);
 }
 
 #define TMAPLANGDATA_READ(offset, into, len) \
     (VectorizedInvertedMemcpy(GetTreasureMapLanguageData(GetBattleStruct()) + (offset), (into), (len)), offset += (len))
 
-bool ExportDetailedTreasureMapData(const TreasureMapMetadata* from, DetailedTreasureMapData* to, int p3, int p4)
+bool ExportDetailedTreasureMapData(const TreasureMapMetadata* from,
+    DetailedTreasureMapData* to, bool computeLegacyStats, const unsigned char* legacyStatsData)
 {
     Struct_ov017_44C8* oddStruct = func_ov017_0218b5b0();
 
@@ -96,8 +90,8 @@ bool ExportDetailedTreasureMapData(const TreasureMapMetadata* from, DetailedTrea
     }
 
     func_020a1df8(4);
-    func_020a57e4(to, p3, p4);
-    func_020a5b1c(to);
+    to->LoadLegacyBossStats(computeLegacyStats, legacyStatsData);
+    to->LoadTreasures();
     func_020a1e54(1);
 
     for (int i = 0; i < 3; i++)
@@ -167,4 +161,11 @@ bool ExportTreasureMapMetadata(const DetailedTreasureMapData* from, TreasureMapM
     }
 
     return true;
+}
+
+// USA: func_020a3ec0
+// JPN: func_020a5bfc
+unsigned int RandATRangeModular(unsigned int minimum, unsigned int maximum)
+{
+    return minimum + ((unsigned int)rand() % (maximum - minimum + 1));
 }

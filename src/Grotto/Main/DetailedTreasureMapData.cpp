@@ -1,10 +1,8 @@
-#include "Grotto/Main/DetailedTreasureMapData.h"
+#include "Grotto/Main/TreasureMapDataStructs.h"
 #include "Combat/Main/BattleList.h"
 #include "Grotto/Main/GrottoStruct.h"
-#include "Grotto/Main/TreasureMapStructConversions.h"
 #include "Grotto/Overlay_17/Struct44C8.h"
 #include "System/Memory.h"
-#include "Grotto/Main/RandATRangeModular.h"
 #include "std_library_functions.h"
 
 #ifdef jpn
@@ -12,6 +10,16 @@
 #define func_020a1e54 func_020a3bcc
 
 #define func_0200fdcc func_0200fc28
+
+#define func_0202f7c8 func_0202f338
+#define func_0202f7e8 func_0202f358
+
+#define func_02075098 func_02076224
+#define func_02075248 func_02076378
+
+#define data_020f1ae4 data_020f1c5c
+#define data_020f1af8 data_020f1c70
+#define data_0211e33c data_0211fb64
 #endif
 
 extern "C"
@@ -35,10 +43,179 @@ extern "C"
     // lack of support for German & Italian.
     // not used in jpn version
     int func_0200fb08(BattleStruct*);
+
+    void func_0202f7c8();
+    void func_0202f7e8();
+
+    // Seems to load an arbitrary file into a buffer, then return that buffer
+    unsigned char* func_02075098(const char* file, const void* buffer, unsigned int* outLength);
+
+    // Seems to extract a file from a NARC buffer
+    bool func_02075248(const unsigned char* narcBuffer, const char* filename,
+        const unsigned char** ppFileData, unsigned int* pFileSize, unsigned int startFileIndex);
 }
 
+#define BINARY_READ_AND_ADVANCE(buffer, offset, dst, len) \
+    (VectorizedInvertedMemcpy((buffer) + (offset), (dst), (len)), offset += (len))
+
 #define TMAPLANGDATA_READ(offset, into, len) \
-    (VectorizedInvertedMemcpy(GetTreasureMapLanguageData(GetBattleStruct()) + (offset), (into), (len)), offset += (len))
+    BINARY_READ_AND_ADVANCE(GetTreasureMapLanguageData(GetBattleStruct()), offset, into, len)
+
+#ifdef jpn
+
+// JPN: func_020a5c20
+void RemoveFurigana(const char* src, char* dst)
+{  
+    if (dst == NULL)
+        return;
+
+    VectorizedMemset(dst, 0, 4);
+
+    unsigned int mode = 0;
+    int srcIndex;
+    int dstIndex = 0;
+    
+    for (srcIndex = 0; src[srcIndex] != '\0'; srcIndex++)
+    {
+        int inChar = src[srcIndex];
+
+        if (inChar == '[')
+        {
+            mode = 1;
+            continue;
+        }
+        
+        if (inChar == '/')
+        {
+            mode = 2;
+            continue;
+        }
+        
+        if (inChar == ']')
+        {
+            mode = 0;
+            continue;
+        }
+        
+        if (mode <= 1)
+        {
+            unsigned char castChar = inChar;
+            bool twoBytes;
+            if ((castChar >= 0x81 && castChar <= 0x9F) || (castChar >= 0xE0 && castChar <= 0xFC))
+                twoBytes = true;
+            else
+                twoBytes = false;
+
+            if (twoBytes)
+            {
+                // totally normal code, nothing to see here
+                // (we need it to force some register placements)
+                int srcIndexPlusOne = srcIndex + 1;
+                dst[dstIndex] = src[srcIndexPlusOne - 1];
+                srcIndex++; // note srcIndex = srcIndexPlusOne doesn't work
+                dstIndex++;
+            }
+
+            dst[dstIndex] = src[srcIndex];
+            dstIndex++;
+        }
+    }
+    
+    dst[dstIndex] = 0;
+}
+
+#endif
+
+// USA: func_020a3ee4
+// JPN: func_020a5cfc
+bool IsMonsterIDLegacyBoss(unsigned short id)
+{
+    // v1 form of Dragonlord (500) through Mortamor (508)
+    if (id >= 500 && id <= 508)
+        return true;
+
+    // v1 form of Orgodemir, Dhoulmagus, Rhapthorne, Nokturnus
+    if (id >= 511 && id <= 514)
+        return true;
+
+    // alternate patterns for all bosses except Nokturnus
+    if (id >= 600 && id <= 660)
+        return true;
+
+    // alternate patterns for Nokturnus
+    if (id >= 769 && id <= 775)
+        return true;
+
+    return false;
+}
+
+struct MapTypeEntry
+{
+    unsigned short itemID;
+    unsigned char legacyBossID;
+    bool isLegacy;
+};
+
+extern const MapTypeEntry treasureMapItemIDs[];
+const MapTypeEntry treasureMapItemIDs[] = {
+    { 1000, 0, false },  // regular map
+    { 1001, 1, true },   // Dragonlord
+    { 1002, 2, true },   // Malroth
+    { 1003, 3, true },   // Baramos
+    { 1004, 4, true },   // Zoma
+    { 1005, 5, true },   // Psaro (comes before Estark here)
+    { 1006, 6, true },   // Estark
+    { 1007, 7, true },   // Nimzo
+    { 1008, 8, true },   // Murdaw
+    { 1009, 9, true },   // Mortamor
+    { 1010, 10, true },  // Nokturnus (this time he's not at the end)
+    { 1011, 11, true },  // Orgodemir
+    { 1012, 12, true },  // Dhoulmagus
+    { 1013, 13, true },  // Rhapthorne
+    { 0 }
+};
+
+// USA: func_020a3f54
+// JPN: func_020a5d6c
+bool GetTreasureMapTypeFromItemID(unsigned short itemID, unsigned char* out)
+{
+    if (out == NULL)
+        return false;
+
+    for (int i = 0; treasureMapItemIDs[i].itemID != 0; i++)
+    {
+        const MapTypeEntry* entry = &treasureMapItemIDs[i];
+        
+        unsigned short thisID = entry->itemID;
+        if (thisID == 0 || itemID != thisID)
+            continue;
+        
+        unsigned char mapType;
+        unsigned char thisLegacyBossID;
+        unsigned short isLegacy;
+
+        if (thisID == 1000)
+        {
+            isLegacy = entry->isLegacy;
+            thisLegacyBossID = entry->legacyBossID;
+            mapType = TreasureMapType_Regular;
+        }
+        else
+        {
+            isLegacy = entry->isLegacy;
+            thisLegacyBossID = entry->legacyBossID;
+            mapType = TreasureMapType_Legacy;
+        }
+
+        out[0] = mapType;
+        out[1] = thisLegacyBossID;
+        *(unsigned short*)(out + 2) = isLegacy;
+        
+        return true;
+    }
+    
+    return false;
+}
 
 void DetailedTreasureMapData::RegularMapData::Populate(unsigned short newseed, unsigned char newquality)
 {
@@ -75,7 +252,7 @@ void DetailedTreasureMapData::RegularMapData::Populate(unsigned short newseed, u
 
 unsigned short DetailedTreasureMapData::LegacyBossMapData::MaybeGetCurrentAlternateID() const
 {
-    int idx = whichAlternateVersion;
+    int idx = stats.alternateVersion;
     if (idx >= 1 && idx <= 3)
         return alternateVersionIDs[idx - 1];
     return 0;
@@ -111,7 +288,7 @@ bool DetailedTreasureMapData::UpdateFollowingCompletion(bool levelledUp, unsigne
     VectorizedMemset(clearedBy, 0, 12);
     VectorizedInvertedMemcpy(asciiName, clearedBy, 10);
 
-    if (levelledUp && legacy.newDropListAtNextLevel)
+    if (levelledUp && legacy.stats.newDropListAtNextLevel)
     {
         discoveredTreasures[0] = true;
         discoveredTreasures[1] = false;
@@ -286,9 +463,9 @@ void DetailedTreasureMapData::LegacyBossMapData::WriteMapLevelString()
 // JPN: func_020a62e4
 bool DetailedTreasureMapData::LegacyBossMapData::CanUseLevelUpMove(unsigned short id)
 {
-    for (int i = 0; i < numLevelUpMoves; i++)
+    for (int i = 0; i < stats.numLevelUpMoves; i++)
     {
-        LevelUpMove* move = &levelUpMoves[i];
+        LegacyBossStats::LevelUpMove* move = &stats.levelUpMoves[i];
         if (move->moveID == id)
             return move->level <= this->level;
     }
@@ -301,9 +478,9 @@ bool DetailedTreasureMapData::LegacyBossMapData::CanUseLevelUpMove(unsigned shor
 // JPN: func_020a6338
 unsigned short DetailedTreasureMapData::LegacyBossMapData::GetLearnedMove(unsigned char atLevel, int filter)
 {
-    for (int i = 0; i < numLevelUpMoves; i++)
+    for (int i = 0; i < stats.numLevelUpMoves; i++)
     {
-        LevelUpMove* move = &levelUpMoves[i];
+        LegacyBossStats::LevelUpMove* move = &stats.levelUpMoves[i];
         if (move->level != atLevel)
             continue;
 
@@ -646,9 +823,11 @@ void DetailedTreasureMapData::RegularMapData::GenerateLocaleRank()
 
 #if defined(usa)
 
-extern const char data_020f1ad0[]; // "%s%d"
-extern const char data_020f1ad5[]; // "%s %s"
+extern char data_020f1ad0[]; // "%s%d"
+extern char data_020f1ad5[]; // "%s %s"
+
 extern const unsigned char data_020e9074[]; // { 4, 13, 11 }
+extern const unsigned char data_020e9077[]; // { 4, 13, 11 }
 
 // USA: func_020a51b0
 void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
@@ -761,10 +940,9 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
     sprintf(topScreenName, data_020f1ad5, nameNoLevel, levelString);
 }
 
-extern const char data_020f1adb[]; // "%s%d"
-extern const unsigned char data_020e9077[]; // { 4, 13, 11 }
+extern char data_020f1adb[]; // "%s%d"
 
-// USA: func_
+// USA: func_020a54d0
 void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
 {    
     if (prefix == 0 || suffix == 0 || localeRank == 0 || level == 0)
@@ -809,7 +987,6 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
         partOrder[1] = 0;
         partOrder[2] = 1;
         break;
-    // Japanese
     case 0:
     default:
         partOrder[0] = 0;
@@ -878,9 +1055,9 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
 
 #elif defined(jpn)
 
-extern const char data_020f1c48[];
-extern const char data_020f1c4d[];
-extern const char data_020f1c52[];
+extern char data_020f1c48[];
+extern char data_020f1c4d[];
+extern char data_020f1c52[];
 
 // JPN: func_020a6f48
 void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
@@ -1035,3 +1212,165 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
 }
 
 #endif
+
+extern char data_020f1ae4[];
+extern char data_020f1af8[];
+
+extern unsigned char data_0211e33c[];
+
+void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned char* providedArchive)
+{
+    if (mapType != TreasureMapType_Legacy)
+        return;
+
+    if (!compute)
+    {
+        legacy.stats.dropListIndex = 0;
+        legacy.stats.newDropListAtNextLevel = false;
+        return;
+    }
+    
+    func_0202f7c8();
+    unsigned int archiveSize = 0;
+    const unsigned char* usedArchive = data_0211e33c;
+    
+    if (providedArchive)
+        usedArchive = providedArchive;
+    else
+    {
+        if (!func_02075098(data_020f1ae4, usedArchive, &archiveSize))
+        {
+            func_0202f7e8();
+            return;
+        }
+    }
+
+    char innerFileName[256];
+    sprintf(innerFileName, data_020f1af8, legacy.bossMonsterID);
+    const unsigned char* innerFileData;
+    unsigned int innerFileSize;
+    if (!func_02075248(usedArchive, innerFileName, &innerFileData, &innerFileSize, 0))
+    {
+        func_0202f7e8();
+        return;
+    }
+
+    func_0202f7e8();
+
+    const unsigned char* copyOfInnerFilePtr;
+    unsigned int loadlevel = legacy.level;
+    // I would very much like to see this horrible hack removed, but it does the trick
+    // and without it, the compiler optimises out the constant 0x18. This way it gets
+    // kept in a register until the end.
+    unsigned int stride;
+    __asm("mov stride, 0x18");
+    copyOfInnerFilePtr = innerFileData; // forces innerFileData to get loaded into a register here
+    __asm("sub loadlevel, loadlevel, 1");
+    // This gets optimized out, but not immediately. Without it, the 4s, 2s and 1s
+    // in subsequent reads get loaded from the literal pool (e.g ldr r2, [pc, blah]
+    // instead of mov r2, #4). A branch/if/goto seems to restore normal behaviour
+    // but trivial if/goto statements get optimized out too early in the process
+    // to be viable as a fix.
+    __asm("b right_here\nright_here:");
+    
+    unsigned int offset = stride * loadlevel;
+    
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.maxHP, 4);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.maxMP, 4);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.agility, 2);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.attack, 2);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.defense, 2);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.alternateVersion, 1);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.rewardExp, 4);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.rewardGold, 4);
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.dropListIndex, 1);
+    
+    legacy.stats.newDropListAtNextLevel = false;
+    if (legacy.level < 99)
+    {
+        LegacyBossStats next;
+        offset = stride * legacy.level;
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.maxHP, 4);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.maxMP, 4);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.agility, 2);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.attack, 2);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.defense, 2);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.alternateVersion, 1);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.rewardExp, 4);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.rewardGold, 4);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &next.dropListIndex, 1);
+        
+        if (legacy.stats.dropListIndex < next.dropListIndex)
+            legacy.stats.newDropListAtNextLevel = true;
+    }
+
+    offset = stride * 99;
+    BINARY_READ_AND_ADVANCE(innerFileData, offset, &legacy.stats.numLevelUpMoves, 1);
+    for (int i = 0; i < legacy.stats.numLevelUpMoves; i++)
+    {
+        LegacyBossStats::LevelUpMove* dst = &legacy.stats.levelUpMoves[i];
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &dst->moveID, 2);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &dst->level, 1);
+        BINARY_READ_AND_ADVANCE(innerFileData, offset, &dst->announceLearn, 1);
+    }
+}
+
+void DetailedTreasureMapData::LoadTreasures()
+{
+    if (!GetTreasureMapLanguageData(GetBattleStruct()))
+        return;
+
+    TreasureMapLanguageDataOffsets* offsets = func_ov017_0218b5b0()->pTMapLanguageOffsets;
+    unsigned int offset;
+    bool foundBoss = false;
+
+    if (mapType == TreasureMapType_Regular)
+    {
+        if (treasureItemIDs[0] != 0 && treasureItemIDs[1] != 0 && treasureItemIDs[2] != 0)
+            return;
+        offset = offsets->grottoBossDrops;
+        do
+        {
+            unsigned char bossIndex;
+            unsigned short regularID;
+            unsigned int innerOffset = offset;
+            TMAPLANGDATA_READ(innerOffset, &bossIndex, 1);
+            TMAPLANGDATA_READ(innerOffset, &regularID, 2);
+            if (regularID == regular.bossMonsterID)
+            {
+                rand();
+                foundBoss = true;
+                offset = innerOffset;
+                break;
+            }
+            else
+                offset += 12;
+        } while (offset < offsets->legacyBossDrops);
+    }
+    else
+    {
+        offset = offsets->legacyBossDrops;
+        do
+        {
+            unsigned short legacyID;
+            TMAPLANGDATA_READ(offset, &legacyID, 2);
+            if (legacyID == legacy.bossMonsterID)
+            {
+                foundBoss = true;
+                offset += (legacy.stats.dropListIndex - 1) * 9;
+                break;
+            }
+            else
+                offset += 90;
+        } while (offset < offsets->legacyBossData);
+    }
+
+    if (foundBoss)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            TMAPLANGDATA_READ(offset, &treasureItemIDs[i], 2);
+            TMAPLANGDATA_READ(offset, &treasureDropRates[i], 1);
+        }
+    }
+}

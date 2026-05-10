@@ -1,6 +1,6 @@
 #include "Grotto/Main/ActiveGrottoClass.h"
 #include "Combat/Main/BattleList.h"
-#include "Grotto/Main/TreasureMapStructConversions.h"
+#include "Grotto/Main/TreasureMapDataStructs.h"
 #include <globaldefs.h>
 
 #ifdef jpn

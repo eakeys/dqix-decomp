@@ -1,5 +1,4 @@
-#include "Grotto/Main/TreasureMapMetadata.h"
-#include "Grotto/Main/RandATRangeModular.h"
+#include "Grotto/Main/TreasureMapDataStructs.h"
 #include "System/Memory.h"
 #include "std_library_functions.h"
 #include "Combat/Main/BattleList.h"

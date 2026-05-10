@@ -3,6 +3,41 @@
 #include <globaldefs.h>
 #include "TreasureMapMetadata.h"
 
+#ifdef jpn
+void RemoveFurigana(const char* src, char* dst);
+#endif
+
+bool IsMonsterIDLegacyBoss(unsigned short id);
+
+// The output format here is pretty weird, it's a 4 byte struct of the form
+// u8 mapType (1 = regular, 2 = legacy)
+// u8 legacyBossID (0 if not a legacy map)
+// u16 isLegacy (0 = regular, 1 = legacy but it's 16 bit...?)
+bool GetTreasureMapTypeFromItemID(unsigned short itemID, unsigned char* out);
+
+struct LegacyBossStats
+{
+    int maxHP;
+    int maxMP;
+    unsigned short agility;
+    unsigned short attack;
+    unsigned short defense;
+    char padding[2];
+    int alternateVersion; // 1, 2 or 3
+    int rewardExp;
+    // might be an int, but only the last 16 bytes are used
+    unsigned int rewardGold;
+    unsigned char dropListIndex;
+    bool newDropListAtNextLevel;
+    unsigned char numLevelUpMoves;
+    struct LevelUpMove
+    {
+        unsigned short moveID;
+        unsigned char level;
+        bool announceLearn;
+    } levelUpMoves[10];
+};
+
 class DetailedTreasureMapData
 {
 public:
@@ -75,29 +110,7 @@ public:
         // could be e.g. 24 bytes with padding
         // in JPN version, this is stored *with* furigana decorations
         char bossName[26];
-        // amazingly these are actually used quantities, if you modify them
-        // on entering the grotto with a cheat, it changes their stats
-        // when you fight them 
-        int bossHP;
-        int bossMP;
-        unsigned short bossAgility;
-        unsigned short bossAttack;
-        unsigned short bossDefense;
-        char padding_82[2];
-        int whichAlternateVersion; // 1, 2 or 3
-        int rewardExp;
-        // might be an int, but only the last 16 bytes are used
-        unsigned short rewardGold;
-        unsigned char unknown_8E[2];
-        unsigned char dropListIndex;
-        bool newDropListAtNextLevel;
-        unsigned char numLevelUpMoves;
-        struct LevelUpMove
-        {
-            unsigned short moveID;
-            unsigned char level;
-            bool announceLearn;
-        } levelUpMoves[10];
+        LegacyBossStats stats;
 
 #if defined(usa)
         // All stored in the 'markup' encoding, e.g. using <1> for apostrophe
@@ -144,7 +157,7 @@ public:
     unsigned char mapLocation;
     char mapImageName[16]; // e.g. "mapt_005"
     bool discoveredTreasures[3];
-    short treasureItemIDs[3]; // might be unsigned?
+    unsigned short treasureItemIDs[3];
     unsigned char treasureDropRates[3];
     char unknown_49[3]; // might just be padding
 
@@ -163,4 +176,7 @@ public:
     bool UpdateFollowingCompletion(bool levelledUp, unsigned short numTurns);
 
     unsigned int GetLevel() const;
+
+    void LoadLegacyBossStats(bool compute, const unsigned char* providedArchive);
+    void LoadTreasures();
 };

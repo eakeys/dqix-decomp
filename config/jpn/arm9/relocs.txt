@@ -19268,7 +19268,6 @@ from:0x020a5b64 kind:arm_call to:0x020cc11c module:main
 from:0x020a5c08 kind:arm_call to:0x02003c30 module:main
 from:0x020a5c14 kind:arm_call to:0x0200d014 module:main
 from:0x020a5c3c kind:arm_call to:0x020cc060 module:main
-from:0x020a5dec kind:load to:0x020e914c module:main
 from:0x020a5e08 kind:arm_call to:0x020cc060 module:main
 from:0x020a5e14 kind:arm_call to:0x02003c64 module:main
 from:0x020a5e20 kind:arm_call to:0x020a3b70 module:main

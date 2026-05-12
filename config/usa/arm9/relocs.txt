@@ -19241,7 +19241,6 @@ from:0x020a3e18 kind:arm_call to:0x020ca650 module:main
 from:0x020a3e28 kind:arm_call to:0x020ca650 module:main
 from:0x020a3ecc kind:arm_call to:0x02003d14 module:main
 from:0x020a3ed8 kind:arm_call to:0x0200d150 module:main
-from:0x020a3fd4 kind:load to:0x020e9038 module:main
 from:0x020a3ff0 kind:arm_call to:0x020ca594 module:main
 from:0x020a3ffc kind:arm_call to:0x02003d48 module:main
 from:0x020a4008 kind:arm_call to:0x020a1df8 module:main

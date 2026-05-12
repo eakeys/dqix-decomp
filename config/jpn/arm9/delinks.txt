@@ -36,8 +36,22 @@ src/Grotto/Main/TreasureMapDataStructs.cpp:
 src/Grotto/Main/DetailedTreasureMapData.cpp:
     complete
     .rodata start:0x020e914c end:0x020e9188
-    .data start:0x020f1c0c end:0x020f1c7c
-    .text start:0x020a5c20 end:0x020a7a5c
+    .text start:0x020a5c20 end:0x020a6050
+
+src/Grotto/Main/DetailedTreasureMapData_Legacy.cpp:
+    complete
+    .data start:0x020f1c0c end:0x020f1c48
+    .text start:0x020a6050 end:0x020a63b0
+
+src/Grotto/Main/DetailedTreasureMapData_Regular.cpp:
+    complete
+    .data start:0x020f1c48 end:0x020f1c5c
+    .text start:0x020a63b0 end:0x020a7588
+
+src/Grotto/Main/DetailedTreasureMapData_FileData.cpp:
+    complete
+    .data start:0x020f1c5c end:0x020f1c7c
+    .text start:0x020a7588 end:0x020a7a5c
 
 src/Grotto/Main/TileFeatures.c:
 	complete

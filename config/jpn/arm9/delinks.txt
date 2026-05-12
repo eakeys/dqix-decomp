@@ -36,7 +36,7 @@ src/Grotto/Main/TreasureMapDataStructs.cpp:
 src/Grotto/Main/DetailedTreasureMapData.cpp:
     complete
     .rodata start:0x020e914c end:0x020e9188
-    .data start:0x020f1c0c end:0x020f1c48
+    .data start:0x020f1c0c end:0x020f1c7c
     .text start:0x020a5c20 end:0x020a7a5c
 
 src/Grotto/Main/TileFeatures.c:

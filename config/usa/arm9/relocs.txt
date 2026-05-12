@@ -19590,8 +19590,6 @@ from:0x020a5ac0 kind:arm_call to:0x020ca650 module:main
 from:0x020a5ad8 kind:arm_call to:0x020ca650 module:main
 from:0x020a5af0 kind:arm_call to:0x020ca650 module:main
 from:0x020a5b10 kind:load to:0x0211e33c module:main
-from:0x020a5b14 kind:load to:0x020f1ae4 module:main
-from:0x020a5b18 kind:load to:0x020f1af8 module:main
 from:0x020a5b28 kind:arm_call to:0x0200f398 module:main
 from:0x020a5b2c kind:arm_call to:0x02011644 module:main
 from:0x020a5b38 kind:arm_call to:0x0218b5b0 module:overlay(17)

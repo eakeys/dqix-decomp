@@ -23,8 +23,6 @@
 #define func_02075098 func_02076224
 #define func_02075248 func_02076378
 
-#define data_020f1ae4 data_020f1c5c
-#define data_020f1af8 data_020f1c70
 #define data_0211e33c data_0211fb64
 #endif
 
@@ -833,6 +831,9 @@ void DetailedTreasureMapData::RegularMapData::GenerateLocaleRank()
 
 #if defined(usa)
 
+static char MapLevelStringFormat_v2[] = "%s%d";
+static char MapFullNameFormat_v2[] = "%s %s";
+
 // USA: func_020a51b0
 void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
 {    
@@ -942,9 +943,11 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
         }
     }
 
-    sprintf(levelString, "%s%d", func_020e51cc(1011), level);
-    sprintf(topScreenName, "%s %s", nameNoLevel, levelString);
+    sprintf(levelString, MapLevelStringFormat_v2, func_020e51cc(1011), level);
+    sprintf(topScreenName, MapFullNameFormat_v2, nameNoLevel, levelString);
 }
+
+static char MapPopupNameLvlStringFormat[] = " %s%d\0\0\0";
 
 // USA: func_020a54d0
 void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
@@ -1055,18 +1058,16 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
         }
     }
 
-    sprintf(tempBuffer, " %s%d", func_020e51cc(1011), level);
+    // temporary hack to align next string literal
+    sprintf(tempBuffer, MapPopupNameLvlStringFormat, func_020e51cc(1011), level);
     strcat(popupName, tempBuffer);
 }
 
-// This gets placed before any inline string literals
-//static char padding_020f1ae2[2] = "\0";
-
 #elif defined(jpn)
 
-extern char data_020f1c48[];
-extern char data_020f1c4d[];
-extern char data_020f1c52[];
+static char MapStringLiteralMapUndecorated[] = "\x92\x6E" "\x90\x7D";
+static char MapLevelStringFormat_v2[] = JPChar_Lv "%d";
+static char MapTopNameFormat_v2[] = "%s<W=3>%s";
 
 // JPN: func_020a6f48
 void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
@@ -1129,10 +1130,10 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
 
     char nameUndecorated[256];
     RemoveFurigana(nameNoLevel, nameUndecorated);
-    strcat(nameUndecorated, data_020f1c48);
+    strcat(nameUndecorated, MapStringLiteralMapUndecorated);
     strcpy(nameNoLevel, nameUndecorated);
-    sprintf(levelString, data_020f1c4d, level);
-    sprintf(topScreenName, data_020f1c52, nameNoLevel, levelString);
+    sprintf(levelString, MapLevelStringFormat_v2, level);
+    sprintf(topScreenName, MapTopNameFormat_v2, nameNoLevel, levelString);
 }
 
 // JPN: func_020a71f8
@@ -1216,14 +1217,14 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
         }
     }
 
-    sprintf(tempBuffer, data_020f1c4d, level);
+    sprintf(tempBuffer, MapLevelStringFormat_v2, level);
     strcat(popupName, tempBuffer);
 }
 
 #endif
 
-extern char data_020f1ae4[];
-extern char data_020f1af8[];
+static char LegacyBossArchiveFilename[] = "data/tmap/param.pac";
+static char LegacyBossSubfileNameFormat[] = "p_%d.dat\0\0\0";
 
 extern unsigned char data_0211e33c[];
 
@@ -1247,7 +1248,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
         usedArchive = providedArchive;
     else
     {
-        if (!func_02075098(data_020f1ae4, usedArchive, &archiveSize))
+        if (!func_02075098(LegacyBossArchiveFilename, usedArchive, &archiveSize))
         {
             func_0202f7e8();
             return;
@@ -1255,7 +1256,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
     }
 
     char innerFileName[256];
-    sprintf(innerFileName, data_020f1af8, legacy.bossMonsterID);
+    sprintf(innerFileName, LegacyBossSubfileNameFormat, legacy.bossMonsterID);
     const unsigned char* innerFileData;
     unsigned int innerFileSize;
     if (!func_02075248(usedArchive, innerFileName, &innerFileData, &innerFileSize, 0))

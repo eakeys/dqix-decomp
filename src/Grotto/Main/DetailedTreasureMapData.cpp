@@ -5,6 +5,12 @@
 #include "System/Memory.h"
 #include "std_library_functions.h"
 
+// also counts for unsigned char arrays, e.g. data_020e9074 & data_020e9077
+#pragma pool_strings on
+// need this so the blank string in data_020f1ac3 (which is effectively a 
+// single char equal to 0) doesn't go into .bss
+#pragma explicit_zero_data on
+
 #ifdef jpn
 #define func_020a1df8 func_020a3b70
 #define func_020a1e54 func_020a3bcc
@@ -335,20 +341,24 @@ void GrottoStruct::LoadActiveMetadataFromDetailed(DetailedTreasureMapData* from)
 
 #if defined(usa)
 
-extern const char data_020f1ac0[]; // "%s"
-extern const char data_020f1ac3[]; // ""
-extern const char data_020f1ac4[]; // "%s%d"
-extern const char data_020f1ac9[]; // "%s %s"
+static char MapNameNoLvlFormat[] = "%s"; // "%s"
+static char EmptyStringSource[] = ""; // ""
+static char MapLevelStringFormat[] = "%s%d"; // "%s%d"
+static char MapFullNameFormat[] = "%s %s"; // "%s %s"
+// probably a file boundary to explain extra padding
+static char padding_020f1acf = 0;
 
 #elif defined(jpn)
 
-extern const char data_020f1c0c[]; // "%s no chizu"
-extern const char data_020f1c15[]; // "%s no"
-extern const char data_020f1c1a[]; // "[chizu/chizu]" (second is Furigana)
-extern const char data_020f1c26[]; // ""
-extern const char data_020f1c27[]; // "Lv %d"
-extern const char data_020f1c2c[]; // "%s<W=3>%s"
-extern const char data_020f1c36[]; // "%s Lv %d no [ma/ma]"
+#define JPChar_Lv "\xEA\x40"
+
+static char MapNameNoLvlFormat[] = "%s" "\x82\xCC" "\x92\x6E" "\x90\x7D"; // "%sの地図"
+static char MapBossNameGenitiveFormat[] = "%s" "\x82\xCC"; // "%sの"
+static char MapStringLiteralMap[] = "[" "\x92\x6E" "\x90\x7D" "/" "\x82\xBF" "\x82\xB8" "]"; // "[地図/ちず]"
+static char EmptyStringSource[] = "";
+static char MapLevelStringFormat[] = JPChar_Lv "%d";
+static char MapTopNameFormat[] = "%s<W=3>%s";
+static char MapPopupNameFormat[] = "%s" JPChar_Lv "%d" "\x82\xCC" "[" "\x8A\xD4" "/" "\x82\xDC" "]\0\0"; // "%sLv%dの[間/ま]"
 
 #endif
 
@@ -428,22 +438,22 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
     minTurns = newMinTurns;
 
 #if defined(usa)
-    sprintf(mapNameNoLevel_v2, data_020f1ac0, mapNameNoLevel);
-    strcpy(seeminglyEmptyBuffer, data_020f1ac3);
-    sprintf(mapLevelString, data_020f1ac4, func_020e51cc(1011), level);
-    sprintf(topScreenName, data_020f1ac9, mapNameNoLevel, mapLevelString);
-    sprintf(popupName, data_020f1ac9, bossName, mapLevelString);
+    sprintf(mapNameNoLevel_v2, MapNameNoLvlFormat, mapNameNoLevel);
+    strcpy(seeminglyEmptyBuffer, EmptyStringSource);
+    sprintf(mapLevelString, MapLevelStringFormat, func_020e51cc(1011), level);
+    sprintf(topScreenName, MapFullNameFormat, mapNameNoLevel, mapLevelString);
+    sprintf(popupName, MapFullNameFormat, bossName, mapLevelString);
 #elif defined(jpn)
     char bossNameUndecorated[256];
 
     RemoveFurigana(bossName, bossNameUndecorated);
-    sprintf(mapNameNoLevel, data_020f1c0c, bossNameUndecorated);
-    sprintf(bossNameGenitive, data_020f1c15, bossName);
-    strcpy(fixedStringChizu, data_020f1c1a);
-    strcpy(mapLevelString, data_020f1c26);
-    sprintf(mapLevelString, data_020f1c27, level);
-    sprintf(topScreenName, data_020f1c2c, mapNameNoLevel, mapLevelString);
-    sprintf(popupName, data_020f1c36, bossName, level);
+    sprintf(mapNameNoLevel, MapNameNoLvlFormat, bossNameUndecorated);
+    sprintf(bossNameGenitive, MapBossNameGenitiveFormat, bossName);
+    strcpy(fixedStringChizu, MapStringLiteralMap);
+    strcpy(mapLevelString, EmptyStringSource);
+    sprintf(mapLevelString, MapLevelStringFormat, level);
+    sprintf(topScreenName, MapTopNameFormat, mapNameNoLevel, mapLevelString);
+    sprintf(popupName, MapPopupNameFormat, bossName, level);
 #endif
 }
 
@@ -453,9 +463,9 @@ void DetailedTreasureMapData::LegacyBossMapData::WriteMapLevelString()
 {
 #if defined(usa)
     const char* lvlPrefix = func_020e51cc(1011);
-    sprintf(mapLevelString, data_020f1ac4, lvlPrefix, level);
+    sprintf(mapLevelString, MapLevelStringFormat, lvlPrefix, level);
 #elif defined(jpn)
-    sprintf(mapLevelString, data_020f1c27, level);
+    sprintf(mapLevelString, MapLevelStringFormat, level);
 #endif
 }
 
@@ -823,12 +833,6 @@ void DetailedTreasureMapData::RegularMapData::GenerateLocaleRank()
 
 #if defined(usa)
 
-extern char data_020f1ad0[]; // "%s%d"
-extern char data_020f1ad5[]; // "%s %s"
-
-extern const unsigned char data_020e9074[]; // { 4, 13, 11 }
-extern const unsigned char data_020e9077[]; // { 4, 13, 11 }
-
 // USA: func_020a51b0
 void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
 {    
@@ -888,11 +892,13 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
     indices[2] = localeRank;
 
     char tempBuffer[256];
+
+    static const unsigned char offsetIndexLookup[] = { 4, 13, 11 };
     
     for (int i = 0; i < 3; i++)
     {
         int currentNamePart = partOrder[i];
-        int ptrListIndex = data_020e9074[currentNamePart];
+        int ptrListIndex = offsetIndexLookup[currentNamePart];
         
         readOffset = offsetArray[ptrListIndex];
         
@@ -936,11 +942,9 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
         }
     }
 
-    sprintf(levelString, data_020f1ad0, func_020e51cc(1011), level);
-    sprintf(topScreenName, data_020f1ad5, nameNoLevel, levelString);
+    sprintf(levelString, "%s%d", func_020e51cc(1011), level);
+    sprintf(topScreenName, "%s %s", nameNoLevel, levelString);
 }
-
-extern char data_020f1adb[]; // "%s%d"
 
 // USA: func_020a54d0
 void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
@@ -1001,11 +1005,13 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
     indices[2] = localeRank;
 
     char tempBuffer[64];
+
+    static const unsigned char offsetIndexLookup[] = { 4, 13, 11 };
     
     for (int i = 0; i < 3; i++)
     {
         int currentNamePart = partOrder[i];
-        int ptrListIndex = data_020e9077[currentNamePart];
+        int ptrListIndex = offsetIndexLookup[currentNamePart];
         
         readOffset = offsetArray[ptrListIndex];
         
@@ -1049,9 +1055,12 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
         }
     }
 
-    sprintf(tempBuffer, data_020f1adb, func_020e51cc(1011), level);
+    sprintf(tempBuffer, " %s%d", func_020e51cc(1011), level);
     strcat(popupName, tempBuffer);
 }
+
+// This gets placed before any inline string literals
+//static char padding_020f1ae2[2] = "\0";
 
 #elif defined(jpn)
 

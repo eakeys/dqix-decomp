@@ -1,0 +1,22 @@
+#pragma once
+
+#include "FSStructs.h"
+
+bool IsFileValidNarc(const unsigned char* buffer);
+
+// sizeof(NarcHandle) == 104.
+class NarcHandle
+{
+public:
+    NarcHandleInitialPart initial;
+    const void* pNarcFile; // points to where the narc itself is loaded in memory
+    const void* pFATBSection; // points to the 'FATB' header
+    const void* pFileDataStart; // points past the 8-byte 'FIMG' header
+
+    bool Initialize(const char* signatureString, const unsigned char* buffer);
+    bool MaybeDestroy();
+
+    const void* GetFileByIndex(unsigned int idx) const;
+};
+
+extern "C" bool func_020afd88(FSStruct72* files, NarcHandle* narc, unsigned int fileIdx);

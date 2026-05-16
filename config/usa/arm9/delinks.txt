@@ -95,6 +95,10 @@ src/Memory/UnusedSignedAllocator.cpp:
     complete
     .text start:0x020afaf0 end:0x020afb58
 
+src/Filesystem/NarcHandle.cpp:
+    complete
+    .text start:0x020afb58 end:0x020afd88
+
 src/Memory/AllocatorTypes.cpp:
     complete
     .rodata start:0x020e9160 end:0x020e9178
@@ -104,3 +108,10 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020afe6c end:0x020afec4
 
+src/System/Cache.cpp:
+    complete
+    .text start:0x020c824c end:0x020c8348
+
+src/System/Interrupts.cpp:
+    complete
+    .text start:0x020c96e8 end:0x020c976c

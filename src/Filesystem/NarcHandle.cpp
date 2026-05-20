@@ -29,7 +29,7 @@ extern "C"
     void func_020cc758(FSStruct72*);
     bool func_020cca38(FSStruct72*, const char*);
     void func_020cca80(FSStruct72*);
-    bool __attribute__((naked)) func_020cc9c8(FSStruct72*, void*, unsigned int, volatile void*);
+    bool func_020cc9c8(FSStruct72*, void*, unsigned int, volatile void*);
 }
 
 struct NarcHeader
@@ -150,7 +150,7 @@ extern "C" int func_020afd0c(const char* filename)
 
     if (func_020cca38(&files, filename))
     {
-        ret = (int)((NarcHandle*)files.unknown_8)->pFileDataStart + files.unknown_24;
+        ret = (int)((NarcHandle*)files.unknown_8)->pFileDataStart + files.regbase.b.s32;
         func_020cca80(&files);
     }
     return ret;

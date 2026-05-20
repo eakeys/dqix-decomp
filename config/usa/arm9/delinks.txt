@@ -115,3 +115,7 @@ src/System/Cache.cpp:
 src/System/Interrupts.cpp:
     complete
     .text start:0x020c96e8 end:0x020c976c
+
+src/Filesystem/FSStruct.cpp:
+    complete
+    .text start:0x020cb034 end:0x020cb764

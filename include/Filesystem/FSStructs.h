@@ -39,7 +39,7 @@ typedef int(*PFNExecuteCommand)(FSStruct72*, int);
 // Used much more broadly but idk where atm
 struct NarcHandleInitialPart
 {
-    int signature; // 'rom' or 'arc'
+    unsigned int signature; // 'rom' or 'arc'
     char unknown_04[8];
     int unknown_0C;
     int unknown_10;
@@ -111,8 +111,10 @@ struct FSStruct72
     FSStruct72* pNext;
     NarcHandleInitialPart* unknown_8;
     // Initially we were always marking the struct as volatile. But this
-    // seems to work better.
+    // seems to work better. Uses are not properly known, but for now:
+    // * bit 5: directory (set) or file (clear). Used in command #5
     volatile unsigned int flags;
+    // func_020cbf14 uses this as the opcode in a call to ExecuteCommand
     char unknown_10[4];
     int storedResult;
     FSLinkedListChildSet unknown_sublist_18;
@@ -168,12 +170,15 @@ extern "C"
     // Expects as inputs:
     // ext_B_low = directory index (omit the 0xF000)
     // Outputs:
-    // base_A, base_B and base_C = input ext_A, ext_B and ext_C respectively
+    // base_A = input ext_A
+    // base_B_low = input directory index
     // base_D = parent directory index, or num directories if this is the root
-    // However, if ext_C = 0 and ext_B_high = 0, then:
+    // Provided that ext_C = 0 and ext_B_high = 0:
     // base_B_high is overwritten by the first file in the referenced directory
     // base_C is the offset to the subtable for files/subdirs in said directory
     // (relative to the nitro handle)
+    // If this precondition is not met, the values from ext_b_high and ext_c
+    // respectively will just be copied in
     int FS72_Command_GetDirectoryData(FSStruct72* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 3.
@@ -224,6 +229,49 @@ extern "C"
     // ext_c = 0
     // ext_d, reg8, reg9 unchanged
     int FS72_Command_GetFileOrDirectoryByName(FSStruct72* fs);
+
+    // Default command for FS72_ExecuteCommand with opcode 5.
+    // Computes the full path of a file or directory given its ID.
+    // Inputs:
+    // flag bit 5 (0x20): set if specifying a directory, clear if specifying a file
+    // base_a: id of file to get data of (unused if handling a directory)
+    // base_b_low: id of dir to get data of (unused for files)
+    // ext_a: pointer to output the filename. If null, nothing will be written
+    //        and routine will succeed, providing only the other outputs
+    // ext_b: output buffer capacity
+    // ext_c_low: should be 0. If nonzero, this and ext_c_high will be treated
+    //            as outputs from a previous run of this function (with only
+    //            perhaps a different value of ext_a)
+    // Outputs:
+    // the full path, as a null-terminated string in the format
+    // "sig:/path/to/file.ext" (in practice, sig is either 'arc' or 'rom')
+    // is written to the address in ext_a
+    // ext_c_low: number of bytes written, including the null-terminator
+    // ext_c_high: directory id (either input dir id if you specified a dir, or
+    // the id of the container directory if you specified a file)
+    int FS72_Command_GetPath(FSStruct72* fs);
+
+    // Default command for FS72_ExecuteCommand with opcode 6.
+    // Loads data from the file allocation table.
+    // Inputs:
+    // ext_b: file id / index in the table
+    // Outputs:
+    // base_a and ext_c: file id
+    // base_b, base_d and ext_a: beginning of allocation
+    // base_c and ext_b: end of allocation
+    int FS72_Command_GetFATEntry(FSStruct72* fs);
+
+    // Default command for FS72_ExecuteCommand with opcode 7.
+    // Copies data from the extended registers into the base registers.
+    // Specifically:
+    // ext_a is copied into base_b and base_d
+    // ext_b is copied into base_c
+    // ext_c is copied into base_a
+    int FS72_Command_CopyExtendedRegisters(FSStruct72* fs);
+
+    // Default command for FS72_ExecuteCommand with opcode 8.
+    // A simple nop.
+    int FS72_Command_Nop(FSStruct72* fs);
 }
 
 struct FSStruct76

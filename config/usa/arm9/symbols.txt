@@ -5295,10 +5295,10 @@ FS72_Command_Save kind:function(arm,size=0x2c) addr:0x020cb390
 FS72_Command_GetDirectoryData kind:function(arm,size=0x98) addr:0x020cb3bc
 FS72_Command_GetFileOrDirectoryNameData kind:function(arm,size=0x12c) addr:0x020cb454
 FS72_Command_GetFileOrDirectoryByName kind:function(arm,size=0x1e4) addr:0x020cb580
-func_020cb764 kind:function(arm,size=0x3ac) addr:0x020cb764
-func_020cbb10 kind:function(arm,size=0x80) addr:0x020cbb10
-func_020cbb90 kind:function(arm,size=0x28) addr:0x020cbb90
-func_020cbbb8 kind:function(arm,size=0x8) addr:0x020cbbb8
+FS72_Command_GetPath kind:function(arm,size=0x3ac) addr:0x020cb764
+FS72_Command_GetFATEntry kind:function(arm,size=0x80) addr:0x020cbb10
+FS72_Command_CopyExtendedRegisters kind:function(arm,size=0x28) addr:0x020cbb90
+FS72_Command_Nop kind:function(arm,size=0x8) addr:0x020cbbb8
 func_020cbbc0 kind:function(arm,size=0x58) addr:0x020cbbc0
 func_020cbc18 kind:function(arm,size=0x1c) addr:0x020cbc18
 func_020cbc34 kind:function(arm,size=0x20) addr:0x020cbc34
@@ -6490,7 +6490,6 @@ data_020ed658 kind:data(any) addr:0x020ed658
 data_020ed668 kind:data(any) addr:0x020ed668
 data_020ed66a kind:data(any) addr:0x020ed66a
 data_020ed66c kind:data(any) addr:0x020ed66c
-data_020ed6c8 kind:data(any) addr:0x020ed6c8
 data_020ed6ec kind:data(any) addr:0x020ed6ec
 data_020ed82c kind:data(any) addr:0x020ed82c
 data_020edf2c kind:data(any) addr:0x020edf2c

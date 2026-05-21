@@ -118,4 +118,5 @@ src/System/Interrupts.cpp:
 
 src/Filesystem/FSStruct.cpp:
     complete
-    .text start:0x020cb034 end:0x020cb764
+    .rodata start:0x020ed6c8 end:0x020ed6ec
+    .text start:0x020cb034 end:0x020cbbc0

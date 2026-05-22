@@ -6,7 +6,7 @@
     where it makes a difference, but some of this could definitely be wrong.
 
     As it currently stands:
-    * reg9 in FSStruct72 needs to be volatile so that writing to the address it holds
+    * reg9 in NitroVM needs to be volatile so that writing to the address it holds
       in FS72_Command_GetFileByName happens in the right order. At least the pointer
       member needs to be volatile.
       
@@ -25,29 +25,31 @@ struct FSLinkedListChildSet
     void* pLast;
 };
 
-struct NarcHandleInitialPart;
-struct FSStruct72;
+struct NitroHandle;
+struct NitroVM;
 
 // Signature: (this, dst, imageOffset, copyLength)
-typedef int(*PFNLoadFile)(NarcHandleInitialPart*, void*, unsigned int, unsigned int);
+typedef int(*PFNLoadFile)(NitroHandle*, void*, unsigned int, unsigned int);
 // Signature: (this, src, imageOffset, copyLength)
-typedef int(*PFNSaveFile)(NarcHandleInitialPart*, const void*, unsigned int, unsigned int);
+typedef int(*PFNSaveFile)(NitroHandle*, const void*, unsigned int, unsigned int);
 //
-typedef int(*PFNExecuteCommand)(FSStruct72*, int);
+typedef int(*PFNExecuteCommand)(NitroVM*, int);
 
-// sizeof(NarcHandleInitialPart) == 92.
+// sizeof(NitroHandle) == 92.
 // Used much more broadly but idk where atm
-struct NarcHandleInitialPart
+struct NitroHandle
 {
     unsigned int signature; // 'rom' or 'arc'
-    char unknown_04[8];
+    // Weird, but I think this is next and previous in that order
+    NitroHandle* pNeighbor4;
+    NitroHandle* pNeighbor8;
     int unknown_0C;
     int unknown_10;
     int unknown_14;
     int unknown_18;
-    unsigned int flags_1C; // might need this volatile
+    volatile unsigned int flags_1C;
     char unknown_20[4];
-    FSStruct72* fs_24;
+    NitroVM* fs_24;
     void* pFileImage;
     int fatOffset_2C;
     unsigned int fatSize;
@@ -55,14 +57,14 @@ struct NarcHandleInitialPart
     unsigned int nameTableSize;
     int fatOffset_3C;
     int nameTableOffset_40;
-    int unknown_44;
+    void* maybeTablePtr;
     PFNLoadFile loadFileProc_48;
     PFNSaveFile saveFileProc;
     // From some lua testing, this is always either 020cbc18 or 020cbc54.
     // The former copies from (pFileImage + imageOffset), the latter treats
     // imageOffset as a true pointer.
     PFNLoadFile loadFileProc_50;
-    // Seems to be some kind of opcode override. Signature (FSStruct72*, int opcode).
+    // Seems to be some kind of opcode override. Signature (NitroVM*, int opcode).
     // The only non-null one I've found is func_020ccd48 overriding opcodes 1,
     // 9 and 10 (with the latter two being unimplemented by default)
     PFNExecuteCommand instructionOverride;
@@ -104,18 +106,18 @@ union FSRegisterSet
     };
 };
 
-// func_020cbb90 
-struct FSStruct72
+// This is the 72-byte struct we see in a bunch of places
+struct NitroVM
 {
-    FSStruct72* pPrev;
-    FSStruct72* pNext;
-    NarcHandleInitialPart* unknown_8;
+    NitroVM* pPrev;
+    NitroVM* pNext;
+    NitroHandle* unknown_8;
     // Initially we were always marking the struct as volatile. But this
     // seems to work better. Uses are not properly known, but for now:
     // * bit 5: directory (set) or file (clear). Used in command #5
     volatile unsigned int flags;
     // func_020cbf14 uses this as the opcode in a call to ExecuteCommand
-    char unknown_10[4];
+    int maybeScheduledCommand;
     int storedResult;
     FSLinkedListChildSet unknown_sublist_18;
     FSRegisterSet regbase;
@@ -126,26 +128,26 @@ struct FSStruct72
 
 struct FSReadHandle
 {
-    NarcHandleInitialPart* nitroHandle;
+    NitroHandle* nitroHandle;
     unsigned int offset;
 };
 
 extern "C"
 {
-    void FS72_PopAndUpdateResult(FSStruct72* fs, int result);
-    int FS72_ExecuteCommand(FSStruct72* fs, int opcode);
+    void FS72_PopAndUpdateResult(NitroVM* fs, int result);
+    int FS72_ExecuteCommand(NitroVM* fs, int opcode);
     int CaseInsensitiveStrncmp(const unsigned char* first, const unsigned char* second, unsigned int len);
     int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len);
 
     // Pass the index of the directory relative to the beginning of directory entries.
     // That is, for the directory F000, pass 0. For FFFF, pass FFF.
     // The FS struct will end up containing the following values.
-    // value_20: NarcHandleInitialPart* (fs->unknown_8)
+    // value_20: NitroHandle* (fs->unknown_8)
     // value_24.low = input dirIndex
     // value_24.high = id of first file in this directory
     // value_28 = offset of subtable relative to start of data section for NarcHandleInitial
     // value_2C = (int)id of parent directory
-    int FS72_LoadDirectoryDataByIndex(FSStruct72* fs, unsigned int dirIndex);
+    int FS72_LoadDirectoryDataByIndex(NitroVM* fs, unsigned int dirIndex);
 
     // Default command for FS72_ExecuteCommand with opcode 0.
     // Expects as inputs:
@@ -154,7 +156,7 @@ extern "C"
     // value_38 = number of bytes to load.
     // Outputs:
     // The value_2C is adjusted by the number of bytes loaded.
-    int FS72_Command_Load(FSStruct72* fs);
+    int FS72_Command_Load(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 1.
     // Very likely completely unused since nitro files are read-only.
@@ -164,7 +166,7 @@ extern "C"
     // value_38 = number of bytes to copy
     // Outputs:
     // value_2C is adjusted by the number of bytes saved.
-    int FS72_Command_Save(FSStruct72* fs);
+    int FS72_Command_Save(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 2.
     // Expects as inputs:
@@ -179,7 +181,7 @@ extern "C"
     // (relative to the nitro handle)
     // If this precondition is not met, the values from ext_b_high and ext_c
     // respectively will just be copied in
-    int FS72_Command_GetDirectoryData(FSStruct72* fs);
+    int FS72_Command_GetDirectoryData(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 3.
     // Loads data from a FNT subtable within the nitro filesystem.
@@ -194,7 +196,7 @@ extern "C"
     // base_b_high is incremented if we found a file (not a directory)
     // Returns 0 on success, 1 if at end of table and other values if inner
     // processes go wrong for whatever reason
-    int FS72_Command_GetFileOrDirectoryNameData(FSStruct72* fs);
+    int FS72_Command_GetFileOrDirectoryNameData(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 4.
     // Gets the ID and related data of a file / directory based on the name.
@@ -228,7 +230,7 @@ extern "C"
     // ext_b = directory id if got a directory, 0 otherwise
     // ext_c = 0
     // ext_d, reg8, reg9 unchanged
-    int FS72_Command_GetFileOrDirectoryByName(FSStruct72* fs);
+    int FS72_Command_GetFileOrDirectoryByName(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 5.
     // Computes the full path of a file or directory given its ID.
@@ -249,7 +251,7 @@ extern "C"
     // ext_c_low: number of bytes written, including the null-terminator
     // ext_c_high: directory id (either input dir id if you specified a dir, or
     // the id of the container directory if you specified a file)
-    int FS72_Command_GetPath(FSStruct72* fs);
+    int FS72_Command_GetPath(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 6.
     // Loads data from the file allocation table.
@@ -259,7 +261,7 @@ extern "C"
     // base_a and ext_c: file id
     // base_b, base_d and ext_a: beginning of allocation
     // base_c and ext_b: end of allocation
-    int FS72_Command_GetFATEntry(FSStruct72* fs);
+    int FS72_Command_GetFATEntry(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 7.
     // Copies data from the extended registers into the base registers.
@@ -267,17 +269,19 @@ extern "C"
     // ext_a is copied into base_b and base_d
     // ext_b is copied into base_c
     // ext_c is copied into base_a
-    int FS72_Command_CopyExtendedRegisters(FSStruct72* fs);
+    int FS72_Command_CopyExtendedRegisters(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 8.
     // A simple nop.
-    int FS72_Command_Nop(FSStruct72* fs);
+    int FS72_Command_Nop(NitroVM* fs);
+
+    unsigned int Nitro_CalculateSignature(const char* str, int len);
 }
 
 struct FSStruct76
 {
     unsigned short unknown_0;
     unsigned short unknown_2;
-    FSStruct72 inner;
+    NitroVM inner;
 };
 

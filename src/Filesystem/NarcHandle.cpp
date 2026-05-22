@@ -1,6 +1,7 @@
 #include "Filesystem/NarcHandle.h"
 #include "std_library_functions.h"
 #include "Filesystem/FSStructs.h"
+#include "Filesystem/LowNitroHandle.h"
 #include <globaldefs.h>
 
 #define NARC_HEADER 0x4352414e
@@ -14,7 +15,6 @@
 
 extern "C"
 {
-    void func_020cc0fc(void*);
     bool func_020cc168(void*, const char*, unsigned int);
 
     bool func_020cc2a0(void* narcUnknown, const void* image,
@@ -26,10 +26,10 @@ extern "C"
 
     bool func_020cc310(void*);
 
-    void func_020cc758(FSStruct72*);
-    bool func_020cca38(FSStruct72*, const char*);
-    void func_020cca80(FSStruct72*);
-    bool func_020cc9c8(FSStruct72*, void*, unsigned int, volatile void*);
+    void func_020cc758(NitroVM*);
+    bool func_020cca38(NitroVM*, const char*);
+    void func_020cca80(NitroVM*);
+    bool func_020cc9c8(NitroVM*, void*, unsigned int, volatile void*);
 }
 
 struct NarcHeader
@@ -111,32 +111,32 @@ bool NarcHandle::Initialize(const char* signatureString, const unsigned char* bu
         
     }
 
-    func_020cc0fc(this);
+    NitroHandle_ZeroInit(&initial);
     pNarcFile = buffer;
     pFATBSection = fatPtr;
-    const unsigned char* imgPostHeader = (const unsigned char*)(imgPtr) + 8;
+    unsigned char* imgPostHeader = (unsigned char*)(imgPtr) + 8;
     pFileDataStart = imgPostHeader;
 
-    if (!func_020cc168(&initial, signatureString, strlen(signatureString)))
+    if (!NitroHandle_AddToList(&initial, signatureString, strlen(signatureString)))
         return false;
 
-    if (func_020cc2a0(&initial, imgPostHeader,
+    if (NitroHandle_Populate(&initial, imgPostHeader,
             (unsigned int)fatPtr + 12 - (unsigned int)imgPostHeader, fatPtr->sectionSize - 12,
             (unsigned int)fntPtr + 8 - (unsigned int)imgPostHeader, fntPtr->sectionSize - 8,
             NULL, NULL))
         return true;
 
-    func_020cc21c(&initial);
+    NitroHandle_RemoveFromList(&initial);
 
     return false;
 }
 
 bool NarcHandle::MaybeDestroy()
 {
-    if (!func_020cc310(&initial))
+    if (!NitroHandle_Destroy(&initial))
         return false;
 
-    func_020cc21c(&initial);
+    NitroHandle_RemoveFromList(&initial);
     return true;
 }
 
@@ -145,7 +145,7 @@ bool NarcHandle::MaybeDestroy()
 extern "C" int func_020afd0c(const char* filename)
 {
     int ret = NULL;
-    FSStruct72 files;
+    NitroVM files;
     func_020cc758(&files);
 
     if (func_020cca38(&files, filename))

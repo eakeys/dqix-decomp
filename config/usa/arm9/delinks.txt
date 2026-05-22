@@ -119,4 +119,8 @@ src/System/Interrupts.cpp:
 src/Filesystem/FSStruct.cpp:
     complete
     .rodata start:0x020ed6c8 end:0x020ed6ec
-    .text start:0x020cb034 end:0x020cbbc0
+    .text start:0x020cb034 end:0x020cbc18
+
+src/Filesystem/LowNitroHandle.cpp:
+    complete
+    .text start:0x020cc0fc end:0x020cc730

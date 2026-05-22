@@ -8,7 +8,7 @@ bool IsFileValidNarc(const unsigned char* buffer);
 class NarcHandle
 {
 public:
-    NarcHandleInitialPart initial;
+    NitroHandle initial;
     const void* pNarcFile; // points to where the narc itself is loaded in memory
     const void* pFATBSection; // points to the 'FATB' header
     const void* pFileDataStart; // points past the 8-byte 'FIMG' header
@@ -19,4 +19,4 @@ public:
     const void* GetFileByIndex(unsigned int idx) const;
 };
 
-extern "C" bool func_020afd88(FSStruct72* files, NarcHandle* narc, unsigned int fileIdx);
+extern "C" bool func_020afd88(NitroVM* files, NarcHandle* narc, unsigned int fileIdx);

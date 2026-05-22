@@ -6,13 +6,13 @@
 // -O2,p optimization seems to be needed here
 #pragma optimize_for_size off
 
-typedef int(*FixedCommand)(FSStruct72*);
+typedef int(*FixedCommand)(NitroVM*);
 
 extern FixedCommand data_020ed6c8[];
 
 extern "C" void func_020c7898(void*);
 extern "C" void func_020c78e8(volatile void*);
-extern "C" void func_020cc758(FSStruct72*);
+extern "C" void func_020cc758(NitroVM*);
 
 #define GET_FLAG_BIT(what, idx) (((what) & (1 << (idx))) ? 1 : 0)
 
@@ -24,12 +24,12 @@ extern "C" void func_020cc758(FSStruct72*);
 #define FS_RESULT_SUCCESS 0
 #define FS_RESULT_FAILURE 1
 
-extern "C" void FS72_PopAndUpdateResult(FSStruct72* fs, int result)
+extern "C" void FS72_PopAndUpdateResult(NitroVM* fs, int result)
 {
     int priorIRQState = DisableIRQInterrupts();
 
-    FSStruct72* prev = fs->pPrev;
-    FSStruct72* next = fs->pNext;
+    NitroVM* prev = fs->pPrev;
+    NitroVM* next = fs->pNext;
 
     if (prev != NULL)
         prev->pNext = next;
@@ -47,17 +47,20 @@ extern "C" void FS72_PopAndUpdateResult(FSStruct72* fs, int result)
     SetIRQInterruptState(priorIRQState);
 }
 
-extern "C" int FS72_ExecuteCommand(FSStruct72* fs, int opcode)
+extern "C" int FS72_ExecuteCommand(NitroVM* fs, int opcode)
 {
     int result;
     int startingFlags = fs->flags;
-    NarcHandleInitialPart* nitroHandle = fs->unknown_8;
+    NitroHandle* nitroHandle = fs->unknown_8;
     int opcodeMask = 1 << opcode;
-    
+
+    // Bit verbose, but this way works with volatile and non-volatile
+    unsigned int flagAdjust = nitroHandle->flags_1C;
     if (GET_FLAG_BIT(startingFlags, 2))
-        nitroHandle->flags_1C |= 0x200;
+        flagAdjust |= (1 << 9);
     else
-        nitroHandle->flags_1C |= 0x100;
+        flagAdjust |= (1 << 8);
+    nitroHandle->flags_1C = flagAdjust;
 
     if ((nitroHandle->overrideOpcodeFlags & opcodeMask))
     {
@@ -127,7 +130,8 @@ extern "C" int FS72_ExecuteCommand(FSStruct72* fs, int opcode)
     return result;
 }
 
-extern "C" int CaseInsensitiveStrncmp(const unsigned char* first, const unsigned char* second, unsigned int len)
+extern "C" int CaseInsensitiveStrncmp(const unsigned char* first,
+    const unsigned char* second, unsigned int len)
 {
     unsigned int index = 0;
     // needed to prevent optimizing to len != 0
@@ -155,7 +159,7 @@ extern "C" int CaseInsensitiveStrncmp(const unsigned char* first, const unsigned
 
 extern "C" int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len)
 {
-    NarcHandleInitialPart* nitroHandle = handle->nitroHandle;
+    NitroHandle* nitroHandle = handle->nitroHandle;
     nitroHandle->flags_1C |= 0x200;
 
     int result = nitroHandle->loadFileProc_50(nitroHandle, dst, handle->offset, len);
@@ -190,7 +194,7 @@ extern "C" int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len)
 // base_b_high holds the id of the first file in the directory
 // base_c holds an offset to the relevant FNT subtable (in particular, you're
 // ready to iteratively run command 3 to get data about each contained file/subdir)
-extern "C" int FS72_LoadDirectoryDataByIndex(FSStruct72* fs, unsigned int dirIndex)
+extern "C" int FS72_LoadDirectoryDataByIndex(NitroVM* fs, unsigned int dirIndex)
 {
     fs->flags |= 4;
     fs->regext.a.ptr = fs->unknown_8;
@@ -200,22 +204,22 @@ extern "C" int FS72_LoadDirectoryDataByIndex(FSStruct72* fs, unsigned int dirInd
     return FS72_ExecuteCommand(fs, 2);
 }
 
-extern "C" int FS72_Command_Load(FSStruct72* fs)
+extern "C" int FS72_Command_Load(NitroVM* fs)
 {
     unsigned int oldOffset = fs->regbase.d.u32;
     unsigned int length = fs->regext.c.u32;
-    NarcHandleInitialPart* nitroHandle = fs->unknown_8;
+    NitroHandle* nitroHandle = fs->unknown_8;
     void* dst = fs->regext.a.ptr;
 
     fs->regbase.d.u32 = oldOffset + length;
     return nitroHandle->loadFileProc_48(nitroHandle, dst, oldOffset, length);
 }
 
-extern "C" int FS72_Command_Save(FSStruct72* fs)
+extern "C" int FS72_Command_Save(NitroVM* fs)
 {
     unsigned int oldOffset = fs->regbase.d.u32;
     unsigned int length = fs->regext.c.u32;
-    NarcHandleInitialPart* nitroHandle = fs->unknown_8;
+    NitroHandle* nitroHandle = fs->unknown_8;
     void* src = fs->regext.a.ptr;
 
     fs->regbase.d.u32 = oldOffset + length;
@@ -229,9 +233,9 @@ struct FNTMainTableEntry
     unsigned short numDirectoriesOrParentID; // first (root) entry holds num directories, rest hold parent ID
 };
 
-extern "C" int FS72_Command_GetDirectoryData(FSStruct72* fs)
+extern "C" int FS72_Command_GetDirectoryData(NitroVM* fs)
 {
-    NarcHandleInitialPart* nitroHandle = fs->unknown_8;
+    NitroHandle* nitroHandle = fs->unknown_8;
     FSRegisterSet* extendedRegs = &fs->regext;
     FNTMainTableEntry tableEntry;
     FSReadHandle readHandle;
@@ -258,7 +262,7 @@ extern "C" int FS72_Command_GetDirectoryData(FSStruct72* fs)
 
 struct FileDataStore
 {
-    NarcHandleInitialPart* nitroHandle;
+    NitroHandle* nitroHandle;
     // If holding data for a file, holds the file ID as a 32-bit value
     // (i.e. top 16 bits are zero).
     // If holding data for a directory, the bottom 16 bits hold its ID
@@ -272,7 +276,7 @@ struct FileDataStore
     unsigned char name[128];
 };
 
-extern "C" int FS72_Command_GetFileOrDirectoryNameData(FSStruct72* fs)
+extern "C" int FS72_Command_GetFileOrDirectoryNameData(NitroVM* fs)
 {
     FileDataStore* pStorage = (FileDataStore*)fs->regext.a.ptr;
     FSReadHandle readHandle;
@@ -327,7 +331,7 @@ extern "C" int FS72_Command_GetFileOrDirectoryNameData(FSStruct72* fs)
     return result;
 }
 
-extern "C" int FS72_Command_GetFileOrDirectoryByName(FSStruct72* fs)
+extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* fs)
 {
     FileDataStore storage;
     unsigned char* filePath = (unsigned char*)fs->regext.d.ptr;
@@ -416,7 +420,7 @@ extern "C" int FS72_Command_GetFileOrDirectoryByName(FSStruct72* fs)
                 volatile FileDataStore& volStorage = storage;
                 FSRegisterSet* writeLocation = (FSRegisterSet*)fs->reg9.ptr;
 
-                NarcHandleInitialPart* nh = volStorage.nitroHandle;
+                NitroHandle* nh = volStorage.nitroHandle;
                 unsigned int fileID = volStorage.fileOrDirID.s32;
                 writeLocation->a.ptr = nh;
                 writeLocation->b.u32 = fileID;
@@ -441,13 +445,13 @@ extern unsigned char data_020f2288[]; // ":/"
 
 #define NITROFS_ID_INVALID 0x10000
 
-extern "C" int FS72_Command_GetPath(FSStruct72* fs)
+extern "C" int FS72_Command_GetPath(NitroVM* fs)
 {
     
     FileDataStore storage;
-    FSStruct72 tempFS;
+    NitroVM tempFS;
 
-    NarcHandleInitialPart* nitroHandle = fs->unknown_8;
+    NitroHandle* nitroHandle = fs->unknown_8;
     // Initialisation function
     func_020cc758(&tempFS);
     tempFS.unknown_8 = fs->unknown_8;
@@ -661,7 +665,7 @@ extern "C" int FS72_Command_GetPath(FSStruct72* fs)
     return 0;
 }
 
-extern "C" int FS72_Command_GetFATEntry(FSStruct72* fs)
+extern "C" int FS72_Command_GetFATEntry(NitroVM* fs)
 {
     unsigned int offsets[2];
     FSReadHandle readHandle;
@@ -689,7 +693,7 @@ extern "C" int FS72_Command_GetFATEntry(FSStruct72* fs)
     return FS72_ExecuteCommand(fs, 7);
 }
 
-extern "C" int FS72_Command_CopyExtendedRegisters(FSStruct72* fs)
+extern "C" int FS72_Command_CopyExtendedRegisters(NitroVM* fs)
 {
     fs->regbase.b.u32 = fs->regext.a.u32;
     fs->regbase.d.u32 = fs->regext.a.u32;
@@ -698,7 +702,39 @@ extern "C" int FS72_Command_CopyExtendedRegisters(FSStruct72* fs)
     return 0;
 }
 
-extern "C" int FS72_Command_Nop(FSStruct72* fs)
+extern "C" int FS72_Command_Nop(NitroVM* fs)
 {
     return 0;
+}
+
+extern "C" unsigned int Nitro_CalculateSignature(const char* str, int len)
+{
+    unsigned int signature = 0;
+
+    if (len <= 3)
+    {
+        int idx = 0; 
+        if (len > 0)
+        {   
+            int bitshift = 0;
+            
+            do {
+                if ((unsigned char)str[idx] == '\0')
+                    break;
+                
+                // Convert to lowercase
+                unsigned int charValue = (unsigned char)str[idx] - 'A';
+                if (charValue <= 'Z' - 'A')
+                    charValue += 'a';
+                else
+                    charValue += 'A';
+
+                idx++;
+                signature |= charValue << bitshift;
+                bitshift += 8;
+            } while (idx < len);
+        }
+    }
+
+    return signature;
 }

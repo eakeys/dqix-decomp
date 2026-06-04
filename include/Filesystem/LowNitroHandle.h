@@ -16,18 +16,31 @@ extern "C"
 
     int NitroHandle_Destroy(NitroHandle*);
 
+    // Loads the file tables (FAT and FNT) into memory at the given
+    // position. The memory should already be allocated in some way.
     // Returns the amount of space used or needed. If this exceeds the
     // capacity, nothing will be written.
-    unsigned int NitroHandle_GetFileTables(NitroHandle*, void* into, unsigned int capacity);
+    unsigned int NitroHandle_LoadFileTables(NitroHandle*, void* into, unsigned int capacity);
 
     // Removes all references to the file tables, then returns the pointer
     // to the allocation so that you can free the memory
     void* NitroHandle_ReleaseFileTables(NitroHandle*);
 
-    int NitroHandle_UnknownDestructionFunction(NitroHandle*);
-    int NitroHandle_OtherUnknownDestFunc(NitroHandle*);
+    CBool NitroHandle_UnknownDestructionFunction(NitroHandle*);
+    CBool NitroHandle_OtherUnknownDestFunc(NitroHandle*);
 
     void NitroHandle_SetOpcodeOverride(NitroHandle*, PFNExecuteCommand, unsigned int mask);
 
     void NitroHandle_020cc6ac(NitroHandle*, int result);
+
+    void InitializeCartridgeFilesystem(int unknown);
+
+    void NitroVM_Initialize(NitroVM*);
+
+    // Can be used with a temporary VM, and doesn't need a nitro handle
+    // attached - it will be assigned by the function itself
+    int GlobalSearchFileOrDirectory_020cc780(NitroVM*, const char* path,
+        NitroFileAccessor* outFileData, NitroDirectoryAccessor* outDirData);
+
+   int NitroVM_ExecuteLoad_020cc8c4(NitroVM*, void* dst, int capacity, int unknownBool);
 }

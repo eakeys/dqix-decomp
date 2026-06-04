@@ -25,8 +25,17 @@ struct FSLinkedListChildSet
     void* pLast;
 };
 
+template<class T>
+struct FSListHeader
+{
+    T* pPrev;
+    T* pNext;
+};
+
 struct NitroHandle;
 struct NitroVM;
+
+typedef int CBool;
 
 // Signature: (this, dst, imageOffset, copyLength)
 typedef int(*PFNLoadFile)(NitroHandle*, void*, unsigned int, unsigned int);
@@ -34,43 +43,6 @@ typedef int(*PFNLoadFile)(NitroHandle*, void*, unsigned int, unsigned int);
 typedef int(*PFNSaveFile)(NitroHandle*, const void*, unsigned int, unsigned int);
 //
 typedef int(*PFNExecuteCommand)(NitroVM*, int);
-
-// sizeof(NitroHandle) == 92.
-// Used much more broadly but idk where atm
-struct NitroHandle
-{
-    unsigned int signature; // 'rom' or 'arc'
-    // Weird, but I think this is next and previous in that order
-    NitroHandle* pNeighbor4;
-    NitroHandle* pNeighbor8;
-    int unknown_0C;
-    int unknown_10;
-    int unknown_14;
-    int unknown_18;
-    volatile unsigned int flags_1C;
-    char unknown_20[4];
-    NitroVM* fs_24;
-    void* pFileImage;
-    int fatOffset_2C;
-    unsigned int fatSize;
-    int nameTableOffset_34;
-    unsigned int nameTableSize;
-    int fatOffset_3C;
-    int nameTableOffset_40;
-    void* maybeTablePtr;
-    PFNLoadFile loadFileProc_48;
-    PFNSaveFile saveFileProc;
-    // From some lua testing, this is always either 020cbc18 or 020cbc54.
-    // The former copies from (pFileImage + imageOffset), the latter treats
-    // imageOffset as a true pointer.
-    PFNLoadFile loadFileProc_50;
-    // Seems to be some kind of opcode override. Signature (NitroVM*, int opcode).
-    // The only non-null one I've found is func_020ccd48 overriding opcodes 1,
-    // 9 and 10 (with the latter two being unimplemented by default)
-    PFNExecuteCommand instructionOverride;
-    // Indicates whether to use the opcode override for a given opcode
-    unsigned int overrideOpcodeFlags;
-};
 
 // The FS72 struct seems to hold a bunch of values that are used
 // for various different purposes by different commands. It seems they're
@@ -92,26 +64,20 @@ union FSRegister
 
 // There are a few operations that act on multiple registers at once
 // via ldm / stm commands, which is consistent with copy-assigning an array
-union FSRegisterSet
+union FSRegisterTriple
 {
-    struct { FSRegister vals[4]; } abcd;
-    struct { FSRegister vals[3]; } abc;
-    struct { FSRegister vals[2]; } ab;
-
     struct {
         FSRegister a;
         FSRegister b;
         FSRegister c;
-        FSRegister d;
     };
 };
 
 // This is the 72-byte struct we see in a bunch of places
 struct NitroVM
 {
-    NitroVM* pPrev;
-    NitroVM* pNext;
-    NitroHandle* unknown_8;
+    FSListHeader<NitroVM> links;
+    NitroHandle* linkedHandle;
     // Initially we were always marking the struct as volatile. But this
     // seems to work better. Uses are not properly known, but for now:
     // * bit 5: directory (set) or file (clear). Used in command #5
@@ -120,8 +86,10 @@ struct NitroVM
     int maybeScheduledCommand;
     int storedResult;
     FSLinkedListChildSet unknown_sublist_18;
-    FSRegisterSet regbase;
-    FSRegisterSet regext;
+    FSRegisterTriple regbase_abc;
+    FSRegister regbase_d;
+    FSRegisterTriple regext_abc;
+    FSRegister regext_d;
     FSRegister reg8;
     volatile FSRegister reg9;
 };
@@ -132,9 +100,66 @@ struct FSReadHandle
     unsigned int offset;
 };
 
+// sizeof(NitroHandle) == 92 == 0x5C.
+// Used much more broadly but idk where atm
+struct NitroHandle
+{
+    unsigned int signature; // 'rom' or 'arc'
+    // Weird, but I think this is next and previous in that order
+    NitroHandle* pNeighbor4;
+    NitroHandle* pNeighbor8;
+    int unknown_0C;
+    int unknown_10;
+    int unknown_14;
+    int unknown_18;
+    volatile unsigned int flags;
+    // Creates a fake first entry in a list of VMs. The previous pointer
+    // in here is unused (probably null) and next points to the first actual VM
+    FSListHeader<NitroVM> linkToFirstVM;
+    void* pFileImage;
+    int fatOffset_2C;
+    unsigned int fatSize;
+    int nameTableOffset_34;
+    unsigned int nameTableSize;
+    int fatOffset_3C;
+    int nameTableOffset_40;
+    // When the tables are loaded into memory, this is the pointer that was
+    // passed (though the start of the tables might be a bit after this)
+    void* tableRawPointer;
+    PFNLoadFile loadFileProc_48;
+    PFNSaveFile saveFileProc;
+    // From some lua testing, this is always either 020cbc18 or 020cbc54.
+    // The former copies from (pFileImage + imageOffset), the latter treats
+    // imageOffset as a true pointer.
+    PFNLoadFile loadFileProc_50;
+    // Seems to be some kind of opcode override. Signature (NitroVM*, int opcode).
+    // The only non-null one I've found is func_020ccd48 overriding opcodes 1,
+    // 9 and 10 (with the latter two being unimplemented by default)
+    PFNExecuteCommand instructionOverride;
+    // Indicates whether to use the opcode override for a given opcode
+    unsigned int overrideOpcodeFlags;
+};
+
+struct NitroFileAccessor
+{
+    NitroHandle* handle;
+    unsigned int fileID;
+};
+
+struct NitroDirectoryAccessor
+{
+    // unnamed struct to make this trivially copyable (using ldm, stm commands)
+    struct {
+        NitroHandle* handle;
+        unsigned short dirID;
+        unsigned short firstFileID;
+        unsigned int handleSubtableOffset;
+    };
+};
+
 extern "C"
 {
-    void FS72_PopAndUpdateResult(NitroVM* fs, int result);
+    void NitroVM_UnlinkAndStoreResult(NitroVM* fs, int result);
     int FS72_ExecuteCommand(NitroVM* fs, int opcode);
     int CaseInsensitiveStrncmp(const unsigned char* first, const unsigned char* second, unsigned int len);
     int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len);
@@ -142,28 +167,28 @@ extern "C"
     // Pass the index of the directory relative to the beginning of directory entries.
     // That is, for the directory F000, pass 0. For FFFF, pass FFF.
     // The FS struct will end up containing the following values.
-    // value_20: NitroHandle* (fs->unknown_8)
-    // value_24.low = input dirIndex
-    // value_24.high = id of first file in this directory
-    // value_28 = offset of subtable relative to start of data section for NarcHandleInitial
-    // value_2C = (int)id of parent directory
+    // base_A: NitroHandle* (fs->unknown_8)
+    // base_B.low = input dirIndex
+    // base_B.high = id of first file in this directory
+    // base_C = offset of subtable relative to start of data section for NarcHandleInitial
+    // base_D = (int)id of parent directory
     int FS72_LoadDirectoryDataByIndex(NitroVM* fs, unsigned int dirIndex);
 
     // Default command for FS72_ExecuteCommand with opcode 0.
     // Expects as inputs:
-    // value_2C = offset from beginning of the nitro data to start copying from
-    // value_30 = destination to load data to
-    // value_38 = number of bytes to load.
+    // base_D = offset from beginning of the nitro data to start copying from
+    // ext_A = destination to load data to
+    // ext_C = number of bytes to load.
     // Outputs:
-    // The value_2C is adjusted by the number of bytes loaded.
+    // base_D is adjusted by the number of bytes loaded.
     int FS72_Command_Load(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 1.
     // Very likely completely unused since nitro files are read-only.
     // Expects as inputs:
-    // value_2C = offset from beginning of the nitro data to start copying to
-    // value_30 = source data to copy
-    // value_38 = number of bytes to copy
+    // base_D = offset from beginning of the nitro data to start copying to
+    // ext_A = source data to copy
+    // ext_C = number of bytes to copy
     // Outputs:
     // value_2C is adjusted by the number of bytes saved.
     int FS72_Command_Save(NitroVM* fs);
@@ -209,14 +234,9 @@ extern "C"
     // reg8 = 1 if searching for a directory, 0 if searching for a file
     // reg9 = storage pointer
     // Outputs:
-    // Into reg9 we write the following data.
-    // * If we found a file: { nitro handle (ptr), file id (u32) }
-    // * If we found a directory: { 
-    //       nitro handle (ptr);
-    //       dir id (u16);
-    //       first file id (u16);
-    //       subtable offset in handle (u32)
-    //   }
+    // At the address given by the reg9 input, we populate either a
+    // NitroFileMetadata or a NitroDirectoryMetadata depending on what we
+    // found.
     // The other registers are probably unused, but their contents will be:
     // base_a = nitro handle
     // base_b_low = id either of the directory we found, or of the directory
@@ -272,10 +292,22 @@ extern "C"
     int FS72_Command_CopyExtendedRegisters(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 8.
-    // A simple nop.
+    // Does nothing, but might be intended as a sort of shutdown/destructor.
+    // (See e.g. func_020cca80 in USA, which is used at the end of functions
+    // that create temporary VMs and invokes command 8).
     int FS72_Command_Nop(NitroVM* fs);
 
     unsigned int Nitro_CalculateSignature(const char* str, int len);
+
+    NitroVM* NitroHandle_020cbc6c(NitroHandle* handle);
+    void NitroVM_020cbe80(NitroVM* vm);
+    // Boolean return value
+    int NitroVM_ExecuteAndUnlink_020cbf14(NitroVM* vm);
+    // Boolean return value. It seems like it executes the command and
+    // does some stuff to ensure it's 'fully' executed. (This can't be in terms
+    // of waiting for operations to complete, because everything is single threaded.
+    // But I think it's because of queued commands / stored results etc)
+    int NitroVM_020cbf58(NitroVM* vm, int opcode);
 }
 
 struct FSStruct76

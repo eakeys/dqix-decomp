@@ -2,6 +2,7 @@
 #include "std_library_functions.h"
 #include "Filesystem/FSStructs.h"
 #include "Filesystem/LowNitroHandle.h"
+#include "Filesystem/FileAccessor.h"
 #include <globaldefs.h>
 
 #define NARC_HEADER 0x4352414e
@@ -25,11 +26,6 @@ extern "C"
     void func_020cc21c(void*);
 
     bool func_020cc310(void*);
-
-    void func_020cc758(NitroVM*);
-    bool func_020cca38(NitroVM*, const char*);
-    void func_020cca80(NitroVM*);
-    bool func_020cc9c8(NitroVM*, void*, unsigned int, volatile void*);
 }
 
 struct NarcHeader
@@ -141,17 +137,17 @@ bool NarcHandle::MaybeDestroy()
 }
 
 // I don't know what this does, but it's right here so it's probably related
-// to narc handles somehow (could be that files.unknown_8 points to a narchandle)
+// to narc handles somehow (could be that files.linkedHandle points to a narchandle)
 extern "C" int func_020afd0c(const char* filename)
 {
     int ret = NULL;
-    NitroVM files;
-    func_020cc758(&files);
+    NitroVM machine;
+    NitroVM_Initialize(&machine);
 
-    if (func_020cca38(&files, filename))
+    if (NitroVM_PrepareReadFileByPath(&machine, filename))
     {
-        ret = (int)((NarcHandle*)files.unknown_8)->pFileDataStart + files.regbase.b.s32;
-        func_020cca80(&files);
+        ret = (int)((NarcHandle*)machine.linkedHandle)->pFileDataStart + machine.regbase_abc.b.s32;
+        NitroVM_MaybeCompleteTasks_020cca80(&machine);
     }
     return ret;
 }

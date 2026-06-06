@@ -78,35 +78,40 @@ union FSRegisterTriple
 #define NITROVM_FLAG_2 2
 #define NITROVM_FLAG_3 3
 #define NITROVM_FLAG_4 4
-#define NITROVM_FLAG_5 5
+// might have other uses but this is the only decomped one so far
+#define NITROVM_FLAG_SEARCHING_DIRECTORY 5
+// some kind of sync / interrupt loop thing again
 #define NITROVM_FLAG_6 6
 #define NITROVM_FLAG_7 7
 #define NITROVM_FLAG_8 8
 #define NITROVM_FLAG_9 9
 #define NITROVM_FLAG_10 10
 
-#define NITROVM_OPCODE_0 0
-#define NITROVM_OPCODE_1 1
-#define NITROVM_OPCODE_2 2
-#define NITROVM_OPCODE_3 3
-#define NITROVM_OPCODE_4 4
-#define NITROVM_OPCODE_5 5
-#define NITROVM_OPCODE_6 6
-#define NITROVM_OPCODE_7 7
+#define NITROVM_OPCODE_LOAD 0
+#define NITROVM_OPCODE_SAVE 1
+#define NITROVM_OPCODE_GET_DIRECTORY_DATA 2
+#define NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA 3
+#define NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_BY_NAME 4
+#define NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH 5
+#define NITROVM_OPCODE_GET_FAT_ENTRY 6
+#define NITROVM_OPCODE_COPY_REGISTERS 7
 #define NITROVM_OPCODE_8 8
 #define NITROVM_OPCODE_9 9
 #define NITROVM_OPCODE_10 10
-#define NITROVM_OPCODE_14 14
+#define NITROVM_OPCODE_MAYBE_INVALID 14
 
-#define NITRO_RESULT_0 0
-#define NITRO_RESULT_1 1
+#define NITRO_RESULT_SUCCESS 0
+#define NITRO_RESULT_FAILURE 1
 #define NITRO_RESULT_2 2
-#define NITRO_RESULT_3 3
+#define NITRO_RESULT_MAYBE_INVALID_HANDLE 3
 #define NITRO_RESULT_4 4
 #define NITRO_RESULT_5 5
-#define NITRO_RESULT_6 6
-#define NITRO_RESULT_7 7
-#define NITRO_RESULT_8 8
+// not sure about this one. The load opcode for the ROM filesystem returns this, and
+// ExecuteCommand() does a special loop based on nitroHandle flag 9 if the
+// instruction returns this value.
+#define NITRO_RESULT_REQUIRE_SYNC_MAYBE 6
+#define NITRO_RESULT_FALLBACK_TO_DEFAULT 7
+#define NITRO_RESULT_OPCODE_NOT_IMPLEMENTED 8
 
 // This is the 72-byte struct we see in a bunch of places
 struct NitroVM
@@ -135,12 +140,13 @@ struct FSReadHandle
     unsigned int offset;
 };
 
-#define NITROHANDLE_FLAG_0 0
-#define NITROHANDLE_FLAG_1 1
-#define NITROHANDLE_FLAG_2 2
+#define NITROHANDLE_FLAG_IS_IN_MAIN_LIST 0
+#define NITROHANDLE_FLAG_IS_POPULATED 1
+#define NITROHANDLE_FLAG_TABLES_LOADED_IN_MEMORY 2
 #define NITROHANDLE_FLAG_3 3
 #define NITROHANDLE_FLAG_4 4
 #define NITROHANDLE_FLAG_5 5
+// used for some sort of interrupt / sync loop thing
 #define NITROHANDLE_FLAG_6 6
 #define NITROHANDLE_FLAG_7 7
 #define NITROHANDLE_FLAG_8 8
@@ -206,7 +212,7 @@ struct NitroDirectoryAccessor
 extern "C"
 {
     void NitroVM_UnlinkAndStoreResult(NitroVM* fs, int result);
-    int FS72_ExecuteCommand(NitroVM* fs, int opcode);
+    int NitroVM_ExecuteCommand(NitroVM* fs, int opcode);
     int CaseInsensitiveStrncmp(const unsigned char* first, const unsigned char* second, unsigned int len);
     int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len);
 
@@ -218,7 +224,7 @@ extern "C"
     // base_B.high = id of first file in this directory
     // base_C = offset of subtable relative to start of data section for NarcHandleInitial
     // base_D = (int)id of parent directory
-    int FS72_LoadDirectoryDataByIndex(NitroVM* fs, unsigned int dirIndex);
+    int NitroVM_LoadDirectoryDataByIndex(NitroVM* fs, unsigned int dirIndex);
 
     // Default command for FS72_ExecuteCommand with opcode 0.
     // Expects as inputs:
@@ -227,7 +233,7 @@ extern "C"
     // ext_C = number of bytes to load.
     // Outputs:
     // base_D is adjusted by the number of bytes loaded.
-    int FS72_Command_Load(NitroVM* fs);
+    int NitroVM_DefaultCommand_Load(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 1.
     // Very likely completely unused since nitro files are read-only.
@@ -237,7 +243,7 @@ extern "C"
     // ext_C = number of bytes to copy
     // Outputs:
     // value_2C is adjusted by the number of bytes saved.
-    int FS72_Command_Save(NitroVM* fs);
+    int NitroVM_DefaultCommand_Save(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 2.
     // Expects as inputs:
@@ -252,7 +258,7 @@ extern "C"
     // (relative to the nitro handle)
     // If this precondition is not met, the values from ext_b_high and ext_c
     // respectively will just be copied in
-    int FS72_Command_GetDirectoryData(NitroVM* fs);
+    int NitroVM_DefaultCommand_GetDirectoryData(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 3.
     // Loads data from a FNT subtable within the nitro filesystem.
@@ -267,7 +273,7 @@ extern "C"
     // base_b_high is incremented if we found a file (not a directory)
     // Returns 0 on success, 1 if at end of table and other values if inner
     // processes go wrong for whatever reason
-    int FS72_Command_GetFileOrDirectoryNameData(NitroVM* fs);
+    int NitroVM_DefaultCommand_GetFileOrDirectoryNameData(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 4.
     // Gets the ID and related data of a file / directory based on the name.
@@ -296,7 +302,7 @@ extern "C"
     // ext_b = directory id if got a directory, 0 otherwise
     // ext_c = 0
     // ext_d, reg8, reg9 unchanged
-    int FS72_Command_GetFileOrDirectoryByName(NitroVM* fs);
+    int NitroVM_DefaultCommand_GetFileOrDirectoryByName(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 5.
     // Computes the full path of a file or directory given its ID.
@@ -317,7 +323,7 @@ extern "C"
     // ext_c_low: number of bytes written, including the null-terminator
     // ext_c_high: directory id (either input dir id if you specified a dir, or
     // the id of the container directory if you specified a file)
-    int FS72_Command_GetPath(NitroVM* fs);
+    int NitroVM_DefaultCommand_GetPath(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 6.
     // Loads data from the file allocation table.
@@ -327,7 +333,7 @@ extern "C"
     // base_a and ext_c: file id
     // base_b, base_d and ext_a: beginning of allocation
     // base_c and ext_b: end of allocation
-    int FS72_Command_GetFATEntry(NitroVM* fs);
+    int NitroVM_DefaultCommand_GetFATEntry(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 7.
     // Copies data from the extended registers into the base registers.
@@ -335,13 +341,13 @@ extern "C"
     // ext_a is copied into base_b and base_d
     // ext_b is copied into base_c
     // ext_c is copied into base_a
-    int FS72_Command_CopyExtendedRegisters(NitroVM* fs);
+    int NitroVM_DefaultCommand_CopyRegisters(NitroVM* fs);
 
     // Default command for FS72_ExecuteCommand with opcode 8.
     // Does nothing, but might be intended as a sort of shutdown/destructor.
     // (See e.g. func_020cca80 in USA, which is used at the end of functions
     // that create temporary VMs and invokes command 8).
-    int FS72_Command_Nop(NitroVM* fs);
+    int NitroVM_DefaultCommand_8_Nop(NitroVM* fs);
 
     unsigned int Nitro_CalculateSignature(const char* str, int len);
 

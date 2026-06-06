@@ -45,7 +45,7 @@ extern "C" void NitroVM_UnlinkAndStoreResult(NitroVM* vm, int result)
     SetIRQInterruptState(priorIRQState);
 }
 
-extern "C" int FS72_ExecuteCommand(NitroVM* vm, int opcode)
+extern "C" int NitroVM_ExecuteCommand(NitroVM* vm, int opcode)
 {
     int result;
     int machineStartingFlags = vm->flags;
@@ -65,37 +65,37 @@ extern "C" int FS72_ExecuteCommand(NitroVM* vm, int opcode)
         result = nitroHandle->instructionOverride(vm, opcode);
         switch (result)
         {
-        case NITRO_RESULT_0:
-        case NITRO_RESULT_1:
+        case NITRO_RESULT_SUCCESS:
+        case NITRO_RESULT_FAILURE:
         case NITRO_RESULT_4:
             vm->storedResult = result;
             break;
-        case NITRO_RESULT_8:
+        case NITRO_RESULT_OPCODE_NOT_IMPLEMENTED:
             nitroHandle->overrideOpcodeFlags &= ~opcodeMask;
-            result = NITRO_RESULT_7;
+            result = NITRO_RESULT_FALLBACK_TO_DEFAULT;
             break;
         }
     }
     else
-        result = NITRO_RESULT_7;
+        result = NITRO_RESULT_FALLBACK_TO_DEFAULT;
 
-    if (result == NITRO_RESULT_7)
+    if (result == NITRO_RESULT_FALLBACK_TO_DEFAULT)
     {
         static const FixedCommand defaultCommands[] = {
-            &FS72_Command_Load,
-            &FS72_Command_Save,
-            &FS72_Command_GetDirectoryData,
-            &FS72_Command_GetFileOrDirectoryNameData,
-            &FS72_Command_GetFileOrDirectoryByName,
-            &FS72_Command_GetPath,
-            &FS72_Command_GetFATEntry,
-            &FS72_Command_CopyExtendedRegisters,
-            &FS72_Command_Nop
+            &NitroVM_DefaultCommand_Load,
+            &NitroVM_DefaultCommand_Save,
+            &NitroVM_DefaultCommand_GetDirectoryData,
+            &NitroVM_DefaultCommand_GetFileOrDirectoryNameData,
+            &NitroVM_DefaultCommand_GetFileOrDirectoryByName,
+            &NitroVM_DefaultCommand_GetPath,
+            &NitroVM_DefaultCommand_GetFATEntry,
+            &NitroVM_DefaultCommand_CopyRegisters,
+            &NitroVM_DefaultCommand_8_Nop
         };
         result = defaultCommands[opcode](vm);
     }
 
-    if (result == NITRO_RESULT_6)
+    if (result == NITRO_RESULT_REQUIRE_SYNC_MAYBE)
     {
         if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_2))
         {
@@ -163,11 +163,11 @@ extern "C" int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len)
     int result = nitroHandle->loadFileProc_50(nitroHandle, dst, handle->offset, len);
     switch (result)
     {
-    case NITRO_RESULT_0:
-    case NITRO_RESULT_1:
-        nitroHandle->flags &= ~(1 << 9);
+    case NITRO_RESULT_SUCCESS:
+    case NITRO_RESULT_FAILURE:
+        nitroHandle->flags &= ~(1 << NITROHANDLE_FLAG_9);
         break;
-    case NITRO_RESULT_6:
+    case NITRO_RESULT_REQUIRE_SYNC_MAYBE:
     {
         int priorState = DisableIRQInterrupts();
         if (GET_FLAG_BIT(nitroHandle->flags, NITROHANDLE_FLAG_9))
@@ -192,17 +192,17 @@ extern "C" int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len)
 // base_b_high holds the id of the first file in the directory
 // base_c holds an offset to the relevant FNT subtable (in particular, you're
 // ready to iteratively run command 3 to get data about each contained file/subdir)
-extern "C" int FS72_LoadDirectoryDataByIndex(NitroVM* vm, unsigned int dirIndex)
+extern "C" int NitroVM_LoadDirectoryDataByIndex(NitroVM* vm, unsigned int dirIndex)
 {
     vm->flags |= (1 << NITROVM_FLAG_2);
     vm->regext_abc.a.ptr = vm->linkedHandle;
     vm->regext_abc.c.s32 = 0;
     vm->regext_abc.b.u16.high = 0;
     vm->regext_abc.b.u16.low = dirIndex;
-    return FS72_ExecuteCommand(vm, NITROVM_OPCODE_2);
+    return NitroVM_ExecuteCommand(vm, NITROVM_OPCODE_GET_DIRECTORY_DATA);
 }
 
-extern "C" int FS72_Command_Load(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_Load(NitroVM* vm)
 {
     unsigned int oldOffset = vm->regbase_d.u32;
     unsigned int length = vm->regext_abc.c.u32;
@@ -213,7 +213,7 @@ extern "C" int FS72_Command_Load(NitroVM* vm)
     return nitroHandle->loadFileProc_48(nitroHandle, dst, oldOffset, length);
 }
 
-extern "C" int FS72_Command_Save(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_Save(NitroVM* vm)
 {
     unsigned int oldOffset = vm->regbase_d.u32;
     unsigned int length = vm->regext_abc.c.u32;
@@ -231,7 +231,7 @@ struct FNTMainTableEntry
     unsigned short numDirectoriesOrParentID; // first (root) entry holds num directories, rest hold parent ID
 };
 
-extern "C" int FS72_Command_GetDirectoryData(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_GetDirectoryData(NitroVM* vm)
 {
     NitroHandle* nitroHandle = vm->linkedHandle;
     FSRegisterTriple* extendedRegs = &vm->regext_abc;
@@ -243,7 +243,7 @@ extern "C" int FS72_Command_GetDirectoryData(NitroVM* vm)
     
     int result = FS_ReadBytes(&readHandle, &tableEntry, 8);
 
-    if (result == NITRO_RESULT_0)
+    if (result == NITRO_RESULT_SUCCESS)
     {
         vm->regbase_abc = *extendedRegs;
     
@@ -274,7 +274,7 @@ struct FileDataStore
     unsigned char name[128];
 };
 
-extern "C" int FS72_Command_GetFileOrDirectoryNameData(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_GetFileOrDirectoryNameData(NitroVM* vm)
 {
     FileDataStore* pStorage = (FileDataStore*)vm->regext_abc.a.ptr;
     FSReadHandle readHandle;
@@ -292,12 +292,12 @@ extern "C" int FS72_Command_GetFileOrDirectoryNameData(NitroVM* vm)
     pStorage->isDirectory = ((int)stringLengthAndType >> 7) & 1;
     
     if (pStorage->stringLength == 0)
-        return NITRO_RESULT_1;
+        return NITRO_RESULT_FAILURE;
 
     if (!vm->regext_abc.b.u32) // don't skip copying the string
     {
         result = FS_ReadBytes(&readHandle, pStorage->name, pStorage->stringLength);
-        if (result != NITRO_RESULT_0)
+        if (result != NITRO_RESULT_SUCCESS)
             return result;
 
         pStorage->name[pStorage->stringLength] = '\0';
@@ -311,7 +311,7 @@ extern "C" int FS72_Command_GetFileOrDirectoryNameData(NitroVM* vm)
     {
         unsigned short directoryID;
         result = FS_ReadBytes(&readHandle, &directoryID, 2);
-        if (result != NITRO_RESULT_0)
+        if (result != NITRO_RESULT_SUCCESS)
             return result;
         pStorage->nitroHandle = vm->linkedHandle;
         pStorage->fileOrDirID.u16.low = directoryID & 0xfff;
@@ -329,13 +329,13 @@ extern "C" int FS72_Command_GetFileOrDirectoryNameData(NitroVM* vm)
     return result;
 }
 
-extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_GetFileOrDirectoryByName(NitroVM* vm)
 {
     FileDataStore storage;
     unsigned char* filePath = (unsigned char*)vm->regext_d.ptr;
     int targetIsDirectory = vm->reg8.s32;
 
-    FS72_ExecuteCommand(vm, NITROVM_OPCODE_2);
+    NitroVM_ExecuteCommand(vm, NITROVM_OPCODE_GET_DIRECTORY_DATA);
     
     // Parse the filename string in terms of tokens (i.e. directory names
     // followed by the final filename).
@@ -366,7 +366,7 @@ extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* vm)
                 isParsingDirectory = true;
 
             if (tokenLength == 0)
-                return NITRO_RESULT_1;
+                return NITRO_RESULT_FAILURE;
             
             // Special treatment for directory names "." (this dir) and ".." (go up a dir)
             if (*filePath == '.')
@@ -383,21 +383,21 @@ extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* vm)
                     // base_D holds the parent directory index following initial
                     // execution of opcode 2. (If this runs, it'll be updated to the parent of that)
                     if (vm->regbase_abc.b.u16.low != 0)
-                        FS72_LoadDirectoryDataByIndex(vm, vm->regbase_d.u32);
+                        NitroVM_LoadDirectoryDataByIndex(vm, vm->regbase_d.u32);
                     filePath += 2;
                     goto loopEnd;
                 }
             }
 
             if (tokenLength > 127)
-                return NITRO_RESULT_1;
+                return NITRO_RESULT_FAILURE;
 
             vm->regext_abc.a.ptr = &storage;
             vm->regext_abc.b.u32 = 0;
             while (true)
             {
-                if (FS72_ExecuteCommand(vm, 3) != NITRO_RESULT_0)
-                    return NITRO_RESULT_1;
+                if (NitroVM_ExecuteCommand(vm, 3) != NITRO_RESULT_SUCCESS)
+                    return NITRO_RESULT_FAILURE;
                 
                 if (isParsingDirectory == storage.isDirectory && tokenLength == storage.stringLength
                 && CaseInsensitiveStrncmp(filePath, storage.name, tokenLength) == 0)
@@ -408,12 +408,12 @@ extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* vm)
             {
                 vm->regext_abc = *((FSRegisterTriple*)&storage);
                 filePath += tokenLength;
-                FS72_ExecuteCommand(vm, NITROVM_OPCODE_2);
+                NitroVM_ExecuteCommand(vm, NITROVM_OPCODE_GET_DIRECTORY_DATA);
             }
             else
             {
                 if (targetIsDirectory)
-                    return NITRO_RESULT_1;
+                    return NITRO_RESULT_FAILURE;
 
                 volatile FileDataStore& volStorage = storage;
                 NitroFileAccessor* output = (NitroFileAccessor*)vm->reg9.ptr;
@@ -422,7 +422,7 @@ extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* vm)
                 unsigned int fileID = volStorage.fileOrDirID.s32;
                 output->handle = nh;
                 output->fileID = fileID;
-                return NITRO_RESULT_0;
+                return NITRO_RESULT_SUCCESS;
             }
 
         loopEnd:
@@ -433,18 +433,18 @@ extern "C" int FS72_Command_GetFileOrDirectoryByName(NitroVM* vm)
     // I think we only get here if the final token represents a directory,
     // i.e. we're looking for a directory in the first place
     if (!targetIsDirectory)
-        return NITRO_RESULT_1;
+        return NITRO_RESULT_FAILURE;
     
     // base registers a, b, c follow the right format for NitroDirectoryMetadata
     *((FSRegisterTriple*)vm->reg9.ptr) = vm->regbase_abc;
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
 extern unsigned char data_020f2288[]; // ":/"
 
 #define NITROFS_ID_INVALID 0x10000
 
-extern "C" int FS72_Command_GetPath(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_GetPath(NitroVM* vm)
 {
     
     FileDataStore storage;
@@ -461,7 +461,7 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
     unsigned int numDirectories;
     unsigned int targetDirID;
     
-    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_5)) // looking for a directory
+    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_SEARCHING_DIRECTORY)) // looking for a directory
     {
         targetDirID = vm->regbase_abc.b.u16.low;
         targetFileID = NITROFS_ID_INVALID;
@@ -480,7 +480,7 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
             targetDirID = NITROFS_ID_INVALID;
             do
             {
-                FS72_LoadDirectoryDataByIndex(&tempVM, candidateDirID);
+                NitroVM_LoadDirectoryDataByIndex(&tempVM, candidateDirID);
                 if (candidateDirID == 0)
                 {
                     // Normally base_d would hold the parent directory id here,
@@ -493,7 +493,7 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
                 // [for command 3] don't bother copying out the name
                 tempVM.regext_abc.b.u32 = 1;
 
-                if (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0)
+                if (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS)
                 {
                     do {
                         if (!storage.isDirectory && storage.fileOrDirID.u32 == targetFileID)
@@ -504,7 +504,7 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
                             targetDirID = tempVM.regbase_abc.b.u16.low;
                             break;
                         }
-                    } while (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0);
+                    } while (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS);
                 }
 
                 if (targetDirID != NITROFS_ID_INVALID)
@@ -516,7 +516,7 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
     if (targetDirID == NITROFS_ID_INVALID)
     {
         vm->regext_abc.c.u16.low = 0;
-        return NITRO_RESULT_1;
+        return NITRO_RESULT_FAILURE;
     }
 
     // Figure out how many bytes we'll need to write.
@@ -543,15 +543,15 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
         // Loop through ancestor folders (unless we're in the root)
         if (targetDirID != 0)
         {
-            FS72_LoadDirectoryDataByIndex(&tempVM, targetDirID);
+            NitroVM_LoadDirectoryDataByIndex(&tempVM, targetDirID);
             do 
             {
                 // Get data about the previous directory's parent
-                FS72_LoadDirectoryDataByIndex(&tempVM, tempVM.regbase_d.u32);
+                NitroVM_LoadDirectoryDataByIndex(&tempVM, tempVM.regbase_d.u32);
                 tempVM.regext_abc.a.ptr = &storage;
                 tempVM.regext_abc.b.u32 = 1; // Don't bother copying the string
 
-                if (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0)
+                if (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS)
                 {
                     do
                     {
@@ -563,7 +563,7 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
     
                         totalWriteSize += storage.stringLength + 1;
                         break;
-                    } while (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0);
+                    } while (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS);
                 }
                 // This still holds the parent id parameter passed to
                 // FS72_LoadDirectoryDataByIndex
@@ -576,12 +576,12 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
     }
     
     if (!vm->regext_abc.a.ptr)
-        return NITRO_RESULT_0;
+        return NITRO_RESULT_SUCCESS;
 
     unsigned int backWriteLocation = vm->regext_abc.c.u16.low;
     unsigned char* writeDst = (unsigned char*)vm->regext_abc.a.ptr;
     if (vm->regext_abc.b.u32 < backWriteLocation)
-        return NITRO_RESULT_1;
+        return NITRO_RESULT_FAILURE;
 
     {
         // Ignore the weird assembly, there was a weird quirk of the code that
@@ -608,18 +608,18 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
         VectorizedInvertedMemcpy(data_020f2288, writeDst + signatureLength, 2);
     }
 
-    FS72_LoadDirectoryDataByIndex(&tempVM, targetDirID);
+    NitroVM_LoadDirectoryDataByIndex(&tempVM, targetDirID);
     if (targetFileID != NITROFS_ID_INVALID)
     {
         tempVM.regext_abc.a.ptr = &storage;
         tempVM.regext_abc.b.u32 = 0; // This time, do copy the string
-        if (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0)
+        if (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS)
         {
             do 
             {
                 if (!storage.isDirectory && storage.fileOrDirID.u32 == targetFileID)
                     break;
-            } while (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0);
+            } while (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS);
         }
         // The copied string is null-terminated, and we want to also copy the null terminator
         int copySize = storage.stringLength + 1;
@@ -636,13 +636,13 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
     {
         do
         {
-            FS72_LoadDirectoryDataByIndex(&tempVM, tempVM.regbase_d.u32);
+            NitroVM_LoadDirectoryDataByIndex(&tempVM, tempVM.regbase_d.u32);
             tempVM.regext_abc.a.ptr = &storage;
             tempVM.regext_abc.b.u32 = 0;
             *(writeDst + backWriteLocation - 1) = '/';
             backWriteLocation--;
 
-            if (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0)
+            if (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS)
             {
                 do
                 {
@@ -654,16 +654,16 @@ extern "C" int FS72_Command_GetPath(NitroVM* vm)
                         writeDst + backWriteLocation - tokenLength, tokenLength);
                     backWriteLocation -= tokenLength;
                     break;
-                } while (FS72_ExecuteCommand(&tempVM, NITROVM_OPCODE_3) == NITRO_RESULT_0);
+                } while (NitroVM_ExecuteCommand(&tempVM, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_NAME_DATA) == NITRO_RESULT_SUCCESS);
             }
             targetDirID = tempVM.regbase_abc.b.u16.low;
         } while (targetDirID != 0);
     }
 
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
-extern "C" int FS72_Command_GetFATEntry(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_GetFATEntry(NitroVM* vm)
 {
     unsigned int offsets[2];
     FSReadHandle readHandle;
@@ -681,28 +681,28 @@ extern "C" int FS72_Command_GetFATEntry(NitroVM* vm)
     readHandle.offset = off;
 
     int result = FS_ReadBytes(&readHandle, &offsets, 8);
-    if (result != NITRO_RESULT_0)
+    if (result != NITRO_RESULT_SUCCESS)
         return result;
 
     vm->regext_abc.a.u32 = offsets[0];
     vm->regext_abc.b.u32 = offsets[1];
     vm->regext_abc.c.u32 = entryIdx;
 
-    return FS72_ExecuteCommand(vm, NITROVM_OPCODE_7);
+    return NitroVM_ExecuteCommand(vm, NITROVM_OPCODE_COPY_REGISTERS);
 }
 
-extern "C" int FS72_Command_CopyExtendedRegisters(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_CopyRegisters(NitroVM* vm)
 {
     vm->regbase_abc.b.u32 = vm->regext_abc.a.u32;
     vm->regbase_d.u32 = vm->regext_abc.a.u32;
     vm->regbase_abc.c.u32 = vm->regext_abc.b.u32;
     vm->regbase_abc.a.u32 = vm->regext_abc.c.u32;
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
-extern "C" int FS72_Command_Nop(NitroVM* vm)
+extern "C" int NitroVM_DefaultCommand_8_Nop(NitroVM* vm)
 {
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
 extern "C" unsigned int Nitro_CalculateSignature(const char* str, int len)
@@ -740,19 +740,19 @@ extern "C" unsigned int Nitro_CalculateSignature(const char* str, int len)
 extern "C" int DefaultNitroLoadProc(NitroHandle* handle, void* dst, unsigned int offset, unsigned int len)
 {
     VectorizedInvertedMemcpy((const unsigned char*)handle->pFileImage + offset, dst, len);
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
 extern "C" int DefaultNitroSaveProc(NitroHandle* handle, const void* src, unsigned int offset, unsigned int len)
 {
     VectorizedInvertedMemcpy(src, (unsigned char*)handle->pFileImage + offset, len);
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
 extern "C" int OverrideNitroLoadProc(NitroHandle* handle, void* dst, unsigned int offset, unsigned int len)
 {
     VectorizedInvertedMemcpy((void*)offset, dst, len);
-    return NITRO_RESULT_0;
+    return NITRO_RESULT_SUCCESS;
 }
 
 extern "C" NitroVM* NitroHandle_020cbc6c(NitroHandle* handle)
@@ -770,7 +770,7 @@ extern "C" NitroVM* NitroHandle_020cbc6c(NitroHandle* handle)
                 {
                     if (handle->linkToFirstVM.pNext == currentVM)
                         handle->linkToFirstVM.pNext = nextVM;
-                    NitroVM_UnlinkAndStoreResult(currentVM, NITRO_RESULT_3);
+                    NitroVM_UnlinkAndStoreResult(currentVM, NITRO_RESULT_MAYBE_INVALID_HANDLE);
                     // Effect of this: if last VM in the list has the flag set,
                     // need to do another pass through...?
                     if (nextVM == NULL)
@@ -848,7 +848,7 @@ extern "C" void NitroVM_020cbe80(NitroVM* vm)
             vm->flags |= (1 << NITROVM_FLAG_3);
             SetIRQInterruptState(oldState);
 
-            if (FS72_ExecuteCommand(vm, vm->maybeScheduledCommand) == NITRO_RESULT_6)
+            if (NitroVM_ExecuteCommand(vm, vm->maybeScheduledCommand) == NITRO_RESULT_REQUIRE_SYNC_MAYBE)
                 break;
 
             vm = NitroHandle_020cbc6c(handle);
@@ -858,14 +858,14 @@ extern "C" void NitroVM_020cbe80(NitroVM* vm)
 
 extern "C" CBool NitroVM_ExecuteAndUnlink_020cbf14(NitroVM* vm)
 {
-    int result = FS72_ExecuteCommand(vm, vm->maybeScheduledCommand);
+    int result = NitroVM_ExecuteCommand(vm, vm->maybeScheduledCommand);
     NitroVM_UnlinkAndStoreResult(vm, result);
 
     NitroVM* maybeMainVM = NitroHandle_020cbc6c(vm->linkedHandle);
     if (maybeMainVM != NULL)
         NitroVM_020cbe80(maybeMainVM);
 
-    return vm->storedResult == NITRO_RESULT_0;
+    return vm->storedResult == NITRO_RESULT_SUCCESS;
 }
 
 extern "C" CBool NitroVM_020cbf58(NitroVM* vm, int opcode)
@@ -879,7 +879,7 @@ extern "C" CBool NitroVM_020cbf58(NitroVM* vm, int opcode)
     int oldState = DisableIRQInterrupts();
     if (handle->flags & (1 << NITROHANDLE_FLAG_7))
     {
-        NitroVM_UnlinkAndStoreResult(vm, 3);
+        NitroVM_UnlinkAndStoreResult(vm, NITRO_RESULT_MAYBE_INVALID_HANDLE);
         SetIRQInterruptState(oldState);
         return false;
     }

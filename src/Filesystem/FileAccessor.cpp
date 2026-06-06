@@ -32,12 +32,12 @@ extern "C" CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
 
     // Operand 7 copies capacity into base_a,
     // start into base_b and base_d, end into base_c.
-    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_7))
+    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_COPY_REGISTERS))
         return false;
 
     // Not sure about bit 4, but bit 5 is cleared because this is a file
     // (so command 5 can run properly)
-    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_5);
+    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_SEARCHING_DIRECTORY);
     return true;
 }
 
@@ -52,12 +52,12 @@ extern "C" CBool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor vola
     vm->regext_abc.a.ptr = handle;
     vm->regext_abc.b.u32 = accessor.fileID;
     // After this call, base_A will also hold the file ID
-    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_6))
+    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_GET_FAT_ENTRY))
         return false;
 
     // Not sure about bit 4, but bit 5 is cleared because this is a file
     // (so command 5 can run properly)
-    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_5);
+    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_SEARCHING_DIRECTORY);
     return true;
 }
 
@@ -79,14 +79,14 @@ extern "C" CBool NitroVM_MaybeCompleteTasks_020cca80(NitroVM* vm)
         return false;
 
     vm->linkedHandle = NULL;
-    vm->maybeScheduledCommand = NITROVM_OPCODE_14;
-    vm->flags &= ~((1 << NITROVM_FLAG_4) | (1 << NITROVM_FLAG_5));
+    vm->maybeScheduledCommand = NITROVM_OPCODE_MAYBE_INVALID;
+    vm->flags &= ~((1 << NITROVM_FLAG_4) | (1 << NITROVM_FLAG_SEARCHING_DIRECTORY));
     return true;
 }
 
 extern "C" void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLength)
 {
-    if (vm->maybeScheduledCommand != NITROVM_OPCODE_5)
+    if (vm->maybeScheduledCommand != NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH)
     {
         vm->regext_abc.c.u16.low = 0;
         vm->regext_abc.c.u16.high = 0;
@@ -97,7 +97,7 @@ extern "C" void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int
 
     // This might be a bool function, in which case we return the return value
     // of this. (We still get tail call optimisation though)
-    NitroVM_020cbf58(vm, NITROVM_OPCODE_5);
+    NitroVM_020cbf58(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH);
 }
 
 extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
@@ -130,7 +130,7 @@ extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
     if (needToExecute)
         return NitroVM_ExecuteAndUnlink_020cbf14(vm);
     else
-        return vm->storedResult == NITRO_RESULT_0;
+        return vm->storedResult == NITRO_RESULT_SUCCESS;
 }
 
 extern "C" void NitroVM_FlagStuff_020ccba8(NitroVM* vm)
@@ -195,45 +195,45 @@ extern "C" CBool SetPrimaryFilesystemRoot(const char* path)
 
 extern "C" void NitroHandle_020cccd4(NitroHandle* vm)
 {
-    int result = func_020d1198() ? NITRO_RESULT_5 : NITRO_RESULT_0;
+    int result = func_020d1198() ? NITRO_RESULT_5 : NITRO_RESULT_SUCCESS;
     NitroHandle_020cc6ac(vm, result);
 }
 
 extern "C" int ROMFilesystemLoadProc(NitroHandle* handle, void* dst, unsigned offset, unsigned len)
 {
     LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &NitroHandle_020cccd4, handle, true);
-    return NITRO_RESULT_6;
+    return NITRO_RESULT_REQUIRE_SYNC_MAYBE;
 }
 
 extern "C" int ROMFilesystemSaveProc(NitroHandle*, const void*, unsigned, unsigned)
 {
-    return NITRO_RESULT_1;
+    return NITRO_RESULT_FAILURE;
 }
 
 extern "C" int ROMFilesystemOpcodeOverride(NitroVM* vm, int opcode)
 {
-    if (opcode != NITROVM_OPCODE_1)
+    if (opcode != NITROVM_OPCODE_SAVE)
     {
         switch (opcode)
         {
         case NITROVM_OPCODE_9:
             func_020d0008(data_0211173c.unknown_0);
-            return NITRO_RESULT_0;
+            return NITRO_RESULT_SUCCESS;
         case NITROVM_OPCODE_10:
             func_020d0024(data_0211173c.unknown_0);
-            return NITRO_RESULT_0;
+            return NITRO_RESULT_SUCCESS;
         }
     }
     else // opcode = 1 (save), not possible for ROM data
         return NITRO_RESULT_4;
 
     // Override does not implement command
-    return NITRO_RESULT_8;
+    return NITRO_RESULT_OPCODE_NOT_IMPLEMENTED;
 }
 
 extern "C" int UnsupportedFilesystemLoadProc(NitroHandle*, void*, unsigned, unsigned)
 {
-    return NITRO_RESULT_1;
+    return NITRO_RESULT_FAILURE;
 }
 
 extern "C" int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
@@ -271,7 +271,7 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
     }
 
     NitroHandle_SetOpcodeOverride(&data_02111754, &ROMFilesystemOpcodeOverride,
-        (1 << NITROVM_OPCODE_10) | (1 << NITROVM_OPCODE_9) | (1 << NITROVM_OPCODE_1));
+        (1 << NITROVM_OPCODE_10) | (1 << NITROVM_OPCODE_9) | (1 << NITROVM_OPCODE_SAVE));
 
     if (cartridgeHeader.fileNameTableOffset == -1 ||
         cartridgeHeader.fileNameTableOffset == 0 ||

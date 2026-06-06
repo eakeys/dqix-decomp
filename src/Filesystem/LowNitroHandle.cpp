@@ -71,7 +71,7 @@ extern "C" int NitroHandle_AddToList(NitroHandle* handle, const char* str, int l
         }
         handle->signature = Nitro_CalculateSignature(str, len);
         result = true;
-        handle->flags |= (1 << NITROHANDLE_FLAG_0);
+        handle->flags |= (1 << NITROHANDLE_FLAG_IS_IN_MAIN_LIST);
     }
 
     SetIRQInterruptState(oldState);
@@ -94,7 +94,7 @@ extern "C" void NitroHandle_RemoveFromList(NitroHandle* handle)
     handle->signature = 0;
     handle->pNeighbor8 = NULL;
     handle->pNeighbor4 = NULL;
-    handle->flags &= ~(1 << NITROHANDLE_FLAG_0);
+    handle->flags &= ~(1 << NITROHANDLE_FLAG_IS_IN_MAIN_LIST);
 
     if (data_02111728.primaryFSRoot.handle == handle)
     {
@@ -124,7 +124,7 @@ extern "C" CBool NitroHandle_Populate(NitroHandle* handle, void* image,
 
     handle->loadFileProc_50 = handle->loadFileProc_48;
     handle->tableRawPointer = NULL;
-    handle->flags |= (1 << NITROHANDLE_FLAG_1);
+    handle->flags |= (1 << NITROHANDLE_FLAG_IS_POPULATED);
     return true;
 }
 
@@ -132,7 +132,7 @@ extern "C" CBool NitroHandle_Destroy(NitroHandle* handle)
 {
     int oldState = DisableIRQInterrupts();
     
-    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_1) != 0)
+    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_IS_POPULATED) != 0)
     {
         // Silly unused volatile read of the flags. Assembly is extra misleading,
         // can make it look like it's the 2nd argument, but this is wrong
@@ -144,7 +144,7 @@ extern "C" CBool NitroHandle_Destroy(NitroHandle* handle)
         {
             do {
                 NitroVM* next = machine->links.pNext;
-                NitroVM_UnlinkAndStoreResult(machine, NITRO_RESULT_3);
+                NitroVM_UnlinkAndStoreResult(machine, NITRO_RESULT_MAYBE_INVALID_HANDLE);
                 machine = next;
             } while (machine != NULL);
         }
@@ -160,7 +160,7 @@ extern "C" CBool NitroHandle_Destroy(NitroHandle* handle)
         handle->nameTableOffset_40 = 0;
         handle->fatOffset_3C = 0;
 
-        handle->flags &= ~((1 << NITROHANDLE_FLAG_7) | (1 << NITROHANDLE_FLAG_5) | (1 << NITROHANDLE_FLAG_1));
+        handle->flags &= ~((1 << NITROHANDLE_FLAG_7) | (1 << NITROHANDLE_FLAG_5) | (1 << NITROHANDLE_FLAG_IS_POPULATED));
     }
     SetIRQInterruptState(oldState);
     return true;
@@ -198,7 +198,7 @@ extern "C" unsigned int NitroHandle_LoadFileTables(NitroHandle* handle, void* in
         handle->nameTableOffset_34 = (unsigned int)alignedPtr;
         handle->tableRawPointer = into;
         handle->loadFileProc_50 = &OverrideNitroLoadProc;
-        handle->flags |= (1 << NITROHANDLE_FLAG_2);
+        handle->flags |= (1 << NITROHANDLE_FLAG_TABLES_LOADED_IN_MEMORY);
     }
 
     return neededSpace;
@@ -207,12 +207,12 @@ extern "C" unsigned int NitroHandle_LoadFileTables(NitroHandle* handle, void* in
 extern "C" void* NitroHandle_ReleaseFileTables(NitroHandle* handle)
 {
     void* oldPtr = NULL;
-    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_1))
+    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_IS_POPULATED))
     {
         int destructionThingHappened = NitroHandle_UnknownDestructionFunction(handle);
-        if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_2))
+        if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_TABLES_LOADED_IN_MEMORY))
         {
-            handle->flags &= ~(1 << NITROHANDLE_FLAG_2);
+            handle->flags &= ~(1 << NITROHANDLE_FLAG_TABLES_LOADED_IN_MEMORY);
             oldPtr = handle->tableRawPointer;
             handle->tableRawPointer = NULL;
             handle->fatOffset_2C = handle->fatOffset_3C;
@@ -317,7 +317,7 @@ extern "C" void NitroVM_Initialize(NitroVM* vm)
     vm->unknown_sublist_18.pLast = NULL;
     vm->unknown_sublist_18.pFirst = NULL;
     vm->linkedHandle = NULL;
-    vm->maybeScheduledCommand = NITROVM_OPCODE_14;
+    vm->maybeScheduledCommand = NITROVM_OPCODE_MAYBE_INVALID;
     vm->flags = 0;
 }
 
@@ -350,7 +350,7 @@ extern "C" int GlobalSearchFileOrDirectory_020cc780(NitroVM* vm, const char* inP
 
             if (handle == NULL)
                 return false;
-            if (!GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_1))
+            if (!GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_IS_POPULATED))
                 return false;
 
             accessor.handle = handle;
@@ -378,7 +378,7 @@ extern "C" int GlobalSearchFileOrDirectory_020cc780(NitroVM* vm, const char* inP
         vm->reg9.ptr = outFileData;
     }
 
-    return NitroVM_020cbf58(vm, NITROVM_OPCODE_4);
+    return NitroVM_020cbf58(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_BY_NAME);
 }
 
 #define min(a, b) (((a) > (b)) ? (b) : (a))

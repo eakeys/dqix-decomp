@@ -3,6 +3,7 @@
 #include "System/Cache.h"
 #include "System/Memory.h"
 #include "System/BiosData.h"
+#include <globaldefs.h>
 
 #pragma optimize_for_size off
 
@@ -84,6 +85,7 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
     arg_readEnd = start + size;
     __asm("b here\nhere:");
 
+    // NitroVM_PrepareRead(&machine, romHandle, start + (overlayIdx << 5), start + size, -1)
     if (!NitroVM_PrepareRead(arg_machine, arg_handle, arg_readStart, arg_readEnd, arg_capacity))
         return false;
     }
@@ -102,22 +104,22 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
     if (!NitroVM_PrepareReadFileByID(&machine, overlayAccessor))
         return false;
     
-    into->unknown_24 = machine.regbase_abc.b.u32;
-    into->unknown_28 = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
+    into->romStorageOffset = machine.regbase_abc.b.u32;
+    into->romStorageSize = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
     NitroVM_MaybeCompleteTasks_020cca80(&machine);
     return true;
 }
 
 bool LoadOverlayMetadata(OverlayMetadata* into, bool isArm7, unsigned int idx)
 {
-    Struct_0211173c::ArmData* armData;
-    armData = (!isArm7) ? &data_0211173c.unknown_8 : &data_0211173c.unknown_10;
+    Struct_0211173c::ArmOverlayDataTableData* armData;
+    armData = (!isArm7) ? &data_0211173c.arm9Data : &data_0211173c.arm7Data;
 
     unsigned int offset;
-    const char* source = (const char*)armData->unknown[0];
-    if (source)
+    const char* source = (const char*)armData->start;
+    if (source != NULL)
     {
-        if (armData->unknown[1] <= (offset = idx * 0x20))
+        if (armData->size <= (offset = idx * 0x20))
             return false;
         const char* shifted;
         OverlayMetadata* copyDst;
@@ -134,8 +136,8 @@ bool LoadOverlayMetadata(OverlayMetadata* into, bool isArm7, unsigned int idx)
         if (!NitroVM_PrepareReadFileByID(&machine, accessor))
             return false;
 
-        into->unknown_24 = machine.regbase_abc.b.u32;
-        into->unknown_28 = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
+        into->romStorageOffset = machine.regbase_abc.b.u32;
+        into->romStorageSize = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
         NitroVM_MaybeCompleteTasks_020cca80(&machine);
         return true;
     }

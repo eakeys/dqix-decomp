@@ -3,6 +3,7 @@
 #include "FSStructs.h"
 #include "LowNitroHandle.h"
 #include "FileAccessor.h"
+#include "FileIOPorts.h"
 
 extern "C"
 {
@@ -14,6 +15,12 @@ extern "C"
 
 #define GET_FLAG_BIT(what, idx) (((what) & (1 << (idx))) ? 1 : 0)
 
+struct Struct_02111304
+{
+    unsigned int unknown_0;
+    void* unknown_4;
+};
+
 struct Struct_02111728
 {
     NitroHandle* handle;
@@ -24,16 +31,73 @@ struct Struct_0211173c
 {
     unsigned int unknown_0;
     unsigned int maybeDMAChannel;
-    // These are referenced as 8 byte things somewhere, probably a smaller struct
 
-    struct ArmData
+    // For each overlay we have 0x20 bytes of metadata in the ROM.
+    // The ARM9 overlays are all grouped together in a table, and the ARM7 overlays
+    // are grouped together in another table. (In DQIX there are no arm7 overlays)
+    // In theory, one or both of these tables could be loaded into memory,
+    // in which case this would point to it. In practice, I don't think it ever is
+    struct ArmOverlayDataTableData
     {
-        unsigned int unknown[2];
+        void* start;
+        unsigned int size;
     };
-
-    ArmData unknown_8;
-    ArmData unknown_10;
+    ArmOverlayDataTableData arm9Data;
+    ArmOverlayDataTableData arm7Data;
 };
+
+
+// sizeof <= 0x620
+struct Struct_021118e0
+{
+    typedef void (*PFNUnknown)(Struct_021118e0*);
+
+    unsigned int* unknown_0;
+    int unknown_4[6];
+    unsigned int cartridgeReadOffset;
+    unsigned char* writeDst;
+    unsigned int writeLength;
+    unsigned int dmaChannel;
+    int unknown_2c[3];
+    PFNNitroCleanup maybeCleanupProc_38;
+    NitroHandle* handle_3c;
+    PFNUnknown anotherProc_40;
+    // used as param1 in func_020c75b4 (called by func_020cfe08)
+    char bufferOrOtherStruct_44[0xC0];
+    void* pointer_MaybeToPrevStruct_104;
+    // Set to 4 and 8 in different places
+    unsigned int unknown_108;
+    FSLinkedListChildSet list_10C;
+    volatile unsigned int flags_114;
+    // see func_020d0a5c
+    unsigned int maybeInstructionCacheLimit_118;
+    unsigned int maybeDataCacheLimit_11c;
+
+    // Start of this seems to have game title, but can't find where it gets
+    // copied in
+    char unknown[0x500];
+};
+
+struct Struct_02111f20
+{
+    typedef void (*PFNRead)(Struct_02111f20*);
+
+    PFNRead readProc;
+    unsigned int control_4;
+    unsigned int* alignedWrite;
+    unsigned int unknown_C[5];
+    // 512 = 0x200 bytes of temporary space for unaligned writes
+    unsigned char scratchBuffer[512];
+};
+
+struct Struct_02111f00
+{
+    unsigned int number;
+    unsigned int unknown_4[7];
+    Struct_02111f20 innerStruct;
+};
+
+extern Struct_02111304 data_02111304;
 
 // These overlap, but the 72c is accessed from the 728 as well as on its own.
 // It should be possible to just take a reference to mountedDir directly, e.g.
@@ -45,3 +109,8 @@ extern NitroDirectoryAccessor data_0211172c;
 extern int data_02111738; // stores whether the rom fs is initialised
 extern Struct_0211173c data_0211173c;
 extern NitroHandle data_02111754;
+
+extern Struct_021118e0 data_021118e0;
+// Some kind of offset for reading from the ROM. In practice it's always 0
+extern Struct_02111f00 data_02111f00;
+//extern Struct_02111f20 data_02111f20;

@@ -39,8 +39,13 @@ struct CartridgeHeader
         unsigned int arm7TableSize;
     } overlayTableValues;
 
-    char other_stuff_50[0x120];
+    unsigned int gamecardBusControlNormalSettings;
+    unsigned int gamecardBusControlKEY1Settings;
+
+    char other_stuff_68[0x108];
 };
+
+extern CartridgeHeader* data_020f22cc;
 
 // Exists at 0x027FFC40
 struct BootIndicator

@@ -132,3 +132,7 @@ src/Filesystem/FileAccessor.cpp:
 src/Filesystem/OverlayFSManagement.cpp:
     complete
     .text start:0x020ccf7c end:0x020cd494
+
+src/Filesystem/FileIOPorts.cpp:
+    complete
+    .text start:0x020d084c end:0x020d0f40

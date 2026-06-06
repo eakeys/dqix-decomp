@@ -7,13 +7,8 @@
 
 extern "C"
 {
-    void func_020d0dcc(unsigned int, unsigned int offset, void* dst, unsigned int len,
-        void (*proc)(NitroHandle*), NitroHandle*, CBool);
-
     void func_020d0024(unsigned short);
     void func_020d0008(unsigned short);
-
-    void func_020d0ec4();
 
     int func_020c7080();
 }
@@ -200,13 +195,13 @@ extern "C" CBool SetPrimaryFilesystemRoot(const char* path)
 
 extern "C" void NitroHandle_020cccd4(NitroHandle* vm)
 {
-    int opcode = func_020d1198() ? 5 : 0;
-    NitroHandle_020cc6ac(vm, opcode);
+    int result = func_020d1198() ? 5 : 0;
+    NitroHandle_020cc6ac(vm, result);
 }
 
 extern "C" int ROMFilesystemLoadProc(NitroHandle* handle, void* dst, unsigned offset, unsigned len)
 {
-    func_020d0dcc(data_0211173c.maybeDMAChannel, offset, dst, len, &NitroHandle_020cccd4, handle, 1);
+    LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &NitroHandle_020cccd4, handle, 1);
     return 6;
 }
 
@@ -248,17 +243,15 @@ extern "C" int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
 
 extern char data_020f228c[]; // "rom"
 
-//#define biosData ((BootIndicator*)BIOS_ADDR_BOOT_INDICATOR)
-
 extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
 {
     data_0211173c.maybeDMAChannel = channel;
     data_0211173c.unknown_0 = func_020c7080();
-    data_0211173c.unknown_8.unknown[0] = 0;
-    data_0211173c.unknown_8.unknown[1] = 0;
-    data_0211173c.unknown_10.unknown[0] = 0;
-    data_0211173c.unknown_10.unknown[1] = 0;
-    func_020d0ec4();
+    data_0211173c.arm9Data.start = NULL;
+    data_0211173c.arm9Data.size = 0;
+    data_0211173c.arm7Data.start = NULL;
+    data_0211173c.arm7Data.size = 0;
+    InitRawReadStructs_020d0ec4();
 
     NitroHandle_ZeroInit(&data_02111754);
     NitroHandle_AddToList(&data_02111754, data_020f228c, 3);
@@ -267,10 +260,10 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
     const CartridgeHeader& cartridgeHeader = biosData->cartHeader;
     if (biosData->bootMode == 2) // DS Download Play? Is this even a thing for DQ9?
     {
-        data_0211173c.unknown_8.unknown[0] = -1;
-        data_0211173c.unknown_8.unknown[1] = 0;
-        data_0211173c.unknown_10.unknown[0] = -1;
-        data_0211173c.unknown_10.unknown[1] = 0;
+        data_0211173c.arm9Data.start = (void*)-1;
+        data_0211173c.arm9Data.size = 0;
+        data_0211173c.arm7Data.start = (void*)-1;
+        data_0211173c.arm7Data.size = 0;
         NitroHandle_SetOpcodeOverride(&data_02111754, &UnsupportedFilesystemOpcodeOverride, -1);
         NitroHandle_Populate(&data_02111754, NULL, 0, 0, 0, 0,
             &UnsupportedFilesystemLoadProc, &ROMFilesystemSaveProc);

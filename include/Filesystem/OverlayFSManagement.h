@@ -26,8 +26,8 @@ struct OverlayMetadata
     unsigned int overlayFlags : 8;
 
     CBool isArm7;
-    unsigned int unknown_24;
-    unsigned int unknown_28;
+    unsigned int romStorageOffset;
+    unsigned int romStorageSize;
 };
 
 unsigned int GetOverlaySizeOnCartridge(const OverlayMetadata& overlay);

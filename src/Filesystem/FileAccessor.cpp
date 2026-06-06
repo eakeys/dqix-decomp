@@ -32,12 +32,12 @@ extern "C" CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
 
     // Operand 7 copies capacity into base_a,
     // start into base_b and base_d, end into base_c.
-    if (!NitroVM_020cbf58(vm, 7))
+    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_7))
         return false;
 
     // Not sure about bit 4, but bit 5 is cleared because this is a file
     // (so command 5 can run properly)
-    vm->flags = (vm->flags | (1 << 4)) & ~(1 << 5);
+    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_5);
     return true;
 }
 
@@ -52,12 +52,12 @@ extern "C" CBool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor vola
     vm->regext_abc.a.ptr = handle;
     vm->regext_abc.b.u32 = accessor.fileID;
     // After this call, base_A will also hold the file ID
-    if (!NitroVM_020cbf58(vm, 6))
+    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_6))
         return false;
 
     // Not sure about bit 4, but bit 5 is cleared because this is a file
     // (so command 5 can run properly)
-    vm->flags = (vm->flags | (1 << 4)) & ~(1 << 5);
+    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_5);
     return true;
 }
 
@@ -79,14 +79,14 @@ extern "C" CBool NitroVM_MaybeCompleteTasks_020cca80(NitroVM* vm)
         return false;
 
     vm->linkedHandle = NULL;
-    vm->maybeScheduledCommand = 14;
-    vm->flags &= ~((1 << 4) | (1 << 5));
+    vm->maybeScheduledCommand = NITROVM_OPCODE_14;
+    vm->flags &= ~((1 << NITROVM_FLAG_4) | (1 << NITROVM_FLAG_5));
     return true;
 }
 
 extern "C" void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLength)
 {
-    if (vm->maybeScheduledCommand != 5)
+    if (vm->maybeScheduledCommand != NITROVM_OPCODE_5)
     {
         vm->regext_abc.c.u16.low = 0;
         vm->regext_abc.c.u16.high = 0;
@@ -97,7 +97,7 @@ extern "C" void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int
 
     // This might be a bool function, in which case we return the return value
     // of this. (We still get tail call optimisation though)
-    NitroVM_020cbf58(vm, 5);
+    NitroVM_020cbf58(vm, NITROVM_OPCODE_5);
 }
 
 extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
@@ -106,22 +106,22 @@ extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
 
     int oldState = DisableIRQInterrupts();
 
-    if (GET_FLAG_BIT(vm->flags, 0))
+    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0))
     {
-        needToExecute = !(vm->flags & ((1 << 6) | (1 << 2)));
+        needToExecute = !(vm->flags & ((1 << NITROVM_FLAG_6) | (1 << NITROVM_FLAG_2)));
 
         if (needToExecute)
         {
-            vm->flags |= (1 << 2);
+            vm->flags |= (1 << NITROVM_FLAG_2);
             do {
                 func_020c7898(&vm->unknown_sublist_18);
-            } while (!(vm->flags & (1 << 6))); // why the different format here?
+            } while (!(vm->flags & (1 << NITROVM_FLAG_6))); // why the different format here?
         }
         else
         {
             do {
                 func_020c7898(&vm->unknown_sublist_18);
-            } while (GET_FLAG_BIT(vm->flags, 0));
+            } while (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0));
         }
     }
 
@@ -130,17 +130,17 @@ extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
     if (needToExecute)
         return NitroVM_ExecuteAndUnlink_020cbf14(vm);
     else
-        return vm->storedResult == 0;
+        return vm->storedResult == NITRO_RESULT_0;
 }
 
 extern "C" void NitroVM_FlagStuff_020ccba8(NitroVM* vm)
 {
     int oldState = DisableIRQInterrupts();
 
-    if (GET_FLAG_BIT(vm->flags, 0))
+    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0))
     {
-        vm->flags |= (1 << 1);
-        vm->linkedHandle->flags |= (1 << 5);
+        vm->flags |= (1 << NITROVM_FLAG_1);
+        vm->linkedHandle->flags |= (1 << NITROHANDLE_FLAG_5);
     }
     SetIRQInterruptState(oldState);
 }
@@ -195,50 +195,50 @@ extern "C" CBool SetPrimaryFilesystemRoot(const char* path)
 
 extern "C" void NitroHandle_020cccd4(NitroHandle* vm)
 {
-    int result = func_020d1198() ? 5 : 0;
+    int result = func_020d1198() ? NITRO_RESULT_5 : NITRO_RESULT_0;
     NitroHandle_020cc6ac(vm, result);
 }
 
 extern "C" int ROMFilesystemLoadProc(NitroHandle* handle, void* dst, unsigned offset, unsigned len)
 {
-    LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &NitroHandle_020cccd4, handle, 1);
-    return 6;
+    LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &NitroHandle_020cccd4, handle, true);
+    return NITRO_RESULT_6;
 }
 
 extern "C" int ROMFilesystemSaveProc(NitroHandle*, const void*, unsigned, unsigned)
 {
-    return 1;
+    return NITRO_RESULT_1;
 }
 
 extern "C" int ROMFilesystemOpcodeOverride(NitroVM* vm, int opcode)
 {
-    if (opcode != 1)
+    if (opcode != NITROVM_OPCODE_1)
     {
         switch (opcode)
         {
-        case 9:
+        case NITROVM_OPCODE_9:
             func_020d0008(data_0211173c.unknown_0);
-            return 0;
-        case 10:
+            return NITRO_RESULT_0;
+        case NITROVM_OPCODE_10:
             func_020d0024(data_0211173c.unknown_0);
-            return 0;
+            return NITRO_RESULT_0;
         }
     }
     else // opcode = 1 (save), not possible for ROM data
-        return 4;
+        return NITRO_RESULT_4;
 
     // Override does not implement command
-    return 8;
+    return NITRO_RESULT_8;
 }
 
 extern "C" int UnsupportedFilesystemLoadProc(NitroHandle*, void*, unsigned, unsigned)
 {
-    return 1;
+    return NITRO_RESULT_1;
 }
 
 extern "C" int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
 {
-    return 4;
+    return NITRO_RESULT_4;
 }
 
 extern char data_020f228c[]; // "rom"
@@ -271,7 +271,7 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
     }
 
     NitroHandle_SetOpcodeOverride(&data_02111754, &ROMFilesystemOpcodeOverride,
-        (1 << 10) | (1 << 9) | (1 << 1));
+        (1 << NITROVM_OPCODE_10) | (1 << NITROVM_OPCODE_9) | (1 << NITROVM_OPCODE_1));
 
     if (cartridgeHeader.fileNameTableOffset == -1 ||
         cartridgeHeader.fileNameTableOffset == 0 ||

@@ -2,6 +2,10 @@
 
 #include "FSStructs.h"
 
+#define OVERLAY_FLAG_COMPRESSED 0
+// Something related to download play, I don't know what exactly
+#define OVERLAY_FLAG_DOWNLOAD_PLAY 1
+
 // sizeof == 0x2C == 44.
 // Held as an array in 0x01FFD394
 struct OverlayMetadata

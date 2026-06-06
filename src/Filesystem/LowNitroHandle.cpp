@@ -12,13 +12,13 @@ extern "C" {
     int OverrideNitroLoadProc(NitroHandle* handle, void* dst, unsigned int offset, unsigned int len);
 }
 
-extern "C" void NitroHandle_ZeroInit(NitroHandle* nitro)
+extern "C" void NitroHandle_ZeroInit(NitroHandle* handle)
 {
-    VectorizedMemset(nitro, 0, sizeof(NitroHandle));
-    nitro->unknown_10 = 0;
-    nitro->unknown_0C = 0;
-    nitro->unknown_18 = 0;
-    nitro->unknown_14 = 0;
+    VectorizedMemset(handle, 0, sizeof(NitroHandle));
+    handle->unknown_10 = 0;
+    handle->unknown_0C = 0;
+    handle->unknown_18 = 0;
+    handle->unknown_14 = 0;
 }
 
 extern "C" NitroHandle* NitroHandle_FindBySignature(const char* str, int len)
@@ -37,7 +37,7 @@ extern "C" NitroHandle* NitroHandle_FindBySignature(const char* str, int len)
     return handle;
 }
 
-extern "C" int NitroHandle_AddToList(NitroHandle* nitro, const char* str, int len)
+extern "C" int NitroHandle_AddToList(NitroHandle* handle, const char* str, int len)
 {
     int result = false;
     int oldState = DisableIRQInterrupts();
@@ -45,8 +45,8 @@ extern "C" int NitroHandle_AddToList(NitroHandle* nitro, const char* str, int le
     {
         if (data_02111728.handle == NULL)
         {
-            data_02111728.handle = nitro;
-            data_02111728.primaryFSRoot.handle = nitro;
+            data_02111728.handle = handle;
+            data_02111728.primaryFSRoot.handle = handle;
             data_02111728.primaryFSRoot.handleSubtableOffset = 0;
             data_02111728.primaryFSRoot.firstFileID = 0;
             data_02111728.primaryFSRoot.dirID = 0;
@@ -66,37 +66,37 @@ extern "C" int NitroHandle_AddToList(NitroHandle* nitro, const char* str, int le
                 } while (nextEntry != NULL);
             }
 
-            currentEntry->pNeighbor4 = nitro;
-            nitro->pNeighbor8 = currentEntry;
+            currentEntry->pNeighbor4 = handle;
+            handle->pNeighbor8 = currentEntry;
         }
-        nitro->signature = Nitro_CalculateSignature(str, len);
+        handle->signature = Nitro_CalculateSignature(str, len);
         result = true;
-        nitro->flags |= 1;
+        handle->flags |= (1 << NITROHANDLE_FLAG_0);
     }
 
     SetIRQInterruptState(oldState);
     return result;
 }
 
-extern "C" void NitroHandle_RemoveFromList(NitroHandle* nitro)
+extern "C" void NitroHandle_RemoveFromList(NitroHandle* handle)
 {
-    if (nitro->signature == 0)
+    if (handle->signature == 0)
         return;
 
     int oldState = DisableIRQInterrupts();
 
-    if (nitro->pNeighbor4 != NULL)
-        nitro->pNeighbor4->pNeighbor8 = nitro->pNeighbor8;
+    if (handle->pNeighbor4 != NULL)
+        handle->pNeighbor4->pNeighbor8 = handle->pNeighbor8;
 
-    if (nitro->pNeighbor8 != NULL)
-        nitro->pNeighbor8->pNeighbor4 = nitro->pNeighbor4;
+    if (handle->pNeighbor8 != NULL)
+        handle->pNeighbor8->pNeighbor4 = handle->pNeighbor4;
 
-    nitro->signature = 0;
-    nitro->pNeighbor8 = NULL;
-    nitro->pNeighbor4 = NULL;
-    nitro->flags &= ~1;
+    handle->signature = 0;
+    handle->pNeighbor8 = NULL;
+    handle->pNeighbor4 = NULL;
+    handle->flags &= ~(1 << NITROHANDLE_FLAG_0);
 
-    if (data_02111728.primaryFSRoot.handle == nitro)
+    if (data_02111728.primaryFSRoot.handle == handle)
     {
         data_02111728.primaryFSRoot.handle = data_02111728.handle;
         data_02111728.primaryFSRoot.handleSubtableOffset = 0;
@@ -107,142 +107,142 @@ extern "C" void NitroHandle_RemoveFromList(NitroHandle* nitro)
     SetIRQInterruptState(oldState);
 }
 
-extern "C" int NitroHandle_Populate(NitroHandle* nitro, void* image,
+extern "C" CBool NitroHandle_Populate(NitroHandle* handle, void* image,
         unsigned int fatOffset, unsigned int fatSize,
         unsigned int fntOffset, unsigned int fntSize,
         PFNLoadFile loadProc, PFNSaveFile saveProc)
 {
-    nitro->pFileImage = image;
-    nitro->fatSize = fatSize;
-    nitro->fatOffset_2C = nitro->fatOffset_3C = fatOffset;
-    nitro->nameTableSize = fntSize;
-    nitro->nameTableOffset_40 = fntOffset;
-    nitro->nameTableOffset_34 = fntOffset;
+    handle->pFileImage = image;
+    handle->fatSize = fatSize;
+    handle->fatOffset_2C = handle->fatOffset_3C = fatOffset;
+    handle->nameTableSize = fntSize;
+    handle->nameTableOffset_40 = fntOffset;
+    handle->nameTableOffset_34 = fntOffset;
 
-    nitro->loadFileProc_48 = (loadProc == NULL) ? &DefaultNitroLoadProc : loadProc;
-    nitro->saveFileProc = (saveProc == NULL) ? &DefaultNitroSaveProc : saveProc;
+    handle->loadFileProc_48 = (loadProc == NULL) ? &DefaultNitroLoadProc : loadProc;
+    handle->saveFileProc = (saveProc == NULL) ? &DefaultNitroSaveProc : saveProc;
 
-    nitro->loadFileProc_50 = nitro->loadFileProc_48;
-    nitro->tableRawPointer = NULL;
-    nitro->flags |= (1 << 1);
-    return 1;
+    handle->loadFileProc_50 = handle->loadFileProc_48;
+    handle->tableRawPointer = NULL;
+    handle->flags |= (1 << NITROHANDLE_FLAG_1);
+    return true;
 }
 
-extern "C" int NitroHandle_Destroy(NitroHandle* nitro)
+extern "C" CBool NitroHandle_Destroy(NitroHandle* handle)
 {
     int oldState = DisableIRQInterrupts();
     
-    if (GET_FLAG_BIT(nitro->flags, 1) != 0)
+    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_1) != 0)
     {
         // Silly unused volatile read of the flags. Assembly is extra misleading,
         // can make it look like it's the 2nd argument, but this is wrong
-        int destructionThingHappened = (nitro->flags, NitroHandle_UnknownDestructionFunction(nitro));
-        nitro->flags |= (1 << 7);
+        CBool destructionThingHappened = (handle->flags, NitroHandle_UnknownDestructionFunction(handle));
+        handle->flags |= (1 << NITROHANDLE_FLAG_7);
         
-        NitroVM* fs = nitro->linkToFirstVM.pNext;
-        if (fs != NULL)
+        NitroVM* machine = handle->linkToFirstVM.pNext;
+        if (machine != NULL)
         {
             do {
-                NitroVM* next = fs->links.pNext;
-                NitroVM_UnlinkAndStoreResult(fs, 3);
-                fs = next;
-            } while (fs != NULL);
+                NitroVM* next = machine->links.pNext;
+                NitroVM_UnlinkAndStoreResult(machine, NITRO_RESULT_3);
+                machine = next;
+            } while (machine != NULL);
         }
-        nitro->linkToFirstVM.pNext = NULL;
+        handle->linkToFirstVM.pNext = NULL;
         if (destructionThingHappened)
-            NitroHandle_OtherUnknownDestFunc(nitro);
+            NitroHandle_OtherUnknownDestFunc(handle);
 
-        nitro->pFileImage = NULL;
-        nitro->fatOffset_2C = 0;
-        nitro->fatSize = 0;
-        nitro->nameTableOffset_34 = 0;
-        nitro->nameTableSize = 0;
-        nitro->nameTableOffset_40 = 0;
-        nitro->fatOffset_3C = 0;
+        handle->pFileImage = NULL;
+        handle->fatOffset_2C = 0;
+        handle->fatSize = 0;
+        handle->nameTableOffset_34 = 0;
+        handle->nameTableSize = 0;
+        handle->nameTableOffset_40 = 0;
+        handle->fatOffset_3C = 0;
 
-        nitro->flags &= ~((1 << 7) | (1 << 5) | (1 << 1));
+        handle->flags &= ~((1 << NITROHANDLE_FLAG_7) | (1 << NITROHANDLE_FLAG_5) | (1 << NITROHANDLE_FLAG_1));
     }
     SetIRQInterruptState(oldState);
-    return 1;
+    return true;
 }
 
-extern "C" unsigned int NitroHandle_LoadFileTables(NitroHandle* nitro, void* into, unsigned int capacity)
+extern "C" unsigned int NitroHandle_LoadFileTables(NitroHandle* handle, void* into, unsigned int capacity)
 {
-    unsigned int neededSpace = (nitro->fatSize + nitro->nameTableSize + 0x3f) & ~0x1f;
+    unsigned int neededSpace = (handle->fatSize + handle->nameTableSize + 0x3f) & ~0x1f;
 
     if (neededSpace <= capacity)
     {
         void* alignedPtr = (void*)(((unsigned int)into + 0x1f) & ~0x1f);
         NitroVM vm;
         NitroVM_Initialize(&vm);
-        if (NitroVM_PrepareRead(&vm, nitro, 
-            nitro->fatOffset_2C,
-            nitro->fatOffset_2C + nitro->fatSize, -1))
+        if (NitroVM_PrepareRead(&vm, handle, 
+            handle->fatOffset_2C,
+            handle->fatOffset_2C + handle->fatSize, -1))
         {
-            if (NitroVM_MaybeExecuteLoad_v0(&vm, alignedPtr, nitro->fatSize) < 0)
-                VectorizedMemset(alignedPtr, 0, nitro->fatSize);
+            if (NitroVM_MaybeExecuteLoad_v0(&vm, alignedPtr, handle->fatSize) < 0)
+                VectorizedMemset(alignedPtr, 0, handle->fatSize);
             NitroVM_MaybeCompleteTasks_020cca80(&vm);
         }
-        nitro->fatOffset_2C = (unsigned int)alignedPtr;
-        alignedPtr = (void*)((unsigned int)alignedPtr + nitro->fatSize);
+        handle->fatOffset_2C = (unsigned int)alignedPtr;
+        alignedPtr = (void*)((unsigned int)alignedPtr + handle->fatSize);
 
-        if (NitroVM_PrepareRead(&vm, nitro, 
-            nitro->nameTableOffset_34,
-            nitro->nameTableOffset_34 + nitro->nameTableSize, -1))
+        if (NitroVM_PrepareRead(&vm, handle, 
+            handle->nameTableOffset_34,
+            handle->nameTableOffset_34 + handle->nameTableSize, -1))
         {
-            if (NitroVM_MaybeExecuteLoad_v0(&vm, alignedPtr, nitro->nameTableSize) < 0)
-                VectorizedMemset(alignedPtr, 0, nitro->nameTableSize);
+            if (NitroVM_MaybeExecuteLoad_v0(&vm, alignedPtr, handle->nameTableSize) < 0)
+                VectorizedMemset(alignedPtr, 0, handle->nameTableSize);
             NitroVM_MaybeCompleteTasks_020cca80(&vm);
         }
 
-        nitro->nameTableOffset_34 = (unsigned int)alignedPtr;
-        nitro->tableRawPointer = into;
-        nitro->loadFileProc_50 = &OverrideNitroLoadProc;
-        nitro->flags |= (1 << 2);
+        handle->nameTableOffset_34 = (unsigned int)alignedPtr;
+        handle->tableRawPointer = into;
+        handle->loadFileProc_50 = &OverrideNitroLoadProc;
+        handle->flags |= (1 << NITROHANDLE_FLAG_2);
     }
 
     return neededSpace;
 }
 
-extern "C" void* NitroHandle_ReleaseFileTables(NitroHandle* nitro)
+extern "C" void* NitroHandle_ReleaseFileTables(NitroHandle* handle)
 {
     void* oldPtr = NULL;
-    if (GET_FLAG_BIT(nitro->flags, 1))
+    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_1))
     {
-        int destructionThingHappened = NitroHandle_UnknownDestructionFunction(nitro);
-        if (GET_FLAG_BIT(nitro->flags, 2))
+        int destructionThingHappened = NitroHandle_UnknownDestructionFunction(handle);
+        if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_2))
         {
-            nitro->flags &= ~(1 << 2);
-            oldPtr = nitro->tableRawPointer;
-            nitro->tableRawPointer = NULL;
-            nitro->fatOffset_2C = nitro->fatOffset_3C;
-            nitro->nameTableOffset_34 = nitro->nameTableOffset_40;
-            nitro->loadFileProc_50 = nitro->loadFileProc_48;
+            handle->flags &= ~(1 << NITROHANDLE_FLAG_2);
+            oldPtr = handle->tableRawPointer;
+            handle->tableRawPointer = NULL;
+            handle->fatOffset_2C = handle->fatOffset_3C;
+            handle->nameTableOffset_34 = handle->nameTableOffset_40;
+            handle->loadFileProc_50 = handle->loadFileProc_48;
         }
         if (destructionThingHappened)
-            NitroHandle_OtherUnknownDestFunc(nitro);
+            NitroHandle_OtherUnknownDestFunc(handle);
     }
     return oldPtr;
 }
 
-extern "C" CBool NitroHandle_UnknownDestructionFunction(NitroHandle* nitro)
+extern "C" CBool NitroHandle_UnknownDestructionFunction(NitroHandle* handle)
 {
     int oldState = DisableIRQInterrupts();
-    CBool act = GET_FLAG_BIT(nitro->flags, 3) == 0;
+    CBool act = GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_3) == 0;
     if (act)
     {
-        int flagbit4 = GET_FLAG_BIT(nitro->flags, 4);
-        int oldFlags = nitro->flags;
+        int flagbit4 = GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_4);
+        int oldFlags = handle->flags;
         if (flagbit4)
         {
-            nitro->flags = oldFlags | (1 << 6);
+            handle->flags = oldFlags | (1 << NITROHANDLE_FLAG_6);
             do {
-                func_020c7898(&nitro->unknown_14);
-            } while (GET_FLAG_BIT(nitro->flags, 6));
+                func_020c7898(&handle->unknown_14);
+            } while (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_6));
         }
         else
         {
-            nitro->flags = oldFlags | (1 << 3);
+            handle->flags = oldFlags | (1 << NITROHANDLE_FLAG_3);
         }
     }
 
@@ -250,64 +250,64 @@ extern "C" CBool NitroHandle_UnknownDestructionFunction(NitroHandle* nitro)
     return act;
 }
 
-extern "C" CBool NitroHandle_OtherUnknownDestFunc(NitroHandle* nitro)
+extern "C" CBool NitroHandle_OtherUnknownDestFunc(NitroHandle* handle)
 {
-    NitroVM* fs = NULL;
+    NitroVM* machine = NULL;
     int oldState = DisableIRQInterrupts();
 
-    CBool skip = GET_FLAG_BIT(nitro->flags, 3) == 0;
+    CBool skip = GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_3) == 0;
     if (!skip)
     {
-        nitro->flags &= ~(1 << 3);
-        fs = NitroHandle_020cbc6c(nitro);
+        handle->flags &= ~(1 << NITROHANDLE_FLAG_3);
+        machine = NitroHandle_020cbc6c(handle);
     }
 
     SetIRQInterruptState(oldState);
-    if (fs != NULL)
-        NitroVM_020cbe80(fs);
+    if (machine != NULL)
+        NitroVM_020cbe80(machine);
     return skip;
 }
 
-extern "C" void NitroHandle_SetOpcodeOverride(NitroHandle* nitro, PFNExecuteCommand fnOverride, unsigned int mask)
+extern "C" void NitroHandle_SetOpcodeOverride(NitroHandle* handle, PFNExecuteCommand fnOverride, unsigned int mask)
 {
     if (mask == 0)
         fnOverride = NULL;
     else if (fnOverride == NULL)
         mask = 0;
     
-    nitro->instructionOverride = fnOverride;
-    nitro->overrideOpcodeFlags = mask;
+    handle->instructionOverride = fnOverride;
+    handle->overrideOpcodeFlags = mask;
 }
 
-extern "C" void NitroHandle_020cc6ac(NitroHandle* nitro, int result)
+extern "C" void NitroHandle_020cc6ac(NitroHandle* handle, int result)
 {
-    if (GET_FLAG_BIT(nitro->flags, 8))
+    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_8))
     {
-        int previousFlags = nitro->flags;
-        NitroVM* firstVM = nitro->linkToFirstVM.pNext;
-        nitro->flags = previousFlags & ~(1 << 8);
+        int previousFlags = handle->flags;
+        NitroVM* firstVM = handle->linkToFirstVM.pNext;
+        handle->flags = previousFlags & ~(1 << NITROHANDLE_FLAG_8);
         NitroVM_UnlinkAndStoreResult(firstVM, result);
-        NitroVM* fs = NitroHandle_020cbc6c(nitro);
+        NitroVM* fs = NitroHandle_020cbc6c(handle);
         if (fs != NULL)
             NitroVM_020cbe80(fs);
     }
     else
     {
-        NitroVM* firstVM = nitro->linkToFirstVM.pNext;
+        NitroVM* firstVM = handle->linkToFirstVM.pNext;
         int oldState = DisableIRQInterrupts();
         firstVM->storedResult = result;
-        nitro->flags &= ~(1 << 9);
-        func_020c78e8(&nitro->unknown_0C);
+        handle->flags &= ~(1 << NITROHANDLE_FLAG_9);
+        func_020c78e8(&handle->unknown_0C);
         SetIRQInterruptState(oldState);
     }
 }
 
-extern "C" void InitializeCartridgeFilesystem(int unknown)
+extern "C" void InitializeCartridgeFilesystem(int dmaChannel)
 {
     if (data_02111738)
         return;
     data_02111738 = true;
-    InitializeROMFilesystem_Internal(unknown);
+    InitializeROMFilesystem_Internal(dmaChannel);
 }
 
 extern "C" void NitroVM_Initialize(NitroVM* vm)
@@ -317,7 +317,7 @@ extern "C" void NitroVM_Initialize(NitroVM* vm)
     vm->unknown_sublist_18.pLast = NULL;
     vm->unknown_sublist_18.pFirst = NULL;
     vm->linkedHandle = NULL;
-    vm->maybeScheduledCommand = 14;
+    vm->maybeScheduledCommand = NITROVM_OPCODE_14;
     vm->flags = 0;
 }
 
@@ -350,7 +350,7 @@ extern "C" int GlobalSearchFileOrDirectory_020cc780(NitroVM* vm, const char* inP
 
             if (handle == NULL)
                 return false;
-            if (!GET_FLAG_BIT(handle->flags, 1))
+            if (!GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_1))
                 return false;
 
             accessor.handle = handle;
@@ -378,7 +378,7 @@ extern "C" int GlobalSearchFileOrDirectory_020cc780(NitroVM* vm, const char* inP
         vm->reg9.ptr = outFileData;
     }
 
-    return NitroVM_020cbf58(vm, 4);
+    return NitroVM_020cbf58(vm, NITROVM_OPCODE_4);
 }
 
 #define min(a, b) (((a) > (b)) ? (b) : (a))

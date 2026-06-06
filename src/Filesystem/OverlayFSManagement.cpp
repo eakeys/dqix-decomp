@@ -15,7 +15,7 @@ extern "C"
 
 unsigned int GetOverlaySizeOnCartridge(const OverlayMetadata& overlay)
 {
-    bool isCompressed = overlay.overlayFlags & 1;
+    bool isCompressed = overlay.overlayFlags & (1 << OVERLAY_FLAG_COMPRESSED);
     if (!isCompressed)
         return overlay.uncompressedSize;
     return overlay.compressedSize;
@@ -63,7 +63,7 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
         size = arm7OverlayTableSize;
     }
 
-    if (size <= (offset = overlayIdx << 5))
+    if (size <= (offset = overlayIdx * 0x20))
         return false;
 
     NitroVM machine;
@@ -234,7 +234,7 @@ void DecompressAndStaticInitializeOverlay(const OverlayMetadata& overlay)
     if (bootData->bootMode == 2)
     {
         bool result = false;
-        if (overlay.overlayFlags & 2)
+        if (overlay.overlayFlags & (1 << OVERLAY_FLAG_DOWNLOAD_PLAY))
         {
             // Using two different formats for the same address (number and label)
             // forces the word to appear twice
@@ -256,7 +256,7 @@ void DecompressAndStaticInitializeOverlay(const OverlayMetadata& overlay)
     }
 
     // Decompress the overlay in place
-    if (overlay.overlayFlags & 1)
+    if (overlay.overlayFlags & (1 << OVERLAY_FLAG_COMPRESSED))
         func_02000970(overlay.loadAddress + initialSize);
     
     CleanInvalidateCacheRange((void*)overlay.loadAddress, overlay.uncompressedSize);

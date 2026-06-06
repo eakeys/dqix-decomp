@@ -73,6 +73,41 @@ union FSRegisterTriple
     };
 };
 
+#define NITROVM_FLAG_0 0
+#define NITROVM_FLAG_1 1
+#define NITROVM_FLAG_2 2
+#define NITROVM_FLAG_3 3
+#define NITROVM_FLAG_4 4
+#define NITROVM_FLAG_5 5
+#define NITROVM_FLAG_6 6
+#define NITROVM_FLAG_7 7
+#define NITROVM_FLAG_8 8
+#define NITROVM_FLAG_9 9
+#define NITROVM_FLAG_10 10
+
+#define NITROVM_OPCODE_0 0
+#define NITROVM_OPCODE_1 1
+#define NITROVM_OPCODE_2 2
+#define NITROVM_OPCODE_3 3
+#define NITROVM_OPCODE_4 4
+#define NITROVM_OPCODE_5 5
+#define NITROVM_OPCODE_6 6
+#define NITROVM_OPCODE_7 7
+#define NITROVM_OPCODE_8 8
+#define NITROVM_OPCODE_9 9
+#define NITROVM_OPCODE_10 10
+#define NITROVM_OPCODE_14 14
+
+#define NITRO_RESULT_0 0
+#define NITRO_RESULT_1 1
+#define NITRO_RESULT_2 2
+#define NITRO_RESULT_3 3
+#define NITRO_RESULT_4 4
+#define NITRO_RESULT_5 5
+#define NITRO_RESULT_6 6
+#define NITRO_RESULT_7 7
+#define NITRO_RESULT_8 8
+
 // This is the 72-byte struct we see in a bunch of places
 struct NitroVM
 {
@@ -99,6 +134,17 @@ struct FSReadHandle
     NitroHandle* nitroHandle;
     unsigned int offset;
 };
+
+#define NITROHANDLE_FLAG_0 0
+#define NITROHANDLE_FLAG_1 1
+#define NITROHANDLE_FLAG_2 2
+#define NITROHANDLE_FLAG_3 3
+#define NITROHANDLE_FLAG_4 4
+#define NITROHANDLE_FLAG_5 5
+#define NITROHANDLE_FLAG_6 6
+#define NITROHANDLE_FLAG_7 7
+#define NITROHANDLE_FLAG_8 8
+#define NITROHANDLE_FLAG_9 9
 
 // sizeof(NitroHandle) == 92 == 0x5C.
 // Used much more broadly but idk where atm

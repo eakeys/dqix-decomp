@@ -52,7 +52,7 @@ struct Struct_021118e0
 {
     typedef void (*PFNUnknown)(Struct_021118e0*);
 
-    unsigned int* unknown_0;
+    unsigned int* pUnknown_0;
     int unknown_4[6];
     unsigned int cartridgeReadOffset;
     unsigned char* writeDst;

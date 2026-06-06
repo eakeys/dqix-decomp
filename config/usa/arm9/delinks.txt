@@ -108,6 +108,10 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020afe6c end:0x020afec4
 
+src/System/InterruptHandling.cpp:
+    complete
+    .text start:0x020c6c90 end:0x020c6d48
+
 src/System/Cache.cpp:
     complete
     .text start:0x020c824c end:0x020c8348

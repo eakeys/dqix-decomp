@@ -3,6 +3,7 @@
 #include "System/BiosData.h"
 #include "System/Memory.h"
 #include "System/Interrupts.h"
+#include "System/InterruptHandling.h"
 #include "System/Cache.h"
 #include <globaldefs.h>
 
@@ -55,18 +56,10 @@ extern "C"
 
     // Checks some boolean is set, hangs if not set
     void func_020cff28();
-
-    bool TryReadViaDMA(Struct_02111f20*);
     void func_020d1234(unsigned int);
 
     // Maybe sets interrupt table?
     void func_020c6aec(unsigned int mask, const void* fn);
-    // Enables interrupt enable flag and return old value
-    unsigned int func_020c6cbc(unsigned int);
-    // Disables the specified interrupt enable flags
-    void func_020c6cec(unsigned int);
-    // Set interrupt enable flag and return old value
-    unsigned int func_020c6d1c(unsigned int);
     
     void func_020d1118();
 }
@@ -147,21 +140,13 @@ void DMAChainSegmentInterruptHandler()
 
     if (!moreToWrite)
     {
-        unsigned int interruptFlags;
-        __asm("mov interruptFlags, #1 << 19");
-        func_020c6cec(interruptFlags);
-        __asm("mov interruptFlags, #1 << 19");
-        func_020c6d1c(interruptFlags);
+        DisableSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
+        AcknowledgeSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
         Struct_021118e0* readManager = &data_021118e0;
         unsigned int romChipID = SetupNormalGamecardBusCommandMode();
         func_020d1234(romChipID);
 
-        unsigned int* writeLocation = readManager->unknown_0;
-        unsigned int zero;
-        __asm("mov zero, 0");
-        *writeLocation = zero;
-        DECLARE_ASM_BOUNDARY();
-
+        *readManager->pUnknown_0 = 0;
         PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
         NitroHandle* handle = readManager->handle_3c;
 
@@ -175,10 +160,12 @@ void DMAChainSegmentInterruptHandler()
 
         if (cleanProc != NULL)
             cleanProc(handle);
-
-        return;
     }
-    ReadSingleSegmentFromCartridge();
+    else
+    {
+        DECLARE_ASM_BOUNDARY();
+        ReadSingleSegmentFromCartridge();
+    }
 }
 
 extern "C" bool TryReadViaDMA(Struct_02111f20* handler)
@@ -246,10 +233,10 @@ extern "C" bool TryReadViaDMA(Struct_02111f20* handler)
             CleanInvalidateDataCache();
         }
 
-        // Set handler for interrupt ID 19 (gamecard data transfer completion)
-        func_020c6aec(1 << 19, &DMAChainSegmentInterruptHandler);
-        func_020c6d1c(1 << 19);
-        func_020c6cbc(1 << 19);
+        // Set interrupt handler
+        func_020c6aec(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE, &DMAChainSegmentInterruptHandler);
+        AcknowledgeSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
+        EnableSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
         SetIRQInterruptState(oldState);
         ReadSingleSegmentFromCartridge();
     }
@@ -347,12 +334,7 @@ extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
     // Might be checking if the cart has been ejected or similar
     func_020d1234(romChipID);
 
-    unsigned int* writeLocation = readManager->unknown_0;
-    unsigned int zero;
-    __asm("mov zero, 0");
-    *writeLocation = zero;
-    DECLARE_ASM_BOUNDARY();
-
+    *readManager->pUnknown_0 = 0;
     PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
     NitroHandle* handle = readManager->handle_3c;
 
@@ -363,9 +345,11 @@ extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
     if (readManager->flags_114 & (1 << 4))
         func_020c7950(readManager->bufferOrOtherStruct_44);
     SetIRQInterruptState(oldState);
-
+    
     if (cleanProc != NULL)
         cleanProc(handle);
+
+    DECLARE_ASM_BOUNDARY();
 }
 
 void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,

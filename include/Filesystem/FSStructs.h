@@ -226,7 +226,7 @@ extern "C"
     // base_D = (int)id of parent directory
     int NitroVM_LoadDirectoryDataByIndex(NitroVM* fs, unsigned int dirIndex);
 
-    // Default command for FS72_ExecuteCommand with opcode 0.
+    // Default implementation for NitroVM opcode 0.
     // Expects as inputs:
     // base_D = offset from beginning of the nitro data to start copying from
     // ext_A = destination to load data to
@@ -235,7 +235,7 @@ extern "C"
     // base_D is adjusted by the number of bytes loaded.
     int NitroVM_DefaultCommand_Load(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 1.
+    // Default implementation for NitroVM opcode 1.
     // Very likely completely unused since nitro files are read-only.
     // Expects as inputs:
     // base_D = offset from beginning of the nitro data to start copying to
@@ -245,7 +245,7 @@ extern "C"
     // value_2C is adjusted by the number of bytes saved.
     int NitroVM_DefaultCommand_Save(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 2.
+    // Default implementation for NitroVM opcode 2.
     // Expects as inputs:
     // ext_B_low = directory index (omit the 0xF000)
     // Outputs:
@@ -260,7 +260,7 @@ extern "C"
     // respectively will just be copied in
     int NitroVM_DefaultCommand_GetDirectoryData(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 3.
+    // Default implementation for NitroVM opcode 3.
     // Loads data from a FNT subtable within the nitro filesystem.
     // Inputs:
     // base_C = offset to start reading from (relative to the nitro handle)
@@ -275,7 +275,7 @@ extern "C"
     // processes go wrong for whatever reason
     int NitroVM_DefaultCommand_GetFileOrDirectoryNameData(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 4.
+    // Default implementation for NitroVM opcode 4.
     // Gets the ID and related data of a file / directory based on the name.
     // Inputs:
     // [technicality] ext_a = should equal nitro handle if passing empty file string, unused otherwise
@@ -304,7 +304,7 @@ extern "C"
     // ext_d, reg8, reg9 unchanged
     int NitroVM_DefaultCommand_GetFileOrDirectoryByName(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 5.
+    // Default implementation for NitroVM opcode 5.
     // Computes the full path of a file or directory given its ID.
     // Inputs:
     // flag bit 5 (0x20): set if specifying a directory, clear if specifying a file
@@ -325,7 +325,7 @@ extern "C"
     // the id of the container directory if you specified a file)
     int NitroVM_DefaultCommand_GetPath(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 6.
+    // Default implementation for NitroVM opcode 6.
     // Loads data from the file allocation table.
     // Inputs:
     // ext_b: file id / index in the table
@@ -335,7 +335,7 @@ extern "C"
     // base_c and ext_b: end of allocation
     int NitroVM_DefaultCommand_GetFATEntry(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 7.
+    // Default implementation for NitroVM opcode 7.
     // Copies data from the extended registers into the base registers.
     // Specifically:
     // ext_a is copied into base_b and base_d
@@ -343,7 +343,7 @@ extern "C"
     // ext_c is copied into base_a
     int NitroVM_DefaultCommand_CopyRegisters(NitroVM* fs);
 
-    // Default command for FS72_ExecuteCommand with opcode 8.
+    // Default implementation for NitroVM opcode 8.
     // Does nothing, but might be intended as a sort of shutdown/destructor.
     // (See e.g. func_020cca80 in USA, which is used at the end of functions
     // that create temporary VMs and invokes command 8).

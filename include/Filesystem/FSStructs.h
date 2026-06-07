@@ -148,7 +148,7 @@ struct FSReadHandle
 #define NITROHANDLE_FLAG_5 5
 // used for some sort of interrupt / sync loop thing
 #define NITROHANDLE_FLAG_6 6
-#define NITROHANDLE_FLAG_7 7
+#define NITROHANDLE_FLAG_MAYBE_DESTRUCTION_UNDERWAY 7
 #define NITROHANDLE_FLAG_8 8
 #define NITROHANDLE_FLAG_9 9
 
@@ -353,13 +353,12 @@ extern "C"
 
     NitroVM* NitroHandle_020cbc6c(NitroHandle* handle);
     void NitroVM_020cbe80(NitroVM* vm);
-    // Boolean return value
-    int NitroVM_ExecuteAndUnlink_020cbf14(NitroVM* vm);
-    // Boolean return value. It seems like it executes the command and
-    // does some stuff to ensure it's 'fully' executed. (This can't be in terms
-    // of waiting for operations to complete, because everything is single threaded.
-    // But I think it's because of queued commands / stored results etc)
-    int NitroVM_020cbf58(NitroVM* vm, int opcode);
+    CBool NitroVM_ExecuteAndUnlink_020cbf14(NitroVM* vm);
+    // Seems like it executes the command and
+    // does some stuff to ensure it's 'fully' executed. (might be waiting
+    // for peripheral stuff e.g. the gamecard bus, or because of queued 
+    // commands / stored results etc)
+    CBool NitroVM_020cbf58(NitroVM* vm, int opcode);
 }
 
 struct FSStruct76

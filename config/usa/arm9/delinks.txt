@@ -97,7 +97,7 @@ src/Memory/UnusedSignedAllocator.cpp:
 
 src/Filesystem/NarcHandle.cpp:
     complete
-    .text start:0x020afb58 end:0x020afd88
+    .text start:0x020afb58 end:0x020afdc8
 
 src/Memory/AllocatorTypes.cpp:
     complete
@@ -140,3 +140,7 @@ src/Filesystem/OverlayFSManagement.cpp:
 src/Filesystem/FileIOPorts.cpp:
     complete
     .text start:0x020d084c end:0x020d0f40
+
+src/Filesystem/ExtendedNitroVM.cpp:
+    complete
+    .text start:0x020d8a48 end:0x020d8d5c

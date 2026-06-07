@@ -10,9 +10,9 @@ extern "C"
 
     // Sets up the appropriate registers to point to the relevant parts, so that 
     // the handle load proc can load the file
-    CBool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor accessor);
+    bool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor accessor);
 
-    CBool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path);
+    bool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path);
 
     // I don't know what this function actually does, but I think it has 
     // some synchronisation purpose. It is often called at destruction time,

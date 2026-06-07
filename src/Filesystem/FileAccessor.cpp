@@ -42,7 +42,7 @@ extern "C" CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
 }
 
 // Accessor passed by value (in registers r1, r2)
-extern "C" CBool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor volatile accessor)
+extern "C" bool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor volatile accessor)
 {
     NitroHandle* handle = accessor.handle;
     if (handle == NULL)
@@ -61,7 +61,7 @@ extern "C" CBool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor vola
     return true;
 }
 
-extern "C" CBool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path)
+extern "C" bool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path)
 {
     NitroFileAccessor accessor;
     if (CreateFileAccessor(&accessor, path))

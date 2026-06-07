@@ -14,20 +14,6 @@
 
 #pragma optimize_for_size off
 
-extern "C"
-{
-    bool func_020cc168(void*, const char*, unsigned int);
-
-    bool func_020cc2a0(void* narcUnknown, const void* image,
-        unsigned int fatOffset, unsigned int fatSize,
-        unsigned int fntOffset, unsigned int fntSize,
-        void* loadFn, void* saveFn);
-
-    void func_020cc21c(void*);
-
-    bool func_020cc310(void*);
-}
-
 struct NarcHeader
 {
     unsigned int magic;
@@ -127,7 +113,7 @@ bool NarcHandle::Initialize(const char* signatureString, const unsigned char* bu
     return false;
 }
 
-bool NarcHandle::MaybeDestroy()
+bool NarcHandle::Destroy()
 {
     if (!NitroHandle_Destroy(&initial))
         return false;
@@ -136,20 +122,19 @@ bool NarcHandle::MaybeDestroy()
     return true;
 }
 
-// I don't know what this does, but it's right here so it's probably related
-// to narc handles somehow (could be that files.linkedHandle points to a narchandle)
-extern "C" int func_020afd0c(const char* filename)
+const void* GetFileFromNARCInMemory(const char* filename)
 {
-    int ret = NULL;
+    const unsigned char* addr = NULL;
     NitroVM machine;
     NitroVM_Initialize(&machine);
 
     if (NitroVM_PrepareReadFileByPath(&machine, filename))
     {
-        ret = (int)((NarcHandle*)machine.linkedHandle)->pFileDataStart + machine.regbase_abc.b.s32;
+        // after running the previous function, base_B holds offset of file from file data
+        addr = (const unsigned char*)((NarcHandle*)machine.linkedHandle)->pFileDataStart + machine.regbase_abc.b.s32;
         NitroVM_MaybeCompleteTasks_020cca80(&machine);
     }
-    return ret;
+    return addr;
 }
 
 const void* NarcHandle::GetFileByIndex(unsigned int idx) const
@@ -161,4 +146,19 @@ const void* NarcHandle::GetFileByIndex(unsigned int idx) const
         ret = (const unsigned char*)pFileDataStart + fatb.entries[idx].startOffset;
 
     return ret;
+}
+
+bool PrepareReadFileInNARCByID(NitroVM* vm, NarcHandle* handle, unsigned int id)
+{
+    bool success = false;
+
+    if (id < ((FATBlock*)handle->pFATBSection)->numFiles)
+    {
+        NitroFileAccessor accessor;
+        accessor.handle = &handle->initial;
+        accessor.fileID = id;
+        success = NitroVM_PrepareReadFileByID(vm, accessor);
+    }
+
+    return success;
 }

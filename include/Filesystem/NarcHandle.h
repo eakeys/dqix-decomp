@@ -14,9 +14,10 @@ public:
     const void* pFileDataStart; // points past the 8-byte 'FIMG' header
 
     bool Initialize(const char* signatureString, const unsigned char* buffer);
-    bool MaybeDestroy();
+    bool Destroy();
 
     const void* GetFileByIndex(unsigned int idx) const;
 };
 
-extern "C" bool func_020afd88(NitroVM* files, NarcHandle* narc, unsigned int fileIdx);
+const void* GetFileFromNARCInMemory(const char* filename);
+bool PrepareReadFileInNARCByID(NitroVM* vm, NarcHandle* handle, unsigned int id);

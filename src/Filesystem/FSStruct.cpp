@@ -877,7 +877,7 @@ extern "C" CBool NitroVM_020cbf58(NitroVM* vm, int opcode)
     vm->flags |= (1 << NITROVM_FLAG_0);
 
     int oldState = DisableIRQInterrupts();
-    if (handle->flags & (1 << NITROHANDLE_FLAG_7))
+    if (handle->flags & (1 << NITROHANDLE_FLAG_MAYBE_DESTRUCTION_UNDERWAY))
     {
         NitroVM_UnlinkAndStoreResult(vm, NITRO_RESULT_MAYBE_INVALID_HANDLE);
         SetIRQInterruptState(oldState);

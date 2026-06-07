@@ -137,7 +137,7 @@ extern "C" CBool NitroHandle_Destroy(NitroHandle* handle)
         // Silly unused volatile read of the flags. Assembly is extra misleading,
         // can make it look like it's the 2nd argument, but this is wrong
         CBool destructionThingHappened = (handle->flags, NitroHandle_UnknownDestructionFunction(handle));
-        handle->flags |= (1 << NITROHANDLE_FLAG_7);
+        handle->flags |= (1 << NITROHANDLE_FLAG_MAYBE_DESTRUCTION_UNDERWAY);
         
         NitroVM* machine = handle->linkToFirstVM.pNext;
         if (machine != NULL)
@@ -160,7 +160,7 @@ extern "C" CBool NitroHandle_Destroy(NitroHandle* handle)
         handle->nameTableOffset_40 = 0;
         handle->fatOffset_3C = 0;
 
-        handle->flags &= ~((1 << NITROHANDLE_FLAG_7) | (1 << NITROHANDLE_FLAG_5) | (1 << NITROHANDLE_FLAG_IS_POPULATED));
+        handle->flags &= ~((1 << NITROHANDLE_FLAG_MAYBE_DESTRUCTION_UNDERWAY) | (1 << NITROHANDLE_FLAG_5) | (1 << NITROHANDLE_FLAG_IS_POPULATED));
     }
     SetIRQInterruptState(oldState);
     return true;

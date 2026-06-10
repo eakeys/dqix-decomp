@@ -14,37 +14,9 @@
 
 #pragma optimize_for_size off
 
-struct NarcHeader
-{
-    unsigned int magic;
-    unsigned short byteOrderMark;
-    unsigned short version;
-    unsigned int fileSize;
-    unsigned short headerSize;
-    unsigned short numSections;
-};
-
-struct NarcSectionHeader
-{
-    unsigned int magic;
-    unsigned int sectionSize;
-};
-
-struct FATBlock
-{
-    NarcSectionHeader generic;
-    unsigned short numFiles;
-    unsigned short reserved;
-    struct FATEntry
-    {
-        unsigned int startOffset;
-        unsigned int endOffset;
-    } entries[0];
-};
-
 bool IsFileValidNarc(const unsigned char* buffer)
 {
-    const NarcHeader& narc = *(const NarcHeader*)buffer;
+    const NarcHandle::ArchiveHeader& narc = *(const NarcHandle::ArchiveHeader*)buffer;
     
     if (narc.magic != NARC_HEADER)
         return false;
@@ -59,16 +31,16 @@ bool IsFileValidNarc(const unsigned char* buffer)
 
 bool NarcHandle::Initialize(const char* signatureString, const unsigned char* buffer)
 {
-    const NarcSectionHeader* fatPtr = NULL;
-    const NarcSectionHeader* fntPtr = NULL;
-    const NarcSectionHeader* imgPtr = NULL;
+    const SectionHeader* fatPtr = NULL;
+    const SectionHeader* fntPtr = NULL;
+    const SectionHeader* imgPtr = NULL;
 
     if (!IsFileValidNarc(buffer))
         return false;
 
-    const NarcHeader& header = *(const NarcHeader*)buffer;
+    const ArchiveHeader& header = *(const ArchiveHeader*)buffer;
     int i = 0;
-    const NarcSectionHeader* sectionPtr = (const NarcSectionHeader*)(buffer + header.headerSize);
+    const SectionHeader* sectionPtr = (const SectionHeader*)(buffer + header.headerSize);
 
     if ((int)header.numSections > 0)
     {
@@ -88,14 +60,14 @@ bool NarcHandle::Initialize(const char* signatureString, const unsigned char* bu
             }                
 
             i++;
-            sectionPtr = (const NarcSectionHeader*)((const char*)sectionPtr + sectionPtr->sectionSize);
+            sectionPtr = (const SectionHeader*)((const char*)sectionPtr + sectionPtr->sectionSize);
         } while (i < header.numSections);
         
     }
 
     NitroHandle_ZeroInit(&initial);
     pNarcFile = buffer;
-    pFATBSection = fatPtr;
+    pFATBSection = (const FATBlock*)fatPtr;
     unsigned char* imgPostHeader = (unsigned char*)(imgPtr) + 8;
     pFileDataStart = imgPostHeader;
 
@@ -152,7 +124,7 @@ bool PrepareReadFileInNARCByID(NitroVM* vm, NarcHandle* handle, unsigned int id)
 {
     bool success = false;
 
-    if (id < ((FATBlock*)handle->pFATBSection)->numFiles)
+    if (id < ((NarcHandle::FATBlock*)handle->pFATBSection)->numFiles)
     {
         NitroFileAccessor accessor;
         accessor.handle = &handle->initial;

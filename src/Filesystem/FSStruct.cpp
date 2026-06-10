@@ -2,6 +2,7 @@
 #include "System/Interrupts.h"
 #include "System/Memory.h"
 #include <globaldefs.h>
+#include <asmhacks.h>
 
 // -O2,p optimization seems to be needed here
 #pragma optimize_for_size off
@@ -592,7 +593,7 @@ extern "C" int NitroVM_DefaultCommand_GetPath(NitroVM* vm)
         unsigned int signature = (unsigned int)nitroHandle;
         __asm("mov uselessZero, 0");
         signature = *(unsigned int*)signature;
-        __asm("b here\nhere:");
+        DECLARE_ASM_NOP();
 
         int signatureLength;
         if (signature <= 0xff)

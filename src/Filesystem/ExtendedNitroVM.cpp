@@ -1,6 +1,7 @@
 #include "Filesystem/ExtendedNitroVM.h"
 #include "Filesystem/FSInnerDefs.h"
 #include "System/Cache.h"
+#include "std_library_functions.h"
 #include <globaldefs.h>
 
 //#pragma optimize_for_size off
@@ -18,12 +19,78 @@ extern "C"
 
     void func_020d9788(int);
 }
-
+// files to prepare accessors in cache for
+extern const char* cachedFilePaths[];
 // Seems to hold whether cached file accessors have been saved or not
 extern bool data_01ffd998;
-// CRC hashes for cached files
+// CRC hashes for cached file accessors
 extern unsigned int data_01ffd99c[61];
+// cached file accessors
 extern NitroFileAccessor data_01ffda90[61];
+
+// "data/"
+extern char data_020f27b8[];
+
+void CacheMainFileAccessors()
+{
+    if (!data_01ffd998)
+    {
+        char fullFilePath[64];
+
+        const char** pCurrentFilePath = cachedFilePaths;
+        
+        for (unsigned int i = 0; i < 61; )
+        {
+            strcpy(fullFilePath, data_020f27b8);
+            strcat(fullFilePath, *pCurrentFilePath);
+            unsigned int crc = 0;
+            if (CreateFileAccessor(&data_01ffda90[i], fullFilePath))
+                crc = func_01ff860c(fullFilePath);
+            // silly goofy register hack (see RemoveFurigana)
+            unsigned int iplusone = i + 1;
+            data_01ffd99c[iplusone - 1] = crc;
+            i++;            
+            pCurrentFilePath++;
+        }
+
+        // bubble sort
+        unsigned int passEnd = 60;
+        while (true)
+        {
+            bool changesMadeThisPass = false;
+            NitroFileAccessor* pAccessor = data_01ffda90;
+            unsigned int* pCRC = data_01ffd99c;
+            for (unsigned int i = 0; i < passEnd; i++, pAccessor++, pCRC++)
+            {
+                NitroFileAccessor currentAccessor;
+                ((NitroFileAccessor*)&currentAccessor)->handle = pAccessor[0].handle;
+                ((NitroFileAccessor*)&currentAccessor)->fileID = pAccessor[0].fileID;
+                NitroFileAccessor nextAccessor;
+                ((NitroFileAccessor*)&nextAccessor)->handle = pAccessor[1].handle;
+                ((NitroFileAccessor*)&nextAccessor)->fileID = pAccessor[1].fileID;
+                unsigned int currentCRC = pCRC[0];
+                
+                unsigned int nextCRC = pCRC[1];
+                if (currentCRC > nextCRC)
+                {
+                    pAccessor[0].handle = nextAccessor.handle;
+                    pAccessor[0].fileID = nextAccessor.fileID;
+                    pAccessor[1].handle = currentAccessor.handle;
+                    pAccessor[1].fileID = currentAccessor.fileID;
+                    
+                    pCRC[0] = nextCRC;
+                    pCRC[1] = currentCRC;
+                    changesMadeThisPass = true;
+                }
+            }
+            if (!changesMadeThisPass)
+                break;
+            passEnd--;
+        }
+
+        data_01ffd998 = true;
+    }
+}
 
 void ExtendedNitroVM::ZeroInitialize()
 {

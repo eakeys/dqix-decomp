@@ -4,6 +4,7 @@
 #include "System/Memory.h"
 #include "System/BiosData.h"
 #include <globaldefs.h>
+#include <asmhacks.h>
 
 #pragma optimize_for_size off
 
@@ -83,7 +84,7 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
     __asm("mov arg_handle, romHandle");
     __asm("add arg_readStart, start, offset");
     arg_readEnd = start + size;
-    __asm("b here\nhere:");
+    DECLARE_ASM_NOP();
 
     // NitroVM_PrepareRead(&machine, romHandle, start + (overlayIdx << 5), start + size, -1)
     if (!NitroVM_PrepareRead(arg_machine, arg_handle, arg_readStart, arg_readEnd, arg_capacity))
@@ -125,7 +126,7 @@ bool LoadOverlayMetadata(OverlayMetadata* into, bool isArm7, unsigned int idx)
         OverlayMetadata* copyDst;
         __asm("mov copyDst, into");
         __asm("add shifted, source, offset");
-        __asm("b here\nhere:");
+        DECLARE_ASM_NOP();
         VectorizedInvertedMemcpy(shifted, copyDst, 0x20);
         into->isArm7 = isArm7;
 

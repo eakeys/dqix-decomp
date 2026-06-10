@@ -42,5 +42,6 @@ extern "C"
     int GlobalSearchFileOrDirectory_020cc780(NitroVM*, const char* path,
         NitroFileAccessor* outFileData, NitroDirectoryAccessor* outDirData);
 
-   int NitroVM_ExecuteLoad_020cc8c4(NitroVM*, void* dst, int capacity, int unknownBool);
+    // Returns number of bytes loaded
+    int NitroVM_ExecuteLoad_020cc8c4(NitroVM*, void* dst, int capacity, CBool unknownBool);
 }

@@ -108,6 +108,7 @@ extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
 
     if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0))
     {
+        // Execute iff flag 6 and flag 2 are both clear.
         needToExecute = !(vm->flags & ((1 << NITROVM_FLAG_6) | (1 << NITROVM_FLAG_2)));
 
         if (needToExecute)

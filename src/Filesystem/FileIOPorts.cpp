@@ -6,6 +6,7 @@
 #include "System/InterruptHandling.h"
 #include "System/Cache.h"
 #include <globaldefs.h>
+#include <asmhacks.h>
 
 #pragma optimization_level 2
 #pragma optimize_for_size off
@@ -16,22 +17,6 @@
 #define ADDR_GAMECARD_BUS_ROMCTRL 0x040001a4
 #define ADDR_GAMECARD_RECEIVED_DATA 0x04100010
 #define GAMECARD_BUS_COMMAND_BYTE(n) *(unsigned char*)(0x040001a8 + n)
-
-#define INTERNAL_ASM_NOP(what) __asm("b " what "\n" what ":")
-#define INTERNAL_ASM_NOP_2(num) INTERNAL_ASM_NOP("label__" #num)
-#define INTERNAL_ASM_NOP_3(num) INTERNAL_ASM_NOP_2(num)
-// Puts in some inline assembly of the form
-// ```     b right_here          ```
-// ```     right_here:           ```
-// with a uniquely generated label to prevent clashes.
-// Such an instruction does nothing and is completely optimized out, but it
-// prevents some quirks of inline assembly spilling over into later code
-// (such as constants being loaded from the end of the function, even if they're
-// small enough to be hardcoded into a command). It also disables some
-// optimizations that move instructions to more efficient (but not matching)
-// places - two C++ instructions on opposite sides of this boundary will 
-// (usually?) have their order respected.
-#define DECLARE_ASM_BOUNDARY() INTERNAL_ASM_NOP_3(__LINE__)
 
 
 extern "C"
@@ -118,7 +103,7 @@ void ReadSingleSegmentFromCartridge()
     void* readLocation = (void*)ADDR_GAMECARD_RECEIVED_DATA;
     Struct_02111f20* ps1f20 = &data_02111f00.innerStruct;
 
-    DECLARE_ASM_BOUNDARY();
+    DECLARE_ASM_NOP();
 
     func_020ca8e8(s18e0->dmaChannel, readLocation, s18e0->writeDst, 0x200);
     unsigned int offset = s18e0->cartridgeReadOffset;
@@ -163,7 +148,7 @@ void DMAChainSegmentInterruptHandler()
     }
     else
     {
-        DECLARE_ASM_BOUNDARY();
+        DECLARE_ASM_NOP();
         ReadSingleSegmentFromCartridge();
     }
 }
@@ -349,7 +334,7 @@ extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
     if (cleanProc != NULL)
         cleanProc(handle);
 
-    DECLARE_ASM_BOUNDARY();
+    DECLARE_ASM_NOP();
 }
 
 void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,

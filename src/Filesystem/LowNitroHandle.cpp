@@ -384,38 +384,39 @@ extern "C" int GlobalSearchFileOrDirectory_020cc780(NitroVM* vm, const char* inP
 #define min(a, b) (((a) > (b)) ? (b) : (a))
 #define max(a, b) (((a) < (b)) ? (b) : (a))
 
-// This is not quite right, registers are wrong but it's logically correct
-// and I'm moving on for now.
-/*extern "C" int NitroVM_ExecuteLoad_020cc8c4(NitroVM* vm, void* dst, int capacity, int unknownBool)
-{ 
+extern "C" int NitroVM_ExecuteLoad_020cc8c4(NitroVM* vm, void* dst, int capacity, CBool unknownBool)
+{
     // base_d is like seek / tell index, adjusted by load commands
     int srcStart = vm->regbase_d.s32;
-    int srcLength = vm->regbase_abc.c.s32 - vm->regbase_d.s32;
-
-    unsigned int lengthToCopy;
-    lengthToCopy = capacity;
-    if ((int)lengthToCopy > srcLength)
+    int srcEnd = vm->regbase_abc.c.s32;
+    
+    int srcLength = srcEnd - srcStart;
+    
+    int lengthToCopy = capacity;
+    unsigned int copyOfCapacity = capacity; // unsigned fixes register stuff
+    
+    if (lengthToCopy > srcLength)
         lengthToCopy = srcLength;
     
-    if ((int)lengthToCopy < 0)
+    if (lengthToCopy < 0)
         lengthToCopy = 0;
-
-    vm->regext_abc.a.ptr = dst;
-    vm->regext_abc.b.s32 = capacity;
+    
+    vm->regext_abc.a.ptr = (char*)dst;
+    vm->regext_abc.b.u32 = copyOfCapacity;
     vm->regext_abc.c.u32 = lengthToCopy;
-
+    
     if (!unknownBool)
-        vm->flags |= (1 << 2);
-
-    NitroVM_020cbf58(vm, 0);
-
+        vm->flags |= (1 << NITROVM_FLAG_2);
+    
+    NitroVM_020cbf58(vm, NITROVM_OPCODE_LOAD);
+    
     if (!unknownBool)
     {
-        if (func_020ccae8(vm))
+        if (NitroVM_020ccae8(vm))
             lengthToCopy = vm->regbase_d.u32 - srcStart;
         else
             lengthToCopy = -1;
     }
 
     return lengthToCopy;
-}*/
+}

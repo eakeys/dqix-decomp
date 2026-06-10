@@ -78,6 +78,10 @@ src/System/Random.c:
 	complete
 	.text start:0x020741d0 end:0x020744a8
 
+src/Filesystem/FileIO.cpp:
+    complete
+    .text start:0x0207517c end:0x0207568c
+
 src/Memory/SignedAllocator.cpp:
     complete
     .bss start:0x02109ffc end:0x0210a00c
@@ -127,7 +131,7 @@ src/Filesystem/FSStruct.cpp:
 
 src/Filesystem/LowNitroHandle.cpp:
     complete
-    .text start:0x020cc0fc end:0x020cc8c4
+    .text start:0x020cc0fc end:0x020cc940
 
 src/Filesystem/FileAccessor.cpp:
     complete
@@ -143,4 +147,4 @@ src/Filesystem/FileIOPorts.cpp:
 
 src/Filesystem/ExtendedNitroVM.cpp:
     complete
-    .text start:0x020d8a48 end:0x020d8d5c
+    .text start:0x020d890c end:0x020d8d5c

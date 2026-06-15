@@ -34,5 +34,6 @@ void* DecompressLZ77FileIntoAllocatedSpace(SafeAllocator& allocator,
 
 // Returns a pointer to the extracted file. The file will be extracted
 // to the 'file scratch space' at 0x0211e33c (USA).
-// Not decompiled yet, as depends on too many unknown functions.
-void* ExtractFileFromGP2(const void* gp2, const char* innerFilePath, unsigned int* outSize);
+extern "C" void* ExtractFileFromGP2(const char* gp2Path, const char* innerFilePath, unsigned int* outSize);
+
+char* StringReplaceLanguageTag(const char* input, char* output, int language);

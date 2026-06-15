@@ -80,7 +80,7 @@ src/System/Random.c:
 
 src/Filesystem/FileIO.cpp:
     complete
-    .text start:0x0207517c end:0x0207568c
+    .text start:0x02075098 end:0x0207568c
 
 src/Memory/SignedAllocator.cpp:
     complete
@@ -147,4 +147,8 @@ src/Filesystem/FileIOPorts.cpp:
 
 src/Filesystem/ExtendedNitroVM.cpp:
     complete
-    .text start:0x020d890c end:0x020d8d5c
+    .text start:0x020d8714 end:0x020d8fcc
+
+src/Filesystem/GPC.cpp:
+    complete
+    .text start:0x020d8fcc end:0x020d96b0

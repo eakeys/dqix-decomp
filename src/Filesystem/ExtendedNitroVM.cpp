@@ -13,11 +13,19 @@ extern "C"
 
     // Zero memory and flush cache
     void func_020d84f8(void*, unsigned);
+    // another memcpy-style function, cleans/invalidates the cache in destination after
+    unsigned int func_020d8524(void*, const void*, unsigned);
 
     void func_020d970c();
     void func_020d974c();
 
     void func_020d9788(int);
+
+    
+
+    void DecompressA  (Decompressor*, const void*, unsigned);
+    void DecompressB  (Decompressor*, const void*, unsigned);
+    void func_020ca95c(Decompressor*, const void*, unsigned);
 }
 // files to prepare accessors in cache for
 extern const char* cachedFilePaths[];
@@ -30,6 +38,88 @@ extern NitroFileAccessor data_01ffda90[61];
 
 // "data/"
 extern char data_020f27b8[];
+
+unsigned int CompressionPrefix::GetDecompressedLength() const
+{
+    return decompressedLength;
+}
+
+bool Decompressor::InitAndDecompress(void *out, unsigned int outCapacity, const void *in, unsigned int inLength)
+{
+    func_020d84f8(this, sizeof(Decompressor));
+    if (out == NULL || in == NULL || inLength < 4)
+        return false;
+    
+    CleanInvalidateCacheRange(in, inLength);
+    unsigned int compressionType = ((const CompressionPrefix*)in)->compressionType;
+    if (compressionType >= 5)
+        return false;
+    unsigned int decompLength = ((const CompressionPrefix*)in)->decompressedLength;
+    if (outCapacity < ((decompLength + 7) & ~3))
+        return false;
+
+    this->writeOutputPtr = (unsigned char*)out;
+    this->remainingOutputBytes = decompLength;
+    this->probablyDecompressedSize = decompLength;
+    this->compressionType = compressionType;
+    unsigned int bytesLeftRoundedUp = (remainingOutputBytes + 3) & ~3;
+    this->abstractOutputLocation = writeOutputPtr;
+    this->abstractOutputLocation = (unsigned char*)this->abstractOutputLocation + bytesLeftRoundedUp;
+    switch (compressionType)
+    {
+    case 0:
+        break;
+    case 1:
+        unknown_11 = 3;
+        break;
+    case 2:
+    case 3:
+        decompressB_typeFlag_18 = 1 << compressionType;
+        unknown_14 = -1;
+        unknown_08 = &unknown_1C[0];
+        break;
+    case 4:
+        break;
+    }
+
+    if (inLength > 4)
+        ProcessBytes((const unsigned char*)in + 4, inLength - 4);
+    
+    return true;
+}
+
+bool Decompressor::ProcessBytes(const void* input, unsigned int inputLength)
+{
+    bool success = false;
+    func_020d970c();
+    unsigned char* writeStart = writeOutputPtr;
+    if (writeOutputPtr != NULL && compressionType < 5 && input != NULL && inputLength != NULL)
+    {
+        switch (compressionType)
+        {
+        case 1:
+            DecompressA(this, input, inputLength);
+            break;
+        case 2:
+        case 3:
+            DecompressB(this, input, inputLength);
+            break;
+        case 4:
+            func_020ca95c(this, input, inputLength);
+            break;
+        case 0: // uncompressed
+        default:
+            if (inputLength >= remainingOutputBytes)
+                inputLength = remainingOutputBytes;
+            remainingOutputBytes -= func_020d8524(writeStart + probablyDecompressedSize - remainingOutputBytes, input, inputLength);
+            break;
+        }
+        CleanInvalidateCacheRange(writeStart, writeOutputPtr - writeStart);
+        success = true;
+    }
+    func_020d974c();
+    return success;
+}
 
 void CacheMainFileAccessors()
 {
@@ -243,4 +333,93 @@ bool ExtendedNitroVM::DoFlagStuff()
     
     func_020d974c();
     return success;
+}
+
+unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompressor, 
+    unsigned int &outDecompressedLength, unsigned int &remainingInputBytes,
+    unsigned int &readPosTracker, void *scratchSpace, unsigned int scratchSpaceCapacity)
+{
+    // 'easy case': scratch space is big enough to fit all output data and have
+    // 256 bytes left. Presumably the extra 256 is to avoid any trouble with 
+    // partial decompression overwriting temporary compressed data? 
+    if (decompressor.remainingOutputBytes + 256 <= scratchSpaceCapacity)
+    {
+        void* loadLocation = (void*)(((int)scratchSpace + scratchSpaceCapacity - remainingInputBytes) & ~3);
+        unsigned int successfulLoadSize = LoadToBuffer(loadLocation, remainingInputBytes);
+        if (unknown_2 != 0)
+            return 0;
+        decompressor.ProcessBytes(loadLocation, successfulLoadSize);
+        remainingInputBytes -= successfulLoadSize;
+        readPosTracker += successfulLoadSize;
+    }
+    // this case seems to implicitly assume the scratch space is large enough
+    // for the output to fit, just not with 256 bytes to spare. 
+    else 
+    {
+        if (remainingInputBytes > 256)
+        {
+            unsigned int loadSize = (remainingInputBytes - 256 + 3) & ~3;
+            void* loadLocation = (void*)(((int)scratchSpace + scratchSpaceCapacity - loadSize) & ~3);
+            unsigned int successfulLoadSize = LoadToBuffer(loadLocation, loadSize);
+            if (unknown_2 != 0)
+                return 0;
+            decompressor.ProcessBytes(loadLocation, successfulLoadSize);
+            remainingInputBytes -= successfulLoadSize;
+            readPosTracker += successfulLoadSize;
+        }
+        // if above assumption violated: stack buffer overrun!
+        if (remainingInputBytes != 0)
+        {
+            char stackScratchSpace[256];
+            unsigned int successfulLoadSize = LoadToBuffer(stackScratchSpace, remainingInputBytes);
+            if (unknown_2 != 0)
+                return 0;
+            decompressor.ProcessBytes(stackScratchSpace, successfulLoadSize);
+            remainingInputBytes -= successfulLoadSize;
+            readPosTracker += successfulLoadSize;
+        }
+    }
+    unsigned int scratchSpaceUsedAmount = (decompressor.probablyDecompressedSize + 4) & ~3;
+    if (scratchSpaceUsedAmount >= scratchSpaceCapacity)
+        scratchSpaceUsedAmount = scratchSpaceCapacity;
+    // zero memory and flush
+    func_020d84f8((unsigned char*)scratchSpace + decompressor.probablyDecompressedSize, 
+        scratchSpaceUsedAmount - decompressor.probablyDecompressedSize);
+    CleanInvalidateCacheRange(scratchSpace, scratchSpaceUsedAmount);
+    outDecompressedLength = decompressor.probablyDecompressedSize;
+    return readPosTracker; 
+}
+
+extern unsigned int data_020f2384;
+
+unsigned int ExtendedNitroVM::DecompressBytes(void *output,
+    unsigned int &outDecompressedSize, unsigned int numBytesToRead, unsigned int outputCapacity)
+{
+    outDecompressedSize = 0;
+    if (output == NULL)
+        return 0;
+    if (!CheckUnknownFlagBit4())
+        return 0;
+
+    unsigned int metadataLength = numBytesToRead;
+    unsigned int stack_bytesRemaining = numBytesToRead;
+    unsigned int readPos = 0;
+    unsigned int metadata = 0;
+    if (metadataLength >= data_020f2384)
+        metadataLength = data_020f2384;
+    
+    unsigned int totalReadAmount = LoadToBuffer(&metadata, metadataLength);
+
+    if (unknown_2 != 0)
+        return 0;
+
+    Decompressor decompressor;  
+    if (!decompressor.InitAndDecompress(output, outputCapacity, &metadata, totalReadAmount))
+        return totalReadAmount;
+
+    stack_bytesRemaining -= totalReadAmount;
+    readPos += totalReadAmount;
+    // readPos will be further incremented and the final value returned
+    return DecompressWithScratchSpace(decompressor, outDecompressedSize,
+        stack_bytesRemaining, readPos, output, outputCapacity);
 }

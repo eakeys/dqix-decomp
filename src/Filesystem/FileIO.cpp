@@ -3,6 +3,7 @@
 #include "Filesystem/FSStructs.h"
 #include "Filesystem/LowNitroHandle.h"
 #include "Filesystem/FileAccessor.h"
+#include "Filesystem/GPC.h"
 #include "Combat/Main/BattleList.h"
 #include "Filesystem/NarcHandle.h"
 #include "System/Memory.h"
@@ -17,11 +18,18 @@ extern "C"
 
     void func_0202f7a8();
 
+    // some sort of bit test of a struct member at offset 0
+    bool func_02046708(void*, unsigned int);
+    // returns pointer to some unknown struct (at 02114e04)
+    void* func_020d6c00();
+
     // get system language?
     int func_0200fb08(BattleStruct*);
 
-    // replace <LG> with en, fr, etc.
-    void func_020757b4(const char* in, char* out, int lang);
+    // Looks like a custom implementation of strstr
+    char* func_020d2f88(char* searchString, const char* targetString);
+    // Custom implementation of strlen
+    int func_020d2ff0(const char* str);
 
     void func_020d970c();
     void func_020d974c();
@@ -33,16 +41,19 @@ int MakeCharUpperCase(char ch);
 
 extern unsigned char data_0211e33c[0x30000];
 
+// character to upper case lookup table
+extern const char data_020e692c[];
+
+extern char* data_020f0da0[]; // array holding "ja", "en", "de", "it", "fr", "es"
+
 // "ARC"
 extern char data_020f0db8[];
 // "arc:/"
 extern char data_020f0dbc[];
 
-// character to upper case lookup table
-extern const char data_020e692c[];
+extern char data_020f0dc2[]; // "<LG>"
 
-// This doesn't quite match, some register shenanigans to be fixed
-/*void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength)
+void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength)
 {
     if (outLength != NULL)
         *outLength = 0;
@@ -53,9 +64,9 @@ extern const char data_020e692c[];
     func_0200f374(replacedPath, sizeof(replacedPath));
 
     int language = func_0200fb08((BattleStruct*)battle);
-    func_020757b4(path, replacedPath, language);
+    StringReplaceLanguageTag(path, replacedPath, language);
     
-    void* output = NULL;
+    void* alwaysNull = NULL;
     
     if (buffer >= data_0211e33c && buffer < &data_0211e33c[0x30000])
         func_0202f7a8();
@@ -63,14 +74,11 @@ extern const char data_020e692c[];
     ExtendedNitroVM reader;
     reader.ZeroInitialize();
     
-    bool thing;
-    __asm("cmp output, 0\n"
-        "mov output, 0\n"
-        "movne thing, 1\n"
-        "moveq thing, output\n");
+    void* output = NULL;
+    bool alwaysFalse = alwaysNull != NULL;
     DECLARE_ASM_NOP();
 
-    if (reader.PrepareRead(replacedPath, thing))
+    if (reader.PrepareRead(replacedPath, alwaysFalse))
     {
         output = buffer;
         unsigned int fileSize = reader.LoadToBuffer(buffer, reader.GetFileSize());
@@ -83,7 +91,7 @@ extern const char data_020e692c[];
     }
 
     return output;
-}*/
+}
 
 void* LoadFileIntoNewAllocation(const char* path, SafeAllocator& alloc, unsigned int* outLength)
 {
@@ -93,7 +101,7 @@ void* LoadFileIntoNewAllocation(const char* path, SafeAllocator& alloc, unsigned
     func_0200f374(replacedPath, sizeof(replacedPath));
 
     int language = func_0200fb08(battle);
-    func_020757b4(path, replacedPath, language);
+    StringReplaceLanguageTag(path, replacedPath, language);
 
     if (outLength != NULL)
         *outLength = 0;
@@ -309,3 +317,106 @@ void* DecompressLZ77FileIntoAllocatedSpace(SafeAllocator& allocator,
     LZ77UnCompReadNormalWrite8bit(fileData, writeDst);
     return writeDst;
 }
+
+/*
+// Doesn't quite work, parameters passed to 8-parameter function in the wrong
+// order.
+extern "C" void* ExtractFileFromGP2(const char* gp2Path, const char* innerFilePath, unsigned int* outSize)
+{
+    if (outSize != NULL)
+        *outSize = 0;
+
+    func_0202f7a8();
+    BattleStruct* battle = GetBattleStruct();
+    char innerFileReplacedPath[128];
+    func_0200f374(innerFileReplacedPath, 128);
+
+    int language = func_0200fb08(battle);
+    StringReplaceLanguageTag(innerFilePath, innerFileReplacedPath, language);
+
+    unsigned int metadataLength = 0;
+    unsigned int metadataLengthCopy;
+    
+    unsigned char* storageSpace = data_0211e33c;
+    unsigned int storageCapacity = 0x30000;  
+    
+    
+    if (func_02046708(func_020d6c00(), 0x02000000))
+        storageCapacity -= 0x8000;
+    DECLARE_ASM_NOP();
+    GPCReadPair readPair;
+    GPCFile** ppGPC = &readPair.pGPCFile;
+    ZeroInitGPCPointer(&readPair.pGPCFile);
+    readPair.ZeroInitializeMachine();
+
+    void* output;
+
+    bool successHeader = LoadAndDecompressGPCHeaderAndInnerFileInfo(ppGPC, readPair.machine,
+        gp2Path, storageSpace, metadataLength, storageCapacity, false, NULL);
+
+    if (successHeader)
+    {
+        //DECLARE_ASM_NOP();
+        unsigned int fileSize = 0;
+        metadataLengthCopy = metadataLength;
+        DecompressFileFromGPCByName(readPair.pGPCFile, readPair.machine, (unsigned char*)storageSpace + metadataLengthCopy, fileSize, storageCapacity - metadataLengthCopy, innerFileReplacedPath);
+        *outSize = fileSize;
+        readPair.Reset();
+        ZeroDestroyGPCPointer(&readPair.pGPCFile);
+        return (unsigned char*)storageSpace + metadataLengthCopy;
+    }
+    else
+    {
+        output = NULL;
+        readPair.Reset();
+        ZeroDestroyGPCPointer(&readPair.pGPCFile);
+    }
+    
+    return output;
+}
+
+// This function is properly matched, the above function is the issue
+char* StringReplaceLanguageTag(const char* input, char* output, int language)
+{
+    if (input == NULL || output == NULL)
+        return output;
+
+    const char* searchTag = data_020f0dc2;
+    
+    char *copyOfOutputPtr;
+    __asm("mov copyOfOutputPtr, output");
+
+    strcpy(copyOfOutputPtr, input);
+
+    __asm("mov copyOfOutputPtr, output");
+    DECLARE_ASM_NOP();
+    char* firstTagOccurrence = func_020d2f88(copyOfOutputPtr, searchTag);
+    
+    const char* replacement = data_020f0da0[language];
+
+    int replacementStringLength = func_020d2ff0(replacement);
+    // difference between length of e.g. "en" and "<LG>" (in practice always -2)
+    int lengthDifference = func_020d2ff0(replacement) - func_020d2ff0(searchTag);
+    while (firstTagOccurrence != NULL)
+    {
+        if (lengthDifference > 0)
+        {
+            int lengthRemaining = func_020d2ff0(firstTagOccurrence);
+            // difference > 0: replacing with a longer substring. Move everything
+            // to the right of the tag to the right. For convenience, we can also
+            // move the tag itself
+            memmove(firstTagOccurrence + lengthDifference, firstTagOccurrence, lengthRemaining + 1);
+        }
+        else if (lengthDifference < 0)
+        {
+            int lengthRemaining = func_020d2ff0(firstTagOccurrence);
+            // difference < 0: replacing with a shorter substring. Move everything
+            // to the left (including the later part of the tag)
+            memmove(firstTagOccurrence, firstTagOccurrence - lengthDifference, lengthDifference + lengthRemaining + 1);
+        }
+
+        memmove(firstTagOccurrence, replacement, replacementStringLength);
+        firstTagOccurrence = func_020d2f88(output, searchTag);
+    }
+    return output;
+}*/

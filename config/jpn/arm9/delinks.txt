@@ -66,6 +66,10 @@ src/Combat/Main/CritRateCalculation.c:
 	complete
 	.text start:0x02075930 end:0x020759c4
 	
+src/Filesystem/FileIO.cpp:
+    complete
+    .text start:0x02076224 end:0x020767bc
+
 src/Combat/Main/GetBattleList.c:
 	complete
 	.text start:0x0200f25c end:0x0200f268
@@ -95,6 +99,10 @@ src/Memory/UnusedSignedAllocator.cpp:
     complete
     .text start:0x020b15bc end:0x020b1624
 
+src/Filesystem/NarcHandle.cpp:
+    complete
+    .text start:0x020b1624 end:0x020b1894
+
 src/Memory/AllocatorTypes.cpp:
     complete
     .rodata start:0x020e926c end:0x020e9284
@@ -103,3 +111,44 @@ src/Memory/AllocatorTypes.cpp:
 src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020b1938 end:0x020b1990
+
+src/System/InterruptHandling.cpp:
+    complete
+    .text start:0x020c875c end:0x020c8814
+
+src/System/Cache.cpp:
+    complete
+    .text start:0x020c9d18 end:0x020c9e14
+
+src/System/Interrupts.cpp:
+    complete
+    .text start:0x020cb1b4 end:0x020cb238
+
+src/Filesystem/FSStruct.cpp:
+    complete
+    .rodata start:0x020ed7d4 end:0x020ed7f8
+    .text start:0x020ccb00 end:0x020cdbc8
+
+src/Filesystem/LowNitroHandle.cpp:
+    complete
+    .text start:0x020cdbc8 end:0x020ce40c
+
+src/Filesystem/FileAccessor.cpp:
+    complete
+    .text start:0x020ce40c end:0x020cea48
+
+src/Filesystem/OverlayFSManagement.cpp:
+    complete
+    .text start:0x020cea48 end:0x020cef60
+
+src/Filesystem/FileIOPorts.cpp:
+    complete
+    .text start:0x020d2318 end:0x020d2a0c
+
+src/Filesystem/ExtendedNitroVM.cpp:
+    complete
+    .text start:0x020da078 end:0x020da930
+
+src/Filesystem/GPC.cpp:
+    complete
+    .text start:0x020da9d8 end:0x020db0bc

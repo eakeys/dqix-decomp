@@ -4,6 +4,10 @@
 
 typedef void (*PFNNitroCleanup)(NitroHandle*);
 
+#if defined(jpn)
+#define func_020d0f28 func_020d29f4
+#endif
+
 void SendGamecardBusCommand(unsigned int firstWord, unsigned int secondWord);
 unsigned int SetupNormalGamecardBusCommandMode();
 void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
@@ -12,10 +16,6 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
 
 extern "C"
 {
-   
-
-   
-   
     void InitRawReadStructs_020d0ec4();
     void func_020d0f28();
 }

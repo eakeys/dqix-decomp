@@ -3,6 +3,17 @@
 
 #pragma dont_inline on
 
+#if defined(jpn)
+#define func_02075090 func_0207621c
+#define func_020d84f8 func_020d9e5c
+#define func_020d8524 func_020d9e88
+
+#define data_020f27c0 data_020f297c
+#define data_020f27e8 data_020f29a4
+#define data_020f27f0 data_020f29ac
+#define data_020f27f8 data_020f29b4
+#endif
+
 extern "C"
 {
     unsigned int func_01ff860c(const char*);

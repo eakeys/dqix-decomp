@@ -5,6 +5,30 @@
 #include <globaldefs.h>
 
 //#pragma optimize_for_size off
+#if defined(jpn)
+#define func_020d84f8 func_020d9e5c
+#define func_020d8524 func_020d9e88
+
+#define func_020d970c func_020db118
+#define func_020d974c func_020db158
+
+#define func_020d9788 func_020db194
+
+#define func_020ca95c func_020cc428
+
+#define data_01ffd998 data_01ffd9b8
+#define data_01ffd99c data_01ffd9bc
+#define data_01ffda90 data_01ffdabc
+
+#define data_020f2384 data_020f24d0
+#define data_020f27b8 data_020f2974
+#endif
+
+#if defined(usa)
+#define NUM_CACHED_FILES 61
+#elif defined(jpn)
+#define NUM_CACHED_FILES 64
+#endif
 
 extern "C"
 {
@@ -21,8 +45,6 @@ extern "C"
 
     void func_020d9788(int);
 
-    
-
     void DecompressA  (Decompressor*, const void*, unsigned);
     void DecompressB  (Decompressor*, const void*, unsigned);
     void func_020ca95c(Decompressor*, const void*, unsigned);
@@ -32,9 +54,13 @@ extern const char* cachedFilePaths[];
 // Seems to hold whether cached file accessors have been saved or not
 extern bool data_01ffd998;
 // CRC hashes for cached file accessors
-extern unsigned int data_01ffd99c[61];
+extern unsigned int data_01ffd99c[NUM_CACHED_FILES];
 // cached file accessors
-extern NitroFileAccessor data_01ffda90[61];
+extern NitroFileAccessor data_01ffda90[NUM_CACHED_FILES];
+// holds the intended length of compression metadata (4 bytes)
+// there are two copies of it, the first is used in USA version and the
+// second in JPN version
+extern unsigned int data_020f2384[];
 
 // "data/"
 extern char data_020f27b8[];
@@ -129,7 +155,7 @@ void CacheMainFileAccessors()
 
         const char** pCurrentFilePath = cachedFilePaths;
         
-        for (unsigned int i = 0; i < 61; )
+        for (unsigned int i = 0; i < NUM_CACHED_FILES; )
         {
             strcpy(fullFilePath, data_020f27b8);
             strcat(fullFilePath, *pCurrentFilePath);
@@ -144,7 +170,7 @@ void CacheMainFileAccessors()
         }
 
         // bubble sort
-        unsigned int passEnd = 60;
+        unsigned int passEnd = NUM_CACHED_FILES - 1;
         while (true)
         {
             bool changesMadeThisPass = false;
@@ -260,7 +286,7 @@ bool ExtendedNitroVM::PrepareRead(const char *filePath, bool skip)
 
             int searchMax, searchMin;
             searchMin = 0;
-            searchMax = 60;
+            searchMax = NUM_CACHED_FILES - 1;
             while (searchMin <= searchMax)
             {
                 cacheIndex = searchMin + ((searchMax - searchMin + 1) >> 1);
@@ -276,7 +302,7 @@ bool ExtendedNitroVM::PrepareRead(const char *filePath, bool skip)
 
         cacheIndex = 0xffffffff;
         EscapeBinarySearch:
-        if (cacheIndex < 61)
+        if (cacheIndex < NUM_CACHED_FILES)
         {
             if (NitroVM_PrepareReadFileByID(&machine, data_01ffda90[cacheIndex]))
                 unknown_0 = 1;
@@ -390,8 +416,6 @@ unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompres
     return readPosTracker; 
 }
 
-extern unsigned int data_020f2384;
-
 unsigned int ExtendedNitroVM::DecompressBytes(void *output,
     unsigned int &outDecompressedSize, unsigned int numBytesToRead, unsigned int outputCapacity)
 {
@@ -405,8 +429,13 @@ unsigned int ExtendedNitroVM::DecompressBytes(void *output,
     unsigned int stack_bytesRemaining = numBytesToRead;
     unsigned int readPos = 0;
     unsigned int metadata = 0;
-    if (metadataLength >= data_020f2384)
-        metadataLength = data_020f2384;
+
+    const unsigned int* pMaxLength = data_020f2384;
+#if defined(jpn)
+    pMaxLength++;
+#endif
+    if (metadataLength >= *pMaxLength)
+        metadataLength = *pMaxLength;
     
     unsigned int totalReadAmount = LoadToBuffer(&metadata, metadataLength);
 

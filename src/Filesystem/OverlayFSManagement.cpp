@@ -8,11 +8,38 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define data_020f2e44 data_020f2e58
+#define data_020f2290 data_020f23fc
+
+#define func_02000970 func_02000970
+#define func_020c9be0 func_020cb6ac
+#define func_020c0c3c func_020c2708
+#endif
+
+extern struct UnknownDownloadPlayStruct
+{
+    unsigned int unknown[5];
+} data_020f2e44[];
+
+#if defined(usa)
+#define ADDR_FIRST_DOWNLOAD_PLAY_STRUCT 0x020f2e44
+#elif defined(jpn)
+#define ADDR_FIRST_DOWNLOAD_PLAY_STRUCT 0x020f2e58
+#endif
+
+extern struct {
+    const void* pointer;
+    unsigned int length;
+} data_020f2290;
+
 extern "C"
 {
-    void func_020c9be0();
     int func_02000970(unsigned int);
+    void func_020c9be0();
+    void func_020c0c3c(UnknownDownloadPlayStruct*, unsigned, unsigned, unsigned char*, unsigned);
 }
+
 
 unsigned int GetOverlaySizeOnCartridge(const OverlayMetadata& overlay)
 {
@@ -192,18 +219,6 @@ bool LoadCompressedOverlay(const OverlayMetadata& overlay)
     return true;
 }
 
-extern struct UnknownDownloadPlayStruct
-{
-    unsigned int unknown[5];
-} data_020f2e44[];
-
-extern struct {
-    const void* pointer;
-    unsigned int length;
-} data_020f2290;
-
-extern "C" void func_020c0c3c(UnknownDownloadPlayStruct*, unsigned, unsigned, unsigned char*, unsigned);
-
 bool VerifyDownloadPlayStruct(const UnknownDownloadPlayStruct& data,
     unsigned int loadAddress, unsigned int size)
 {
@@ -239,7 +254,7 @@ void DecompressAndStaticInitializeOverlay(const OverlayMetadata& overlay)
         {
             // Using two different formats for the same address (number and label)
             // forces the word to appear twice
-            UnknownDownloadPlayStruct* start = (UnknownDownloadPlayStruct*)0x020f2e44;
+            UnknownDownloadPlayStruct* start = (UnknownDownloadPlayStruct*)ADDR_FIRST_DOWNLOAD_PLAY_STRUCT;
             UnknownDownloadPlayStruct* end = data_020f2e44;
             if (overlay.overlayIndex < end - start)
             {

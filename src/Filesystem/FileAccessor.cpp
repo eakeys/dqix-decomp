@@ -5,6 +5,15 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020d0024 func_020d1af0
+#define func_020d0008 func_020d1ad4
+
+#define func_020c7080 func_020c8b4c
+
+#define data_020f228c data_020f23f8
+#endif
+
 extern "C"
 {
     void func_020d0024(unsigned short);
@@ -12,6 +21,8 @@ extern "C"
 
     int func_020c7080();
 }
+
+extern char data_020f228c[]; // "rom"
 
 extern "C" CBool CreateFileAccessor(NitroFileAccessor* outAccessor, const char* path)
 {
@@ -241,8 +252,6 @@ extern "C" int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
 {
     return NITRO_RESULT_4;
 }
-
-extern char data_020f228c[]; // "rom"
 
 extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
 {

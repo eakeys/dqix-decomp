@@ -45,6 +45,10 @@ struct CartridgeHeader
     char other_stuff_68[0x108];
 };
 
+#ifdef jpn
+#define data_020f22cc data_020f2438
+#endif
+
 extern CartridgeHeader* data_020f22cc;
 
 // Exists at 0x027FFC40

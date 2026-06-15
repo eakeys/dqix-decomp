@@ -381,9 +381,6 @@ extern "C" int GlobalSearchFileOrDirectory_020cc780(NitroVM* vm, const char* inP
     return NitroVM_020cbf58(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_BY_NAME);
 }
 
-#define min(a, b) (((a) > (b)) ? (b) : (a))
-#define max(a, b) (((a) < (b)) ? (b) : (a))
-
 extern "C" int NitroVM_ExecuteLoad_020cc8c4(NitroVM* vm, void* dst, int capacity, CBool unknownBool)
 {
     // base_d is like seek / tell index, adjusted by load commands

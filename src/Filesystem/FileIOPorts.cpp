@@ -18,12 +18,24 @@
 #define ADDR_GAMECARD_RECEIVED_DATA 0x04100010
 #define GAMECARD_BUS_COMMAND_BYTE(n) *(unsigned char*)(0x040001a8 + n)
 
+#if defined(jpn)
+#define func_020c6aec func_020c85b8
+#define func_020c7950 func_020c941c
+#define func_020c89e4 func_020ca4b0
+#define func_020c9f2c func_020cb9f8
+#define func_020ca8e8 func_020cc3b4
+#define func_020cfcbc func_020d1788
+#define func_020cfe08 func_020d18d4
+#define func_020cff28 func_020d19f4
+#define func_020cff50 func_020d1a1c
+#define func_020d1118 func_020d2be4
+#define func_020d1234 func_020d2d00
+#endif
 
 extern "C"
 {
-    // Seems to set up DMA to repeatedly read from the read parameter into write
-    // pointer, incrementing the write pointer but not the read pointer.
-    void func_020ca8e8(unsigned int dmaChannel, const void* readFrom, void* writeTo, unsigned int length);
+    // Maybe sets interrupt table?
+    void func_020c6aec(unsigned int mask, const void* fn);
 
     void func_020c7950(void*);
 
@@ -33,6 +45,10 @@ extern "C"
     // Reset / initialize DMA channel
     void func_020c9f2c(unsigned int);
 
+    // Seems to set up DMA to repeatedly read from the read parameter into write
+    // pointer, incrementing the write pointer but not the read pointer.
+    void func_020ca8e8(unsigned int dmaChannel, const void* readFrom, void* writeTo, unsigned int length);
+
     void func_020cfcbc(const void*);
 
     void func_020cfe08();
@@ -41,12 +57,10 @@ extern "C"
 
     // Checks some boolean is set, hangs if not set
     void func_020cff28();
-    void func_020d1234(unsigned int);
-
-    // Maybe sets interrupt table?
-    void func_020c6aec(unsigned int mask, const void* fn);
     
     void func_020d1118();
+
+    void func_020d1234(unsigned int);
 }
 
 Struct_02111f20::PFNRead GetCartridgeReadProc();

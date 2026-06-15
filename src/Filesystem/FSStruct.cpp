@@ -9,13 +9,12 @@
 
 typedef int(*FixedCommand)(NitroVM*);
 
-// The result of a test seems to be some sort of enum. I don't know all the
-// values, but it looks like:
-// 0, 1 and 4 are genuine results of some kind, to be stored
-// 7 indicates that the default code should run
-// 8 indicates that an instruction was invalid and should be skipped in future
-#define FS_RESULT_SUCCESS 0
-#define FS_RESULT_FAILURE 1
+#if defined(jpn)
+#define data_020f2288 data_020f23f4
+#endif
+
+#define NITROFS_ID_INVALID 0x10000
+extern unsigned char data_020f2288[]; // ":/"
 
 extern "C" void NitroVM_UnlinkAndStoreResult(NitroVM* vm, int result)
 {
@@ -440,10 +439,6 @@ extern "C" int NitroVM_DefaultCommand_GetFileOrDirectoryByName(NitroVM* vm)
     *((FSRegisterTriple*)vm->reg9.ptr) = vm->regbase_abc;
     return NITRO_RESULT_SUCCESS;
 }
-
-extern unsigned char data_020f2288[]; // ":/"
-
-#define NITROFS_ID_INVALID 0x10000
 
 extern "C" int NitroVM_DefaultCommand_GetPath(NitroVM* vm)
 {

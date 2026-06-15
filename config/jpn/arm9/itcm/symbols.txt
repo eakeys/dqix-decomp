@@ -12,6 +12,7 @@ func_01ff8554 kind:function(arm,size=0x64) addr:0x01ff8554
 func_01ff85b8 kind:function(arm,size=0x38) addr:0x01ff85b8
 func_01ff85f0 kind:function(arm,size=0x1c) addr:0x01ff85f0
 func_01ff860c kind:function(arm,size=0x34) addr:0x01ff860c
+cachedFilePaths kind:bss addr:0x01ff8640
 func_01ff87b0 kind:function(arm,size=0x6c) addr:0x01ff87b0
 func_01ff881c kind:function(arm,size=0x40) addr:0x01ff881c
 func_01ff885c kind:function(arm,size=0x74) addr:0x01ff885c

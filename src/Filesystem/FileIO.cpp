@@ -11,6 +11,19 @@
 #include <globaldefs.h>
 #include <asmhacks.h>
 
+#ifdef jpn
+#define func_0202f7a8 func_0202f318
+
+#define func_020d970c func_020db118
+#define func_020d974c func_020db158
+
+#define data_020e692c data_020e71d4
+
+#define data_020f0db8 data_020f0e84
+#define data_020f0dbc data_020f0e88
+#define data_0211e33c data_0211fb64
+#endif
+
 extern "C"
 {
     // zero memory
@@ -44,20 +57,23 @@ extern unsigned char data_0211e33c[0x30000];
 // character to upper case lookup table
 extern const char data_020e692c[];
 
-extern char* data_020f0da0[]; // array holding "ja", "en", "de", "it", "fr", "es"
+// (USA only) array holding "ja", "en", "de", "it", "fr", "es"
+extern char* data_020f0da0[];
 
 // "ARC"
 extern char data_020f0db8[];
 // "arc:/"
 extern char data_020f0dbc[];
 
-extern char data_020f0dc2[]; // "<LG>"
+extern char data_020f0dc2[]; // "<LG>" (USA only)
 
+// JPN: func_02076224
 void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength)
 {
     if (outLength != NULL)
         *outLength = 0;
 
+#if defined(usa)
     BattleStruct* battle = GetBattleStruct();
     
     char replacedPath[128];
@@ -65,7 +81,10 @@ void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength
 
     int language = func_0200fb08((BattleStruct*)battle);
     StringReplaceLanguageTag(path, replacedPath, language);
-    
+#elif defined(jpn)
+    const char* replacedPath = path;
+#endif
+
     void* alwaysNull = NULL;
     
     if (buffer >= data_0211e33c && buffer < &data_0211e33c[0x30000])
@@ -95,6 +114,7 @@ void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength
 
 void* LoadFileIntoNewAllocation(const char* path, SafeAllocator& alloc, unsigned int* outLength)
 {
+#if defined(usa)
     BattleStruct* battle = GetBattleStruct();
 
     char replacedPath[128];
@@ -102,6 +122,9 @@ void* LoadFileIntoNewAllocation(const char* path, SafeAllocator& alloc, unsigned
 
     int language = func_0200fb08(battle);
     StringReplaceLanguageTag(path, replacedPath, language);
+#elif defined(jpn)
+    const char* replacedPath = path;
+#endif
 
     if (outLength != NULL)
         *outLength = 0;

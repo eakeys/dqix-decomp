@@ -5,6 +5,24 @@
 #include "FileAccessor.h"
 #include "FileIOPorts.h"
 
+#if defined(jpn)
+#define func_020c7898 func_020c9364
+#define func_020c78e8 func_020c93b4
+
+#define func_020d1198 func_020d2c64
+
+#define data_02111304 data_02110fa4
+
+#define data_02111728 data_021113c8
+#define data_0211172c data_021113cc
+#define data_02111738 data_021113d8
+#define data_0211173c data_021113dc
+#define data_02111754 data_021113f4
+
+#define data_021118e0 data_02111580
+#define data_02111f00 data_02111ba0
+#endif
+
 extern "C"
 {
     void func_020c7898(void*);

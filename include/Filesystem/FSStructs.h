@@ -13,6 +13,8 @@
     
 */
 
+#include "System/ProcessorContext.h"
+
 struct FSLinkedListHeader
 {
     void* pPrev;
@@ -125,7 +127,7 @@ struct NitroVM
     // func_020cbf14 uses this as the opcode in a call to ExecuteCommand
     int maybeScheduledCommand;
     int storedResult;
-    FSLinkedListChildSet unknown_sublist_18;
+    BlockedContextList unknown_sublist_18;
     FSRegisterTriple regbase_abc;
     FSRegister regbase_d;
     FSRegisterTriple regext_abc;
@@ -160,10 +162,8 @@ struct NitroHandle
     // Weird, but I think this is next and previous in that order
     NitroHandle* pNeighbor4;
     NitroHandle* pNeighbor8;
-    int unknown_0C;
-    int unknown_10;
-    int unknown_14;
-    int unknown_18;
+    BlockedContextList unknown_0C;
+    BlockedContextList unknown_14;
     volatile unsigned int flags;
     // Creates a fake first entry in a list of VMs. The previous pointer
     // in here is unused (probably null) and next points to the first actual VM

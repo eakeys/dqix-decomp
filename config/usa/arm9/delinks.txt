@@ -116,6 +116,14 @@ src/System/InterruptHandling.cpp:
     complete
     .text start:0x020c6c90 end:0x020c6d48
 
+src/System/ContextList.cpp:
+    complete
+    .text start:0x020c71a4 end:0x020c745c
+
+src/System/ProcessorContext.cpp:
+    complete
+    .text start:0x020c7898 end:0x020c79a0
+
 src/System/Cache.cpp:
     complete
     .text start:0x020c824c end:0x020c8348

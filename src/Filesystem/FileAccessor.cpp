@@ -126,13 +126,13 @@ extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
         {
             vm->flags |= (1 << NITROVM_FLAG_2);
             do {
-                func_020c7898(&vm->unknown_sublist_18);
+                BlockCurrentContext(&vm->unknown_sublist_18);
             } while (!(vm->flags & (1 << NITROVM_FLAG_6))); // why the different format here?
         }
         else
         {
             do {
-                func_020c7898(&vm->unknown_sublist_18);
+                BlockCurrentContext(&vm->unknown_sublist_18);
             } while (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0));
         }
     }

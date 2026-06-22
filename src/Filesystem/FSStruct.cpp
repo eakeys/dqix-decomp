@@ -40,7 +40,7 @@ extern "C" void NitroVM_UnlinkAndStoreResult(NitroVM* vm, int result)
         (1 << NITROVM_FLAG_6));
     vm->storedResult = result;
 
-    func_020c78e8(&vm->unknown_sublist_18);
+    UnblockContexts(&vm->unknown_sublist_18);
 
     SetIRQInterruptState(priorIRQState);
 }
@@ -104,7 +104,7 @@ extern "C" int NitroVM_ExecuteCommand(NitroVM* vm, int opcode)
             {
                 do
                 {
-                    func_020c7898(&nitroHandle->unknown_0C);
+                    BlockCurrentContext(&nitroHandle->unknown_0C);
                 } while (GET_FLAG_BIT(nitroHandle->flags, NITROHANDLE_FLAG_9));
             }
             result = vm->storedResult;
@@ -174,7 +174,7 @@ extern "C" int FS_ReadBytes(FSReadHandle* handle, void* dst, unsigned int len)
         {
             do
             {
-                func_020c7898(&nitroHandle->unknown_0C);
+                BlockCurrentContext(&nitroHandle->unknown_0C);
             } while (GET_FLAG_BIT(nitroHandle->flags, NITROHANDLE_FLAG_9));
         }
 
@@ -792,7 +792,7 @@ extern "C" NitroVM* NitroHandle_020cbc6c(NitroHandle* handle)
             vm->flags |= (1 << NITROVM_FLAG_6);
             if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_2))
             {
-                func_020c78e8(&vm->unknown_sublist_18);
+                UnblockContexts(&vm->unknown_sublist_18);
                 SetIRQInterruptState(oldState);
                 return NULL;
             }
@@ -819,7 +819,7 @@ extern "C" NitroVM* NitroHandle_020cbc6c(NitroHandle* handle)
     if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_6))
     {
         handle->flags = (handle->flags & ~(1 << NITROHANDLE_FLAG_6)) | (1 << NITROHANDLE_FLAG_3);
-        func_020c78e8(&handle->unknown_14);
+        UnblockContexts(&handle->unknown_14);
     }
 
     SetIRQInterruptState(oldState);
@@ -834,10 +834,10 @@ extern "C" void NitroVM_020cbe80(NitroVM* vm)
         do
         {
             int oldState = DisableIRQInterrupts();
-            vm->flags |= (1 << 6);
+            vm->flags |= (1 << NITROVM_FLAG_6);
             if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_2))
             {
-                func_020c78e8(&vm->unknown_sublist_18);
+                UnblockContexts(&vm->unknown_sublist_18);
                 SetIRQInterruptState(oldState);
                 break;
             }
@@ -935,7 +935,7 @@ extern "C" CBool NitroVM_020cbf58(NitroVM* vm, int opcode)
 
         do
         {
-            func_020c7898(&vm->unknown_sublist_18);
+            BlockCurrentContext(&vm->unknown_sublist_18);
         } while (!(vm->flags & (1 << NITROVM_FLAG_6)));
         SetIRQInterruptState(oldState);
     }

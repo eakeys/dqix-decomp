@@ -4,11 +4,9 @@
 #include "LowNitroHandle.h"
 #include "FileAccessor.h"
 #include "FileIOPorts.h"
+#include "System/ProcessorContext.h"
 
 #if defined(jpn)
-#define func_020c7898 func_020c9364
-#define func_020c78e8 func_020c93b4
-
 #define func_020d1198 func_020d2c64
 
 #define data_02111304 data_02110fa4
@@ -25,19 +23,10 @@
 
 extern "C"
 {
-    void func_020c7898(void*);
-    void func_020c78e8(void*);
-
     CBool func_020d1198();
 }
 
 #define GET_FLAG_BIT(what, idx) (((what) & (1 << (idx))) ? 1 : 0)
-
-struct Struct_02111304
-{
-    unsigned int unknown_0;
-    void* unknown_4;
-};
 
 struct Struct_02111728
 {
@@ -81,11 +70,11 @@ struct Struct_021118e0
     NitroHandle* handle_3c;
     PFNUnknown anotherProc_40;
     // used as param1 in func_020c75b4 (called by func_020cfe08)
-    char bufferOrOtherStruct_44[0xC0];
+    ProcessorContext context_44;
     void* pointer_MaybeToPrevStruct_104;
     // Set to 4 and 8 in different places
     unsigned int unknown_108;
-    FSLinkedListChildSet list_10C;
+    BlockedContextList list_10C;
     volatile unsigned int flags_114;
     // see func_020d0a5c
     unsigned int maybeInstructionCacheLimit_118;
@@ -114,8 +103,6 @@ struct Struct_02111f00
     unsigned int unknown_4[7];
     Struct_02111f20 innerStruct;
 };
-
-extern Struct_02111304 data_02111304;
 
 // These overlap, but the 72c is accessed from the 728 as well as on its own.
 // It should be possible to just take a reference to mountedDir directly, e.g.

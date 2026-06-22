@@ -20,7 +20,6 @@
 
 #if defined(jpn)
 #define func_020c6aec func_020c85b8
-#define func_020c7950 func_020c941c
 #define func_020c89e4 func_020ca4b0
 #define func_020c9f2c func_020cb9f8
 #define func_020ca8e8 func_020cc3b4
@@ -36,8 +35,6 @@ extern "C"
 {
     // Maybe sets interrupt table?
     void func_020c6aec(unsigned int mask, const void* fn);
-
-    void func_020c7950(void*);
 
     // Gets the base of the tightly coupled memory region
     unsigned int func_020c89e4();
@@ -151,10 +148,10 @@ void DMAChainSegmentInterruptHandler()
 
         int oldState = DisableIRQInterrupts();
         readManager->flags_114 &= ~0x4c;
-        func_020c78e8(&readManager->list_10C);
+        UnblockContexts(&readManager->list_10C);
 
         if (readManager->flags_114 & (1 << 4))
-            func_020c7950(readManager->bufferOrOtherStruct_44);
+            MarkContextReadyAndSwitch(&readManager->context_44);
         SetIRQInterruptState(oldState);
 
         if (cleanProc != NULL)
@@ -339,10 +336,10 @@ extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
 
     int oldState = DisableIRQInterrupts();
     readManager->flags_114 &= ~0x4c;
-    func_020c78e8(&readManager->list_10C);
+    UnblockContexts(&readManager->list_10C);
 
     if (readManager->flags_114 & (1 << 4))
-        func_020c7950(readManager->bufferOrOtherStruct_44);
+        MarkContextReadyAndSwitch(&readManager->context_44);
     SetIRQInterruptState(oldState);
     
     if (cleanProc != NULL)
@@ -364,7 +361,7 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
 
     while (readManager->flags_114 & (1 << 2))
     {
-        func_020c7898(&readManager->list_10C);
+        BlockCurrentContext(&readManager->list_10C);
     }
     readManager->flags_114 |= (1 << 2);
     readManager->maybeCleanupProc_38 = cleanupProc;
@@ -389,7 +386,7 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
     }
     else
     {
-        readManager->pointer_MaybeToPrevStruct_104 = data_02111304.unknown_4;
+        readManager->pointer_MaybeToPrevStruct_104 = data_02111304.activeContext;
         SafeReadBlocksFromCartridge(readManager);
     }
 }

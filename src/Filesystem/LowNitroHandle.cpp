@@ -15,10 +15,10 @@ extern "C" {
 extern "C" void NitroHandle_ZeroInit(NitroHandle* handle)
 {
     VectorizedMemset(handle, 0, sizeof(NitroHandle));
-    handle->unknown_10 = 0;
-    handle->unknown_0C = 0;
-    handle->unknown_18 = 0;
-    handle->unknown_14 = 0;
+    handle->unknown_0C.last = NULL;
+    handle->unknown_0C.first = NULL;
+    handle->unknown_14.last = NULL;
+    handle->unknown_14.first = NULL;
 }
 
 extern "C" NitroHandle* NitroHandle_FindBySignature(const char* str, int len)
@@ -237,7 +237,7 @@ extern "C" CBool NitroHandle_UnknownDestructionFunction(NitroHandle* handle)
         {
             handle->flags = oldFlags | (1 << NITROHANDLE_FLAG_6);
             do {
-                func_020c7898(&handle->unknown_14);
+                BlockCurrentContext(&handle->unknown_14);
             } while (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_6));
         }
         else
@@ -297,7 +297,7 @@ extern "C" void NitroHandle_020cc6ac(NitroHandle* handle, int result)
         int oldState = DisableIRQInterrupts();
         firstVM->storedResult = result;
         handle->flags &= ~(1 << NITROHANDLE_FLAG_9);
-        func_020c78e8(&handle->unknown_0C);
+        UnblockContexts(&handle->unknown_0C);
         SetIRQInterruptState(oldState);
     }
 }
@@ -314,8 +314,8 @@ extern "C" void NitroVM_Initialize(NitroVM* vm)
 {
     vm->links.pPrev = NULL;
     vm->links.pNext = NULL;
-    vm->unknown_sublist_18.pLast = NULL;
-    vm->unknown_sublist_18.pFirst = NULL;
+    vm->unknown_sublist_18.last = NULL;
+    vm->unknown_sublist_18.first = NULL;
     vm->linkedHandle = NULL;
     vm->maybeScheduledCommand = NITROVM_OPCODE_MAYBE_INVALID;
     vm->flags = 0;

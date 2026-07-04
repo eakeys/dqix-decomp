@@ -1,6 +1,7 @@
 #pragma once
 
 /*
+copied from GBATek documentation:
   0     LCD V-Blank
   1     LCD H-Blank
   2     LCD V-Counter Match
@@ -44,11 +45,13 @@
 #define IRQ_MASK_TIMER_1_OVERFLOW (1 << 4)
 #define IRQ_MASK_TIMER_2_OVERFLOW (1 << 5)
 #define IRQ_MASK_TIMER_3_OVERFLOW (1 << 6)
+#define IRQ_MASK_TIMER_N_OVERFLOW(n) (1 << (3 + (n)))
 #define IRQ_MASK_ARM7_SERIAL_IO (1 << 7)
 #define IRQ_MASK_DMA_0 (1 << 8)
 #define IRQ_MASK_DMA_1 (1 << 9)
 #define IRQ_MASK_DMA_2 (1 << 10)
 #define IRQ_MASK_DMA_3 (1 << 11)
+#define IRQ_MASK_DMA_N(n) (1 << (8 + (n)))
 #define IRQ_MASK_KEYPAD (1 << 12)
 #define IRQ_MASK_GBA_SLOT (1 << 13)
 // 1 << 14 unused
@@ -62,6 +65,16 @@
 #define IRQ_MASK_ARM7_SCREENS_UNFOLDING (1 << 22)
 #define IRQ_MASK_ARM7_SPI_BUS (1 << 23)
 #define IRQ_MASK_ARM7_WIFI (1 << 24)
+
+#define INTERRUPT_MASTER_ENABLE (*(volatile unsigned short*)0x04000208)
+#define INTERRUPT_ENABLE (*(volatile unsigned int*)0x04000210)
+#define INTERRUPT_REQUEST_FLAGS (*(volatile unsigned int*)0x04000214)
+
+typedef void (*PFNInterrupt)();
+
+extern PFNInterrupt data_027e0000[];
+
+#define DMA_TIMER_INTERRUPTS_HANDLED_FLAGS (*(volatile unsigned int*)((int)data_027e0000 + 0x3ff8))
 
 unsigned int SetSpecificInterruptsEnabled(unsigned int which);
 // Returns the previous state of interrupts enabled

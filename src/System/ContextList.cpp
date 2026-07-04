@@ -21,7 +21,7 @@ int GenerateUniqueContextID()
 void BlockedContextList::Insert(ProcessorContext* insertion)
 {
     ProcessorContext* elementAfter = this->first;
-    while (elementAfter != NULL && elementAfter->maybeContextPriority <= insertion->maybeContextPriority)
+    while (elementAfter != NULL && elementAfter->priority <= insertion->priority)
     {
         if (elementAfter == insertion)
             return;
@@ -109,8 +109,9 @@ ProcessorContext* BlockedContextList::Remove(ProcessorContext* context)
 extern "C" void* UnknownImplementedFunction_020c72bc(void* input)
 {
     struct Entry {
-        unsigned int unknown[4];
-        Entry* next;
+        BlockedContextList contexts;
+        unsigned int unknown[2];
+        Entry* next; // strange
         Entry* prev;
     };
 
@@ -137,7 +138,7 @@ ProcessorContext* InsertContextIntoGlobalList(ProcessorContext *context)
     ProcessorContext* loopEntry = data_021112e0.substruct_24.firstContext;
     ProcessorContext* nodeBefore = NULL;
 
-    while (loopEntry != NULL && loopEntry->maybeContextPriority < context->maybeContextPriority)
+    while (loopEntry != NULL && loopEntry->priority < context->priority)
     {
         nodeBefore = loopEntry;
         loopEntry = loopEntry->pNext;
@@ -175,7 +176,7 @@ void RemoveContextFromGlobalList(ProcessorContext *context)
 
 void SwitchContext()
 {
-    if (data_021112e0.unknown_4 != 0)
+    if (data_021112e0.contextSwitchLock != 0)
         return;
 
     Struct_02111304* contextData = &data_021112e0.substruct_24;
@@ -192,7 +193,7 @@ void SwitchContext()
     if (outgoing == incoming || incoming == NULL)
         return;
 
-    if (outgoing->blockState != CONTEXT_STATE_NEWLY_CREATED)
+    if (outgoing->blockState != CONTEXT_STATE_INVALID)
     {
         if (SaveContext(outgoing) != 0)
             return;

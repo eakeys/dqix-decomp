@@ -122,11 +122,15 @@ src/System/ContextList.cpp:
 
 src/System/ProcessorContext.cpp:
     complete
-    .text start:0x020c7898 end:0x020c79a0
+    .text start:0x020c75b4 end:0x020c7d34
 
 src/System/Cache.cpp:
     complete
     .text start:0x020c824c end:0x020c8348
+
+src/System/Timing.cpp:
+    complete
+    .text start:0x020c8c50 end:0x020c9288
 
 src/System/Interrupts.cpp:
     complete

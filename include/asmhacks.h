@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef __MWERKS__
+
 #define INTERNAL_ASM_NOP(what) __asm("b " what "\n" what ":")
 #define INTERNAL_ASM_NOP_2(num) INTERNAL_ASM_NOP("nop_label__" #num)
 #define INTERNAL_ASM_NOP_3(num) INTERNAL_ASM_NOP_2(num)
@@ -15,3 +17,6 @@
 // places - two C++ instructions on opposite sides of this boundary will 
 // (usually?) have their order respected.
 #define DECLARE_ASM_NOP() INTERNAL_ASM_NOP_3(__LINE__)
+#else
+#define DECLARE_ASM_NOP() ((void)0)
+#endif

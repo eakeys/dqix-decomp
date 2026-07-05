@@ -116,13 +116,29 @@ src/System/InterruptHandling.cpp:
     complete
     .text start:0x020c875c end:0x020c8814
 
+src/System/ContextList.cpp:
+    complete
+    .text start:0x020c8c70 end:0x020c8f28
+
+src/System/ProcessorContext.cpp:
+    complete
+    .text start:0x020c9080 end:0x020c9800
+
 src/System/Cache.cpp:
     complete
     .text start:0x020c9d18 end:0x020c9e14
 
+src/System/Timing.cpp:
+    complete
+    .text start:0x020ca71c end:0x020cad54
+
 src/System/Interrupts.cpp:
     complete
     .text start:0x020cb1b4 end:0x020cb238
+
+src/System/IPC.cpp:
+    complete
+    .text start:0x020cc7e4 end:0x020ccb00
 
 src/Filesystem/FSStruct.cpp:
     complete
@@ -141,9 +157,13 @@ src/Filesystem/OverlayFSManagement.cpp:
     complete
     .text start:0x020cea48 end:0x020cef60
 
+src/Filesystem/ReadTasks.cpp:
+    complete
+    .text start:0x020d1788 end:0x020d17c4
+
 src/Filesystem/FileIOPorts.cpp:
     complete
-    .text start:0x020d2318 end:0x020d2a0c
+    .text start:0x020d2318 end:0x020d2a90
 
 src/Filesystem/ExtendedNitroVM.cpp:
     complete

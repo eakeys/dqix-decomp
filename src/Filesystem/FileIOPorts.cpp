@@ -23,13 +23,14 @@
 #define func_020c89e4 func_020ca4b0
 #define func_020c9f2c func_020cb9f8
 #define func_020ca8e8 func_020cc3b4
-#define func_020cfcbc func_020d1788
 #define func_020cfe08 func_020d18d4
 #define func_020cff28 func_020d19f4
 #define func_020cff50 func_020d1a1c
 #define func_020d1118 func_020d2be4
 #define func_020d1234 func_020d2d00
 #endif
+
+void SendTaskToReadContext(Struct_021118e0::PFNCartridgeRead);
 
 extern "C"
 {
@@ -45,8 +46,6 @@ extern "C"
     // Seems to set up DMA to repeatedly read from the read parameter into write
     // pointer, incrementing the write pointer but not the read pointer.
     void func_020ca8e8(unsigned int dmaChannel, const void* readFrom, void* writeTo, unsigned int length);
-
-    void func_020cfcbc(const void*);
 
     void func_020cfe08();
 
@@ -142,16 +141,16 @@ void DMAChainSegmentInterruptHandler()
         unsigned int romChipID = SetupNormalGamecardBusCommandMode();
         func_020d1234(romChipID);
 
-        *readManager->pUnknown_0 = 0;
+        readManager->pUnknown_0->unknown_0 = 0;
         PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
         NitroHandle* handle = readManager->handle_3c;
 
         int oldState = DisableIRQInterrupts();
-        readManager->flags_114 &= ~0x4c;
+        readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
         UnblockContexts(&readManager->list_10C);
 
-        if (readManager->flags_114 & (1 << 4))
-            MarkContextReadyAndSwitch(&readManager->context_44);
+        if (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
+            MarkContextReadyAndSwitch(&readManager->cartridgeReadContext);
         SetIRQInterruptState(oldState);
 
         if (cleanProc != NULL)
@@ -330,16 +329,16 @@ extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
     // Might be checking if the cart has been ejected or similar
     func_020d1234(romChipID);
 
-    *readManager->pUnknown_0 = 0;
+    readManager->pUnknown_0->unknown_0 = 0;
     PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
     NitroHandle* handle = readManager->handle_3c;
 
     int oldState = DisableIRQInterrupts();
-    readManager->flags_114 &= ~0x4c;
+    readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
     UnblockContexts(&readManager->list_10C);
 
-    if (readManager->flags_114 & (1 << 4))
-        MarkContextReadyAndSwitch(&readManager->context_44);
+    if (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
+        MarkContextReadyAndSwitch(&readManager->cartridgeReadContext);
     SetIRQInterruptState(oldState);
     
     if (cleanProc != NULL)
@@ -359,11 +358,11 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
 
     int oldState = DisableIRQInterrupts();
 
-    while (readManager->flags_114 & (1 << 2))
+    while (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_2))
     {
         BlockCurrentContext(&readManager->list_10C);
     }
-    readManager->flags_114 |= (1 << 2);
+    readManager->flags_114 |= (1 << CARTRIDGE_READ_CONTEXT_FLAG_2);
     readManager->maybeCleanupProc_38 = cleanupProc;
     readManager->handle_3c = handle;
     SetIRQInterruptState(oldState);
@@ -382,11 +381,11 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
     }
     else if (unknownBool)
     {
-        func_020cfcbc(&SafeReadBlocksFromCartridge);
+        SendTaskToReadContext(&SafeReadBlocksFromCartridge);
     }
     else
     {
-        readManager->pointer_MaybeToPrevStruct_104 = data_02111304.activeContext;
+        readManager->pContext_104 = data_02111304.activeContext;
         SafeReadBlocksFromCartridge(readManager);
     }
 }
@@ -397,7 +396,7 @@ extern "C" void InitRawReadStructs_020d0ec4()
     if (readManager->flags_114 != 0)
         return;
 
-    readManager->flags_114 = 1;
+    readManager->flags_114 = (1 << CARTRIDGE_READ_CONTEXT_FLAG_0);
     readManager->writeLength = 0;
     readManager->writeDst = NULL;
     readManager->cartridgeReadOffset = 0;
@@ -419,4 +418,34 @@ extern "C" void func_020d0f28()
 Struct_02111f20::PFNRead GetCartridgeReadProc()
 {
     return &ReadBlocksFromCartridge;
+}
+
+void IPCCommand11Proc(unsigned int command, unsigned int argument, unsigned int flag)
+{
+    if (command != 11 || !flag)
+        return;
+
+    Struct_021118e0* ptr = (Struct_021118e0*)&data_021118e0;
+    
+    ProcessorContext* context = ptr->pContext_104;
+    ptr->flags_114 &= ~(1 << CARTRIDGE_READ_CONTEXT_FLAG_5);
+    
+    MarkContextReadyAndSwitch(context);
+}
+
+void CartridgeReadContextLoop()
+{
+    Struct_021118e0* readManager = &data_021118e0;
+    while (true)
+    {
+        int priorState = DisableIRQInterrupts();
+        if (!(readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING)))
+        {
+            do {
+            BlockCurrentContext(NULL);
+            } while (!(readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING)));
+        }
+        SetIRQInterruptState(priorState);
+        readManager->cartridgeReadProc(readManager);
+    }
 }

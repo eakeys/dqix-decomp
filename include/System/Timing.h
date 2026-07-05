@@ -1,6 +1,14 @@
 #pragma once
 
 #include "std_library_functions.h"
+#include <globaldefs.h>
+
+#if defined(jpn)
+#define data_02111634 data_021112d4
+#define data_02111638 data_021112d8
+#define data_02111644 data_021112e4
+#define data_02111648 data_021112e8
+#endif
 
 struct ProcessorContext;
 
@@ -27,8 +35,7 @@ struct Timer64Bit
 {
     unsigned short isInitialized;
     int reloadTimerOnNextInterrupt;
-    // might be volatile
-    uint64_t numTimerOverflows;
+    volatile uint64_t numTimerOverflows;
 };
 
 extern Timer64Bit data_02111638;

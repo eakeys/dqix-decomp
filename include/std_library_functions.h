@@ -39,6 +39,8 @@ int sprintf(char* buffer, const char* format, ...);
 #ifdef __cplusplus
 }
 
+#define offsetof(type, member) ((unsigned int)(&((type*)0)->member))
+
 typedef unsigned long long uint64_t;
 typedef signed long long int64_t;
 

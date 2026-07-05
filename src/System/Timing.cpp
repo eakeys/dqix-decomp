@@ -17,6 +17,12 @@
 
 #pragma dont_inline on
 
+#if defined(jpn)
+#define func_020c6aec func_020c85b8
+#define func_020c6c48 func_020c8714
+#define func_020c9be0 func_020cb6ac
+#endif
+
 extern "C"
 {
     // set specific interrupts according to mask
@@ -73,7 +79,7 @@ uint64_t GetCurrentTimestamp()
     int priorState = DisableIRQInterrupts();
     volatile unsigned short lowBits = TIMER_N_COUNTER(0);
 
-    volatile uint64_t highBits = *(volatile uint64_t*)&data_02111638.numTimerOverflows & 0xffffffffffff;
+    volatile uint64_t highBits = data_02111638.numTimerOverflows & 0xffffffffffff;
     if ((INTERRUPT_REQUEST_FLAGS & IRQ_MASK_TIMER_0_OVERFLOW) && !(lowBits & 0x8000))
         highBits++;
 

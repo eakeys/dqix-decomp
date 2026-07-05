@@ -136,6 +136,10 @@ src/System/Interrupts.cpp:
     complete
     .text start:0x020c96e8 end:0x020c976c
 
+src/System/IPC.cpp:
+    complete
+    .text start:0x020cad18 end:0x020cb034
+
 src/Filesystem/FSStruct.cpp:
     complete
     .rodata start:0x020ed6c8 end:0x020ed6ec
@@ -153,9 +157,13 @@ src/Filesystem/OverlayFSManagement.cpp:
     complete
     .text start:0x020ccf7c end:0x020cd494
 
+src/Filesystem/ReadTasks.cpp:
+    complete
+    .text start:0x020cfcbc end:0x020cfcf8
+
 src/Filesystem/FileIOPorts.cpp:
     complete
-    .text start:0x020d084c end:0x020d0f40
+    .text start:0x020d084c end:0x020d0fc4
 
 src/Filesystem/ExtendedNitroVM.cpp:
     complete

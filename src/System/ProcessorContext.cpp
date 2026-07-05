@@ -7,6 +7,13 @@
 #pragma dont_inline on
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020c9bf0 func_020cb6bc
+#define func_020c9be0 func_020cb6ac
+#define func_020c8154 func_020c9c20
+#define func_020ca3ec func_020cbeb8
+#endif
+
 extern "C"
 {
     // wait for an interrupt
@@ -293,7 +300,7 @@ bool ChangeContextPriority(ProcessorContext* context, unsigned int newPriority)
         prevContext = loopContext;
     }
 
-    if (loopContext == NULL || loopContext == &data_02111314)
+    if (loopContext == NULL || loopContext == &data_021112e0.contextA)
     {
         SetIRQInterruptState(priorState);
         return false;

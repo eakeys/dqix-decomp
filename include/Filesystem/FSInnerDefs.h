@@ -53,14 +53,30 @@ struct Struct_0211173c
     ArmOverlayDataTableData arm7Data;
 };
 
+// sizeof == 0x60
+struct Struct_02111880
+{
+    int unknown_0;
+    int unknown_4[23];
+};
 
 // sizeof <= 0x620
+#define CARTRIDGE_READ_CONTEXT_FLAG_0 0
+#define CARTRIDGE_READ_CONTEXT_FLAG_2 2
+#define CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING 3
+#define CARTRIDGE_READ_CONTEXT_FLAG_4 4
+#define CARTRIDGE_READ_CONTEXT_FLAG_5 5
+#define CARTRIDGE_READ_CONTEXT_FLAG_6 6
+
 struct Struct_021118e0
 {
-    typedef void (*PFNUnknown)(Struct_021118e0*);
+    typedef void (*PFNCartridgeRead)(Struct_021118e0*);
 
-    unsigned int* pUnknown_0;
-    int unknown_4[6];
+    Struct_02111880* pUnknown_0;
+    int unknown_4, unknown_8;
+    int lockCount_C;
+    BlockedContextList blockedList_10; // unblocked by func_020cfd7c (from opcode 10), blocked by func_020cfcf8 (from opcode 9)
+    int unknown_18;
     unsigned int cartridgeReadOffset;
     unsigned char* writeDst;
     unsigned int writeLength;
@@ -68,13 +84,14 @@ struct Struct_021118e0
     int unknown_2c[3];
     PFNNitroCleanup maybeCleanupProc_38;
     NitroHandle* handle_3c;
-    PFNUnknown anotherProc_40;
-    // used as param1 in func_020c75b4 (called by func_020cfe08)
-    ProcessorContext context_44;
-    void* pointer_MaybeToPrevStruct_104;
+    PFNCartridgeRead cartridgeReadProc;
+    // populated as a call within func_020cfe08
+    ProcessorContext cartridgeReadContext;
+    ProcessorContext* pContext_104;
     // Set to 4 and 8 in different places
-    unsigned int unknown_108;
+    unsigned int contextPriority_108;
     BlockedContextList list_10C;
+    // bit 3: set when there is a task to be done by the read context
     volatile unsigned int flags_114;
     // see func_020d0a5c
     unsigned int maybeInstructionCacheLimit_118;

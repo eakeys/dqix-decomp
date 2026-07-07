@@ -138,6 +138,7 @@ src/System/Interrupts.cpp:
 
 src/System/IPC.cpp:
     complete
+    .bss start:0x02111344 end:0x021113c8
     .text start:0x020cc7e4 end:0x020ccb00
 
 src/Filesystem/FSStruct.cpp:

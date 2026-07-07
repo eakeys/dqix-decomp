@@ -17,6 +17,13 @@
 // places - two C++ instructions on opposite sides of this boundary will 
 // (usually?) have their order respected.
 #define DECLARE_ASM_NOP() INTERNAL_ASM_NOP_3(__LINE__)
+
+#define ASM_GOTO(label) __asm("b " #label)
+#define ASM_LABEL(label) __asm(#label ":")
+
 #else
 #define DECLARE_ASM_NOP() ((void)0)
+
+#define ASM_GOTO(label) goto label 
+#define ASM_LABEL(label) label: ((void)0)
 #endif

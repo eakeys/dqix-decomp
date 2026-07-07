@@ -116,6 +116,10 @@ src/System/InterruptHandling.cpp:
     complete
     .text start:0x020c6c90 end:0x020c6d48
 
+src/System/GamecardBusOwnership.cpp:
+    complete
+    .text start:0x020c6e48 end:0x020c7130
+
 src/System/ContextList.cpp:
     complete
     .text start:0x020c71a4 end:0x020c745c
@@ -138,6 +142,7 @@ src/System/Interrupts.cpp:
 
 src/System/IPC.cpp:
     complete
+    .bss start:0x021116a4 end:0x02111728
     .text start:0x020cad18 end:0x020cb034
 
 src/Filesystem/FSStruct.cpp:
@@ -157,11 +162,15 @@ src/Filesystem/OverlayFSManagement.cpp:
     complete
     .text start:0x020ccf7c end:0x020cd494
 
-src/Filesystem/ReadTasks.cpp:
+src/Filesystem/CardReadManagerInit.cpp:
     complete
-    .text start:0x020cfcbc end:0x020cfcf8
+    .text start:0x020cfcbc end:0x020cff50
 
-src/Filesystem/FileIOPorts.cpp:
+src/Filesystem/CardReadManagerAcquireBus.cpp:
+    complete
+    .text start:0x020cffcc end:0x020d0040
+
+src/Filesystem/CardReadManager.cpp:
     complete
     .text start:0x020d084c end:0x020d0fc4
 

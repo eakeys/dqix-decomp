@@ -782,12 +782,12 @@ extern "C" NitroVM* NitroHandle_020cbc6c(NitroHandle* handle)
         NitroVM* vm = handle->linkToFirstVM.pNext;
         if (vm != NULL)
         {
-            int flagCleared = !GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_4);
+            int flagCleared = !GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_NDS_BUS_HELD);
             if (flagCleared)
-                handle->flags |= (1 << NITROHANDLE_FLAG_4);
+                handle->flags |= (1 << NITROHANDLE_FLAG_NDS_BUS_HELD);
             SetIRQInterruptState(oldState);
-            if (flagCleared && (handle->overrideOpcodeFlags & (1 << NITROVM_OPCODE_9)))
-                handle->instructionOverride(vm, NITROVM_OPCODE_9);
+            if (flagCleared && (handle->overrideOpcodeFlags & (1 << NITROVM_OPCODE_ACQUIRE_NDS_BUS)))
+                handle->instructionOverride(vm, NITROVM_OPCODE_ACQUIRE_NDS_BUS);
             oldState = DisableIRQInterrupts();
             vm->flags |= (1 << NITROVM_FLAG_6);
             if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_2))
@@ -804,15 +804,15 @@ extern "C" NitroVM* NitroHandle_020cbc6c(NitroHandle* handle)
         }
     }
 
-    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_4))
+    if (GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_NDS_BUS_HELD))
     {
-        handle->flags &= ~(1 << NITROHANDLE_FLAG_4);
-        if (handle->overrideOpcodeFlags & (1 << NITROVM_OPCODE_10))
+        handle->flags &= ~(1 << NITROHANDLE_FLAG_NDS_BUS_HELD);
+        if (handle->overrideOpcodeFlags & (1 << NITROVM_OPCODE_RELEASE_NDS_BUS))
         {
             NitroVM tempVM;
             NitroVM_Initialize(&tempVM);
             tempVM.linkedHandle = handle;
-            handle->instructionOverride(&tempVM, NITROVM_OPCODE_10);
+            handle->instructionOverride(&tempVM, NITROVM_OPCODE_RELEASE_NDS_BUS);
         }
     }
 
@@ -909,12 +909,12 @@ extern "C" CBool NitroVM_020cbf58(NitroVM* vm, int opcode)
     vm->links.pPrev = lastAttachedVM;
     vm->links.pNext = NULL;
 
-    if (!GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_3) && !GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_4))
+    if (!GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_3) && !GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_NDS_BUS_HELD))
     {
-        handle->flags |= (1 << NITROHANDLE_FLAG_4);
+        handle->flags |= (1 << NITROHANDLE_FLAG_NDS_BUS_HELD);
         SetIRQInterruptState(oldState);
-        if (handle->overrideOpcodeFlags & (1 << NITROVM_OPCODE_9))
-            handle->instructionOverride(vm, NITROVM_OPCODE_9);
+        if (handle->overrideOpcodeFlags & (1 << NITROVM_OPCODE_ACQUIRE_NDS_BUS))
+            handle->instructionOverride(vm, NITROVM_OPCODE_ACQUIRE_NDS_BUS);
         int oldState = DisableIRQInterrupts();
         vm->flags |= (1 << NITROVM_FLAG_6);
         if (!GET_FLAG_BIT(vm->flags, NITROVM_FLAG_2))

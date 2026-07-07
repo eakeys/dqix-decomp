@@ -7686,8 +7686,7 @@ data_02111308 kind:bss addr:0x02111308
 data_0211130c kind:bss addr:0x0211130c
 data_02111310 kind:bss addr:0x02111310
 data_02111324 kind:bss addr:0x02111324
-data_02111344 kind:bss addr:0x02111344
-data_02111348 kind:bss addr:0x02111348
+
 data_021113c8 kind:bss addr:0x021113c8
 data_021113cc kind:bss addr:0x021113cc
 data_021113d8 kind:bss addr:0x021113d8

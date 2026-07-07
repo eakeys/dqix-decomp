@@ -12,9 +12,6 @@
 #define IPC_FIFO_RECEIVE (*(volatile unsigned int*)0x04100000)
 
 #if defined(jpn)
-#define data_021116a4 data_02111344
-#define data_021116a8 data_02111348
-
 #define func_020c6aec func_020c85b8
 #endif
 
@@ -24,8 +21,8 @@ extern "C"
     void func_020c6aec(unsigned int mask, PFNInterrupt);
 }
 
-extern unsigned short data_021116a4;
-extern IPCCommandHandler data_021116a8[];
+static unsigned short isIPCCommunicationInitialized = false;
+static IPCCommandHandler ipcArm9HandlerTable[32];
 
 /*
 Fifo control bits:
@@ -77,25 +74,26 @@ void ZeroInitializeIPCCommandHandling()
 {
     int priorState = DisableIRQInterrupts();
 
-    if (!data_021116a4)
+    if (!isIPCCommunicationInitialized)
     {
-        data_021116a4 = true;
+        isIPCCommunicationInitialized = true;
         Unknown_027ffc00* data = (Unknown_027ffc00*)0x027ffc00;
         data->ipcHandlersRegistered[IPCSide_Arm9] = 0;
 
         int channel = 0;
         do
         {
-            data_021116a8[channel] = NULL;
+            ipcArm9HandlerTable[channel] = NULL;
             channel++;
         } while (channel < 32);
 
-        IPC_FIFO_CONTROL = FIFO_CONTROL_MASK_ENABLE | FIFO_CONTROL_MASK_ERROR | FIFO_CONTROL_MASK_ENABLE_RECEIVE_FIFO_IRQ | FIFO_CONTROL_MASK_FLUSH_SEND_FIFO;
+        IPC_FIFO_CONTROL = FIFO_CONTROL_MASK_ENABLE | FIFO_CONTROL_MASK_ERROR 
+            | FIFO_CONTROL_MASK_ENABLE_RECEIVE_FIFO_IRQ | FIFO_CONTROL_MASK_FLUSH_SEND_FIFO;
         AcknowledgeSpecificInterrupts(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY);
         func_020c6aec(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY, &HandleCommandReceivedFromArm7);
         EnableSpecificInterrupts(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY);
 
-        int counter;
+        int timeoutCounter;
         unsigned int syncNibble;
         int successfulHandshakeCount = 0;
         while (true)
@@ -104,18 +102,18 @@ void ZeroInitializeIPCCommandHandling()
             IPC_FIFO_SYNC = (syncNibble << 8);
             if (syncNibble == 0 && successfulHandshakeCount > 4)
                 break;
-            counter = 1000;
+            timeoutCounter = 1000;
             if ((IPC_FIFO_SYNC & 0xf) == syncNibble)
             {
                 do
                 {
-                    if (counter <= 0)
+                    if (timeoutCounter <= 0)
                     {
                         successfulHandshakeCount = 0;
                         break;
                     }
                     else
-                        counter--;
+                        timeoutCounter--;
                 } while ((IPC_FIFO_SYNC & 0xf) == syncNibble);
             }
             successfulHandshakeCount++;
@@ -130,7 +128,7 @@ void SetArm9IPCCommandHandler(int command, IPCCommandHandler handler)
     int priorState = DisableIRQInterrupts();
     
     Unknown_027ffc00* data = (Unknown_027ffc00*)0x027ffc00;
-    data_021116a8[command] = handler;
+    ipcArm9HandlerTable[command] = handler;
     if (handler != NULL)
         data->ipcHandlersRegistered[IPCSide_Arm9] |= (1 << command);
     else
@@ -151,7 +149,6 @@ IPCResult SendCommandToArm7(int channel, int argument, bool flag)
     command.parts.channel = channel;
     command.parts.flag = flag;
     command.parts.argument = argument;
-    
 
     if (IPC_FIFO_CONTROL & FIFO_CONTROL_MASK_ERROR)
     {
@@ -211,9 +208,9 @@ void HandleCommandReceivedFromArm7()
         if (result == IPCResult_ReceiveError || command.parts.channel == 0)
             continue;
 
-        if (data_021116a8[command.parts.channel] != 0)
+        if (ipcArm9HandlerTable[command.parts.channel] != 0)
         {
-            data_021116a8[command.parts.channel](command.parts.channel, command.parts.argument, command.parts.flag);
+            ipcArm9HandlerTable[command.parts.channel](command.parts.channel, command.parts.argument, command.parts.flag);
         }
         else if (!command.parts.flag)
         {

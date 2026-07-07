@@ -231,7 +231,7 @@ extern "C" CBool NitroHandle_UnknownDestructionFunction(NitroHandle* handle)
     CBool act = GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_3) == 0;
     if (act)
     {
-        int flagbit4 = GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_4);
+        int flagbit4 = GET_FLAG_BIT(handle->flags, NITROHANDLE_FLAG_NDS_BUS_HELD);
         int oldFlags = handle->flags;
         if (flagbit4)
         {

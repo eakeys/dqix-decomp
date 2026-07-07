@@ -1,6 +1,8 @@
 #include "Filesystem/FSInnerDefs.h"
+#include "Filesystem/CardReadManager.h"
 #include "System/Interrupts.h"
 #include "System/BiosData.h"
+#include "System/GamecardBusOwnership.h"
 #include <globaldefs.h>
 
 #pragma optimize_for_size off
@@ -13,14 +15,6 @@
 
 #define data_020f228c data_020f23f8
 #endif
-
-extern "C"
-{
-    void func_020d0024(unsigned short);
-    void func_020d0008(unsigned short);
-
-    int func_020c7080();
-}
 
 extern char data_020f228c[]; // "rom"
 
@@ -228,11 +222,11 @@ extern "C" int ROMFilesystemOpcodeOverride(NitroVM* vm, int opcode)
     {
         switch (opcode)
         {
-        case NITROVM_OPCODE_9:
-            func_020d0008(data_0211173c.unknown_0);
+        case NITROVM_OPCODE_ACQUIRE_NDS_BUS:
+            NitroVM_Command_AcquireCardReadResources(data_0211173c.busHolderID);
             return NITRO_RESULT_SUCCESS;
-        case NITROVM_OPCODE_10:
-            func_020d0024(data_0211173c.unknown_0);
+        case NITROVM_OPCODE_RELEASE_NDS_BUS:
+            NitroVM_Command_ReleaseCardReadResources(data_0211173c.busHolderID);
             return NITRO_RESULT_SUCCESS;
         }
     }
@@ -256,7 +250,7 @@ extern "C" int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
 extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
 {
     data_0211173c.maybeDMAChannel = channel;
-    data_0211173c.unknown_0 = func_020c7080();
+    data_0211173c.busHolderID = GenerateLockOwnerID();
     data_0211173c.arm9Data.start = NULL;
     data_0211173c.arm9Data.size = 0;
     data_0211173c.arm7Data.start = NULL;
@@ -268,7 +262,7 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
 
     const BootIndicator* biosData = (BootIndicator*)BIOS_ADDR_BOOT_INDICATOR;
     const CartridgeHeader& cartridgeHeader = biosData->cartHeader;
-    if (biosData->bootMode == 2) // DS Download Play? Is this even a thing for DQ9?
+    if (IsDownloadPlay()) // is this even a thing for DQ9?
     {
         data_0211173c.arm9Data.start = (void*)-1;
         data_0211173c.arm9Data.size = 0;
@@ -281,7 +275,7 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
     }
 
     NitroHandle_SetOpcodeOverride(&data_02111754, &ROMFilesystemOpcodeOverride,
-        (1 << NITROVM_OPCODE_10) | (1 << NITROVM_OPCODE_9) | (1 << NITROVM_OPCODE_SAVE));
+        (1 << NITROVM_OPCODE_RELEASE_NDS_BUS) | (1 << NITROVM_OPCODE_ACQUIRE_NDS_BUS) | (1 << NITROVM_OPCODE_SAVE));
 
     if (cartridgeHeader.fileNameTableOffset == -1 ||
         cartridgeHeader.fileNameTableOffset == 0 ||

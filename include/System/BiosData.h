@@ -62,3 +62,9 @@ struct BootIndicator
 #define BIOS_ADDR_BOOT_INDICATOR 0x027FFC40
 #define BIOS_ADDR_CARTRIDGE_HEADER 0x027FFE00
 #define BIOS_ADDR_OVERLAY_TABLE_VALUES 0x027FFE50 
+
+inline bool IsDownloadPlay()
+{
+    BootIndicator* data = (BootIndicator*)BIOS_ADDR_BOOT_INDICATOR;
+    return data->bootMode == 2;
+}

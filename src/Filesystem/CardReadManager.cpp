@@ -1,5 +1,4 @@
 #include "Filesystem/FSInnerDefs.h"
-#include "Filesystem/FileIOPorts.h"
 #include "System/BiosData.h"
 #include "System/Memory.h"
 #include "System/Interrupts.h"
@@ -30,7 +29,7 @@
 #define func_020d1234 func_020d2d00
 #endif
 
-void SendTaskToReadContext(Struct_021118e0::PFNCartridgeRead);
+void SendTaskToReadContext(CardReadManager::PFNCartridgeRead);
 
 extern "C"
 {
@@ -50,9 +49,6 @@ extern "C"
     void func_020cfe08();
 
     void func_020cff50();
-
-    // Checks some boolean is set, hangs if not set
-    void func_020cff28();
     
     void func_020d1118();
 
@@ -63,7 +59,7 @@ Struct_02111f20::PFNRead GetCartridgeReadProc();
 
 extern "C" bool TransferScratchBuffer(Struct_02111f20* input)
 {
-    Struct_021118e0* ptr = &data_021118e0;
+    CardReadManager* ptr = &data_021118e0;
     unsigned int romCurrentBlockStart = ptr->cartridgeReadOffset & 0xfffffe00;
     if (romCurrentBlockStart == (unsigned int)input->alignedWrite)
     {
@@ -109,7 +105,7 @@ void SendGamecardBusCommand(unsigned int firstWord, unsigned int secondWord)
 
 void ReadSingleSegmentFromCartridge()
 {
-    Struct_021118e0* s18e0 = &data_021118e0;
+    CardReadManager* s18e0 = &data_021118e0;
     void* readLocation = (void*)ADDR_GAMECARD_RECEIVED_DATA;
     Struct_02111f20* ps1f20 = &data_02111f00.innerStruct;
 
@@ -125,7 +121,7 @@ void DMAChainSegmentInterruptHandler()
 {
     func_020c9f2c(data_021118e0.dmaChannel);
 
-    Struct_021118e0* ptr = &data_021118e0;
+    CardReadManager* ptr = &data_021118e0;
     
     ptr->cartridgeReadOffset += 512;
     ptr->writeDst += 512;
@@ -137,16 +133,16 @@ void DMAChainSegmentInterruptHandler()
     {
         DisableSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
         AcknowledgeSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
-        Struct_021118e0* readManager = &data_021118e0;
+        CardReadManager* readManager = &data_021118e0;
         unsigned int romChipID = SetupNormalGamecardBusCommandMode();
         func_020d1234(romChipID);
 
-        readManager->pUnknown_0->unknown_0 = 0;
+        readManager->pSharedData->unknown_0 = 0;
         PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
         NitroHandle* handle = readManager->handle_3c;
 
         int oldState = DisableIRQInterrupts();
-        readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
+        readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
         UnblockContexts(&readManager->list_10C);
 
         if (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
@@ -165,7 +161,7 @@ void DMAChainSegmentInterruptHandler()
 
 extern "C" bool TryReadViaDMA(Struct_02111f20* handler)
 {
-    Struct_021118e0* readManager = &data_021118e0;
+    CardReadManager* readManager = &data_021118e0;
     unsigned int length = readManager->writeLength;
     
     bool canDoDMARead = false;
@@ -241,7 +237,7 @@ extern "C" bool TryReadViaDMA(Struct_02111f20* handler)
 
 extern "C" void ReadBlocksFromCartridge(Struct_02111f20* handler)
 {
-    Struct_021118e0* readManager = &data_021118e0;
+    CardReadManager* readManager = &data_021118e0;
     while (true)
     {
         unsigned int alignedOffset = readManager->cartridgeReadOffset & 0xfffffe00;
@@ -285,11 +281,11 @@ extern "C" void ReadBlocksFromCartridge(Struct_02111f20* handler)
         if (practicalWriteLoc == (unsigned int*)readManager->writeDst)
         {
             unsigned int remainingLength;
-            volatile Struct_021118e0* ptr = &data_021118e0;
-            ptr->cartridgeReadOffset += 0x200;
-            ptr->writeDst += 0x200;
-            remainingLength = ptr->writeLength - 0x200;
-            ptr->writeLength = remainingLength;
+            volatile CardReadManager* manager = &data_021118e0;
+            manager->cartridgeReadOffset += 0x200;
+            manager->writeDst += 0x200;
+            remainingLength = manager->writeLength - 0x200;
+            manager->writeLength = remainingLength;
             if (remainingLength != 0)
                 continue;
             break;
@@ -315,7 +311,7 @@ unsigned int SetupNormalGamecardBusCommandMode()
 
 // I don't know that this is safe per se, but in practice it wraps
 // ReadBlocksFromCartridge (the readProc) with some auxiliary stuff
-extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
+extern "C" void SafeReadBlocksFromCartridge(CardReadManager*)
 {
     Struct_02111f20* rawHandler = &data_02111f00.innerStruct;
     if (TransferScratchBuffer(rawHandler))
@@ -324,17 +320,17 @@ extern "C" void SafeReadBlocksFromCartridge(Struct_021118e0*)
         readProc(rawHandler);
     }
 
-    Struct_021118e0* readManager = &data_021118e0;
+    CardReadManager* readManager = &data_021118e0;
     unsigned int romChipID = SetupNormalGamecardBusCommandMode();
     // Might be checking if the cart has been ejected or similar
     func_020d1234(romChipID);
 
-    readManager->pUnknown_0->unknown_0 = 0;
+    readManager->pSharedData->unknown_0 = 0;
     PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
     NitroHandle* handle = readManager->handle_3c;
 
     int oldState = DisableIRQInterrupts();
-    readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
+    readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
     UnblockContexts(&readManager->list_10C);
 
     if (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
@@ -352,9 +348,8 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
     PFNNitroCleanup cleanupProc, NitroHandle* handle, CBool unknownBool)
 {
     Struct_02111f20* rawHandler = &data_02111f00.innerStruct;
-    Struct_021118e0* readManager = &data_021118e0;
-    // Verify some bool
-    func_020cff28();
+    CardReadManager* readManager = &data_021118e0;
+    VerifyCardReadManagerInitialized();
 
     int oldState = DisableIRQInterrupts();
 
@@ -392,7 +387,7 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
 
 extern "C" void InitRawReadStructs_020d0ec4()
 {
-    Struct_021118e0* readManager = &data_021118e0;
+    CardReadManager* readManager = &data_021118e0;
     if (readManager->flags_114 != 0)
         return;
 
@@ -405,7 +400,7 @@ extern "C" void InitRawReadStructs_020d0ec4()
     readManager->handle_3c = NULL;
 
     data_02111f00.number = 0;
-    func_020cfe08();
+    InitializeCardReadManager();
     data_02111f00.innerStruct.readProc = GetCartridgeReadProc();
     func_020d1118();
 }
@@ -425,25 +420,25 @@ void IPCCommand11Proc(unsigned int command, unsigned int argument, unsigned int 
     if (command != 11 || !flag)
         return;
 
-    Struct_021118e0* ptr = (Struct_021118e0*)&data_021118e0;
+    CardReadManager* manager = (CardReadManager*)&data_021118e0;
     
-    ProcessorContext* context = ptr->pContext_104;
-    ptr->flags_114 &= ~(1 << CARTRIDGE_READ_CONTEXT_FLAG_5);
+    ProcessorContext* context = manager->pContext_104;
+    manager->flags_114 &= ~(1 << READ_MANAGER_FLAG_AWAITING_ARM7_ACTION);
     
     MarkContextReadyAndSwitch(context);
 }
 
 void CartridgeReadContextLoop()
 {
-    Struct_021118e0* readManager = &data_021118e0;
+    CardReadManager* readManager = &data_021118e0;
     while (true)
     {
         int priorState = DisableIRQInterrupts();
-        if (!(readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING)))
+        if (!(readManager->flags_114 & (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING)))
         {
             do {
             BlockCurrentContext(NULL);
-            } while (!(readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_TASK_PENDING)));
+            } while (!(readManager->flags_114 & (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING)));
         }
         SetIRQInterruptState(priorState);
         readManager->cartridgeReadProc(readManager);

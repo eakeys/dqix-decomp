@@ -15,7 +15,7 @@ enum IPCSide
     IPCSide_Arm7 = 1
 };
 
-typedef void (*IPCCommandHandler)(int, int, int);
+typedef void (*IPCCommandHandler)(unsigned int, unsigned int, unsigned int);
 
 void InitializeInterProcessorCommunication();
 void ZeroInitializeIPCCommandHandling();

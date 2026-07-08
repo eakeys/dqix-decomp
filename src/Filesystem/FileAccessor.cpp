@@ -8,26 +8,21 @@
 #pragma optimize_for_size off
 
 #if defined(jpn)
-#define func_020d0024 func_020d1af0
-#define func_020d0008 func_020d1ad4
-
-#define func_020c7080 func_020c8b4c
-
 #define data_020f228c data_020f23f8
 #endif
 
 extern char data_020f228c[]; // "rom"
 
-extern "C" CBool CreateFileAccessor(NitroFileAccessor* outAccessor, const char* path)
+CBool CreateFileAccessor(NitroFileAccessor* outAccessor, const char* path)
 {
     NitroVM machine;
     NitroVM_Initialize(&machine);
 
-    int result = GlobalSearchFileOrDirectory_020cc780(&machine, path, outAccessor, NULL);
+    int result = NitroVM_SearchFileOrDirectory(&machine, path, outAccessor, NULL);
     return (result != 0);
 }
 
-extern "C" CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
+CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
     unsigned int start, unsigned int end, unsigned int capacity)
 {
     vm->linkedHandle = handle;
@@ -37,17 +32,17 @@ extern "C" CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
 
     // Operand 7 copies capacity into base_a,
     // start into base_b and base_d, end into base_c.
-    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_COPY_REGISTERS))
+    if (!NitroVM_QueueCommand(vm, NITROVM_OPCODE_COPY_REGISTERS))
         return false;
 
     // Not sure about bit 4, but bit 5 is cleared because this is a file
     // (so command 5 can run properly)
-    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_SEARCHING_DIRECTORY);
+    vm->flags = (vm->flags | (1 << NITROVM_FLAG_READ_POSITIONS_CONFIGURED)) & ~(1 << NITROVM_FLAG_SEARCH_TARGET_IS_DIRECTORY);
     return true;
 }
 
 // Accessor passed by value (in registers r1, r2)
-extern "C" bool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor volatile accessor)
+bool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor volatile accessor)
 {
     NitroHandle* handle = accessor.handle;
     if (handle == NULL)
@@ -57,16 +52,16 @@ extern "C" bool NitroVM_PrepareReadFileByID(NitroVM* vm, NitroFileAccessor volat
     vm->regext_abc.a.ptr = handle;
     vm->regext_abc.b.u32 = accessor.fileID;
     // After this call, base_A will also hold the file ID
-    if (!NitroVM_020cbf58(vm, NITROVM_OPCODE_GET_FAT_ENTRY))
+    if (!NitroVM_QueueCommand(vm, NITROVM_OPCODE_GET_FAT_ENTRY))
         return false;
 
     // Not sure about bit 4, but bit 5 is cleared because this is a file
     // (so command 5 can run properly)
-    vm->flags = (vm->flags | (1 << NITROVM_FLAG_4)) & ~(1 << NITROVM_FLAG_SEARCHING_DIRECTORY);
+    vm->flags = (vm->flags | (1 << NITROVM_FLAG_READ_POSITIONS_CONFIGURED)) & ~(1 << NITROVM_FLAG_SEARCH_TARGET_IS_DIRECTORY);
     return true;
 }
 
-extern "C" bool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path)
+bool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path)
 {
     NitroFileAccessor accessor;
     if (CreateFileAccessor(&accessor, path))
@@ -78,20 +73,22 @@ extern "C" bool NitroVM_PrepareReadFileByPath(NitroVM* vm, const char* path)
     return false;
 }
 
-extern "C" CBool NitroVM_MaybeCompleteTasks_020cca80(NitroVM* vm)
+CBool NitroVM_FinishRead(NitroVM* vm)
 {
-    if (!NitroVM_020cbf58(vm, 8))
+    // this opcode executes synchronously, so when control returns here all
+    // VMs before it will have executed their instructions
+    if (!NitroVM_QueueCommand(vm, NITROVM_OPCODE_NOP))
         return false;
 
     vm->linkedHandle = NULL;
-    vm->maybeScheduledCommand = NITROVM_OPCODE_MAYBE_INVALID;
-    vm->flags &= ~((1 << NITROVM_FLAG_4) | (1 << NITROVM_FLAG_SEARCHING_DIRECTORY));
+    vm->pendingCommand = NITROVM_OPCODE_MAYBE_INVALID;
+    vm->flags &= ~((1 << NITROVM_FLAG_READ_POSITIONS_CONFIGURED) | (1 << NITROVM_FLAG_SEARCH_TARGET_IS_DIRECTORY));
     return true;
 }
 
-extern "C" void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLength)
+void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLength)
 {
-    if (vm->maybeScheduledCommand != NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH)
+    if (vm->pendingCommand != NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH)
     {
         vm->regext_abc.c.u16.low = 0;
         vm->regext_abc.c.u16.high = 0;
@@ -102,66 +99,67 @@ extern "C" void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int
 
     // This might be a bool function, in which case we return the return value
     // of this. (We still get tail call optimisation though)
-    NitroVM_020cbf58(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH);
+    NitroVM_QueueCommand(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH);
 }
 
-extern "C" CBool NitroVM_020ccae8(NitroVM* vm)
+CBool NitroVM_AwaitCommandCompletion(NitroVM* vm)
 {
-    CBool needToExecute = false;
+    CBool executionPending = false;
 
     int oldState = DisableIRQInterrupts();
 
-    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0))
+    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_IN_HANDLE_QUEUE))
     {
         // Execute iff flag 6 and flag 2 are both clear.
-        needToExecute = !(vm->flags & ((1 << NITROVM_FLAG_6) | (1 << NITROVM_FLAG_2)));
+        executionPending = !(vm->flags & ((1 << NITROVM_FLAG_READY_TO_EXECUTE) | (1 << NITROVM_FLAG_SYNCHRONOUS)));
 
-        if (needToExecute)
+        if (executionPending)
         {
-            vm->flags |= (1 << NITROVM_FLAG_2);
+            vm->flags |= (1 << NITROVM_FLAG_SYNCHRONOUS);
             do {
-                BlockCurrentContext(&vm->unknown_sublist_18);
-            } while (!(vm->flags & (1 << NITROVM_FLAG_6))); // why the different format here?
+                BlockCurrentContext(&vm->blockedContexts);
+            } while (!(vm->flags & (1 << NITROVM_FLAG_READY_TO_EXECUTE))); // why the different format here?
         }
         else
         {
             do {
-                BlockCurrentContext(&vm->unknown_sublist_18);
-            } while (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0));
+                BlockCurrentContext(&vm->blockedContexts);
+            } while (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_IN_HANDLE_QUEUE));
         }
     }
 
     SetIRQInterruptState(oldState);
 
-    if (needToExecute)
-        return NitroVM_ExecuteAndUnlink_020cbf14(vm);
+    if (executionPending)
+        return NitroVM_ExecuteAndUnlink(vm);
     else
         return vm->storedResult == NITRO_RESULT_SUCCESS;
 }
 
-extern "C" void NitroVM_FlagStuff_020ccba8(NitroVM* vm)
+void NitroVM_CancelCommand(NitroVM* vm)
 {
     int oldState = DisableIRQInterrupts();
 
-    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_0))
+    if (GET_FLAG_BIT(vm->flags, NITROVM_FLAG_IN_HANDLE_QUEUE))
     {
-        vm->flags |= (1 << NITROVM_FLAG_1);
-        vm->linkedHandle->flags |= (1 << NITROHANDLE_FLAG_5);
+        // mark for removal from the handle's list of attached VMs
+        vm->flags |= (1 << NITROVM_FLAG_MARKED_FOR_UNLINK_FROM_HANDLE);
+        vm->linkedHandle->flags |= (1 << NITROHANDLE_FLAG_VM_LIST_DIRTY);
     }
     SetIRQInterruptState(oldState);
 }
 
-extern "C" int NitroVM_MaybeExecuteLoad_v1(NitroVM* vm, void* dst, int capacity)
+int NitroVM_ReadAsync(NitroVM* vm, void* dst, int capacity)
 {
-    return NitroVM_ExecuteLoad_020cc8c4(vm, dst, capacity, true);
+    return NitroVM_Read(vm, dst, capacity, true);
 }
 
-extern "C" int NitroVM_MaybeExecuteLoad_v0(NitroVM* vm, void* dst, int capacity)
+int NitroVM_ReadSync(NitroVM* vm, void* dst, int capacity)
 {
-    return NitroVM_ExecuteLoad_020cc8c4(vm, dst, capacity, false);
+    return NitroVM_Read(vm, dst, capacity, false);
 }
 
-extern "C" CBool NitroVM_Seek(NitroVM* vm, int offset, int whence)
+CBool NitroVM_Seek(NitroVM* vm, int offset, int whence)
 {
     switch (whence)
     {
@@ -187,36 +185,36 @@ extern "C" CBool NitroVM_Seek(NitroVM* vm, int offset, int whence)
     return true;
 }
 
-extern "C" CBool SetPrimaryFilesystemRoot(const char* path)
+CBool SetROMFilesystemRoot(const char* path)
 {
     NitroVM vm;
     NitroVM_Initialize(&vm);
     NitroDirectoryAccessor accessor;
-    if (!GlobalSearchFileOrDirectory_020cc780(&vm, path, NULL, &accessor))
+    if (!NitroVM_SearchFileOrDirectory(&vm, path, NULL, &accessor))
         return false;
 
-    data_02111728.primaryFSRoot = accessor;
+    data_02111728.romFSRoot = accessor;
     return true;
 }
 
-extern "C" void NitroHandle_020cccd4(NitroHandle* vm)
+void OnCartridgeDataLoadCompletion(NitroHandle* handle)
 {
     int result = func_020d1198() ? NITRO_RESULT_5 : NITRO_RESULT_SUCCESS;
-    NitroHandle_020cc6ac(vm, result);
+    NitroHandle_OnTaskCompletion(handle, result);
 }
 
-extern "C" int ROMFilesystemLoadProc(NitroHandle* handle, void* dst, unsigned offset, unsigned len)
+int ROMFilesystemLoadProc(NitroHandle* handle, void* dst, unsigned offset, unsigned len)
 {
-    LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &NitroHandle_020cccd4, handle, true);
-    return NITRO_RESULT_REQUIRE_SYNC_MAYBE;
+    LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &OnCartridgeDataLoadCompletion, handle, true);
+    return NITRO_RESULT_TASK_STILL_RUNNING;
 }
 
-extern "C" int ROMFilesystemSaveProc(NitroHandle*, const void*, unsigned, unsigned)
+int ROMFilesystemSaveProc(NitroHandle*, const void*, unsigned, unsigned)
 {
     return NITRO_RESULT_FAILURE;
 }
 
-extern "C" int ROMFilesystemOpcodeOverride(NitroVM* vm, int opcode)
+int ROMFilesystemOpcodeOverride(NitroVM* vm, int opcode)
 {
     if (opcode != NITROVM_OPCODE_SAVE)
     {
@@ -231,23 +229,23 @@ extern "C" int ROMFilesystemOpcodeOverride(NitroVM* vm, int opcode)
         }
     }
     else // opcode = 1 (save), not possible for ROM data
-        return NITRO_RESULT_4;
+        return NITRO_RESULT_COMMAND_UNSUPPORTED;
 
     // Override does not implement command
     return NITRO_RESULT_OPCODE_NOT_IMPLEMENTED;
 }
 
-extern "C" int UnsupportedFilesystemLoadProc(NitroHandle*, void*, unsigned, unsigned)
+int UnsupportedFilesystemLoadProc(NitroHandle*, void*, unsigned, unsigned)
 {
     return NITRO_RESULT_FAILURE;
 }
 
-extern "C" int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
+int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
 {
-    return NITRO_RESULT_4;
+    return NITRO_RESULT_COMMAND_UNSUPPORTED;
 }
 
-extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
+void InitializeROMFilesystem_Internal(unsigned int channel)
 {
     data_0211173c.maybeDMAChannel = channel;
     data_0211173c.busHolderID = GenerateLockOwnerID();
@@ -257,8 +255,8 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
     data_0211173c.arm7Data.size = 0;
     InitRawReadStructs_020d0ec4();
 
-    NitroHandle_ZeroInit(&data_02111754);
-    NitroHandle_AddToList(&data_02111754, data_020f228c, 3);
+    NitroHandle_Initialize(&data_02111754);
+    NitroHandle_AddToHandleList(&data_02111754, data_020f228c, 3);
 
     const BootIndicator* biosData = (BootIndicator*)BIOS_ADDR_BOOT_INDICATOR;
     const CartridgeHeader& cartridgeHeader = biosData->cartHeader;
@@ -292,19 +290,19 @@ extern "C" void InitializeROMFilesystem_Internal(unsigned int channel)
         &ROMFilesystemSaveProc);
 }
 
-extern "C" unsigned int MaybeChangeDMAChannel_020ccf0c(unsigned int newChannel)
+unsigned int ChangeROMLoadDMAChannel(unsigned int newChannel)
 {
     int oldState = DisableIRQInterrupts();
     unsigned int oldChannel = data_0211173c.maybeDMAChannel;
-    CBool destructionResult = NitroHandle_UnknownDestructionFunction(&data_02111754);
+    CBool destructionResult = NitroHandle_Pause(&data_02111754);
     data_0211173c.maybeDMAChannel = newChannel;
     if (destructionResult)
-        NitroHandle_OtherUnknownDestFunc(&data_02111754);
+        NitroHandle_Unpause(&data_02111754);
     SetIRQInterruptState(oldState);
     return oldChannel;
 }
 
-extern "C" unsigned int LoadPrimaryFileTables(void* where, unsigned int capacity)
+unsigned int LoadROMFilesystemFileTables(void* where, unsigned int capacity)
 {
     return NitroHandle_LoadFileTables(&data_02111754, where, capacity);
 }

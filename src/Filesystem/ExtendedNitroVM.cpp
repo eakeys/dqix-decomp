@@ -220,7 +220,7 @@ bool ExtendedNitroVM::CheckUnknownFlagBit4()
     switch (unknown_0)
     {
     case 1:
-        return GET_FLAG_BIT(machine.flags, NITROVM_FLAG_4);
+        return GET_FLAG_BIT(machine.flags, NITROVM_FLAG_READ_POSITIONS_CONFIGURED);
     case 2:
         return true;
     }
@@ -261,7 +261,7 @@ bool ExtendedNitroVM::MaybeReset()
     if (unknown_0 != 1)
     {
     }
-    else if (NitroVM_MaybeCompleteTasks_020cca80(&machine))
+    else if (NitroVM_FinishRead(&machine))
         didSomething = true;
 
     func_020d84f8(this, sizeof(ExtendedNitroVM));
@@ -329,8 +329,8 @@ unsigned int ExtendedNitroVM::LoadToBuffer(void *into, unsigned int capacity)
     switch (unknown_0)
     {
     case 1:
-        length = NitroVM_MaybeExecuteLoad_v1(&machine, into, capacity);
-        while (GET_FLAG_BIT(machine.flags, NITROVM_FLAG_0))
+        length = NitroVM_ReadAsync(&machine, into, capacity);
+        while (GET_FLAG_BIT(machine.flags, NITROVM_FLAG_IN_HANDLE_QUEUE))
             func_020d9788(1);
         break;
     case 2:
@@ -352,7 +352,7 @@ bool ExtendedNitroVM::DoFlagStuff()
 
     if (unknown_0 == 1)
     {
-        NitroVM_FlagStuff_020ccba8(&machine);
+        NitroVM_CancelCommand(&machine);
         success = true;
     }
     unknown_2 = 1;

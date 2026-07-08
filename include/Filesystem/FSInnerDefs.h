@@ -31,7 +31,7 @@ extern "C"
 struct Struct_02111728
 {
     NitroHandle* handle;
-    NitroDirectoryAccessor primaryFSRoot;
+    NitroDirectoryAccessor romFSRoot;
 };
 
 struct Struct_0211173c

@@ -65,13 +65,13 @@ bool NarcHandle::Initialize(const char* signatureString, const unsigned char* bu
         
     }
 
-    NitroHandle_ZeroInit(&initial);
+    NitroHandle_Initialize(&initial);
     pNarcFile = buffer;
     pFATBSection = (const FATBlock*)fatPtr;
     unsigned char* imgPostHeader = (unsigned char*)(imgPtr) + 8;
     pFileDataStart = imgPostHeader;
 
-    if (!NitroHandle_AddToList(&initial, signatureString, strlen(signatureString)))
+    if (!NitroHandle_AddToHandleList(&initial, signatureString, strlen(signatureString)))
         return false;
 
     if (NitroHandle_Populate(&initial, imgPostHeader,
@@ -80,7 +80,7 @@ bool NarcHandle::Initialize(const char* signatureString, const unsigned char* bu
             NULL, NULL))
         return true;
 
-    NitroHandle_RemoveFromList(&initial);
+    NitroHandle_RemoveFromHandleList(&initial);
 
     return false;
 }
@@ -90,7 +90,7 @@ bool NarcHandle::Destroy()
     if (!NitroHandle_Destroy(&initial))
         return false;
 
-    NitroHandle_RemoveFromList(&initial);
+    NitroHandle_RemoveFromHandleList(&initial);
     return true;
 }
 
@@ -104,7 +104,7 @@ const void* GetFileFromNARCInMemory(const char* filename)
     {
         // after running the previous function, base_B holds offset of file from file data
         addr = (const unsigned char*)((NarcHandle*)machine.linkedHandle)->pFileDataStart + machine.regbase_abc.b.s32;
-        NitroVM_MaybeCompleteTasks_020cca80(&machine);
+        NitroVM_FinishRead(&machine);
     }
     return addr;
 }

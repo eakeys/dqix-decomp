@@ -118,13 +118,13 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
         return false;
     }
 
-    if (NitroVM_MaybeExecuteLoad_v0(&machine, into, 0x20) != 0x20)
+    if (NitroVM_ReadSync(&machine, into, 0x20) != 0x20)
     {
-        NitroVM_MaybeCompleteTasks_020cca80(&machine);
+        NitroVM_FinishRead(&machine);
         return false;
     }
 
-    NitroVM_MaybeCompleteTasks_020cca80(&machine);
+    NitroVM_FinishRead(&machine);
     into->isArm7 = isArm7;
 
     NitroFileAccessor overlayAccessor;
@@ -134,7 +134,7 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
     
     into->romStorageOffset = machine.regbase_abc.b.u32;
     into->romStorageSize = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
-    NitroVM_MaybeCompleteTasks_020cca80(&machine);
+    NitroVM_FinishRead(&machine);
     return true;
 }
 
@@ -166,7 +166,7 @@ bool LoadOverlayMetadata(OverlayMetadata* into, bool isArm7, unsigned int idx)
 
         into->romStorageOffset = machine.regbase_abc.b.u32;
         into->romStorageSize = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
-        NitroVM_MaybeCompleteTasks_020cca80(&machine);
+        NitroVM_FinishRead(&machine);
         return true;
     }
     else
@@ -189,9 +189,9 @@ bool LoadCompressedOverlay(const OverlayMetadata &overlay, NitroVM *machine)
     
     unsigned int cartridgeSize = GetOverlaySizeOnCartridge(overlay);
     InvalidateCacheAndZeroOverlay(overlay);
-    if (NitroVM_MaybeExecuteLoad_v1(machine, (void*)overlay.loadAddress, cartridgeSize) != cartridgeSize)
+    if (NitroVM_ReadAsync(machine, (void*)overlay.loadAddress, cartridgeSize) != cartridgeSize)
     {
-        NitroVM_MaybeCompleteTasks_020cca80(machine);
+        NitroVM_FinishRead(machine);
         return false;
     }
 
@@ -209,13 +209,13 @@ bool LoadCompressedOverlay(const OverlayMetadata& overlay)
     
     unsigned int cartridgeSize = GetOverlaySizeOnCartridge(overlay);
     InvalidateCacheAndZeroOverlay(overlay);
-    if (NitroVM_MaybeExecuteLoad_v0(&machine, (void*)overlay.loadAddress, cartridgeSize) != cartridgeSize)
+    if (NitroVM_ReadSync(&machine, (void*)overlay.loadAddress, cartridgeSize) != cartridgeSize)
     {
-        NitroVM_MaybeCompleteTasks_020cca80(&machine);
+        NitroVM_FinishRead(&machine);
         return false;
     }
 
-    NitroVM_MaybeCompleteTasks_020cca80(&machine);
+    NitroVM_FinishRead(&machine);
     return true;
 }
 

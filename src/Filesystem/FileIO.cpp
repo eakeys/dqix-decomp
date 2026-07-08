@@ -177,7 +177,7 @@ bool GetFileInNarc(const void *narcBuffer, const char *targetFilePath,
                 strrchr(targetFilePath, '/');
                 success = true;
             }
-            NitroVM_MaybeCompleteTasks_020cca80(&machine);
+            NitroVM_FinishRead(&machine);
             if ((int)success > 0)
                 break;
             idx++;
@@ -244,7 +244,7 @@ bool GetFileInNarcPermissive(const void *narcBuffer, const char *targetFilePath,
                 {
                     maxIdx1 = midpoint - 1;
                 }
-                NitroVM_MaybeCompleteTasks_020cca80(&machine);
+                NitroVM_FinishRead(&machine);
             }
             else
                 maxIdx1 = midpoint - 1;
@@ -303,11 +303,11 @@ unsigned int FindFilesInNarcBySubstring(const void *narcBuffer, const char *subs
                 numFound++;
                 if (maxOutputs <= numFound)
                 {
-                    NitroVM_MaybeCompleteTasks_020cca80(&machine);
+                    NitroVM_FinishRead(&machine);
                     break;
                 }
             }
-            NitroVM_MaybeCompleteTasks_020cca80(&machine);
+            NitroVM_FinishRead(&machine);
             idx++;
         }
         handle.Destroy();

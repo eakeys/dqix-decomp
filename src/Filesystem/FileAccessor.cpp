@@ -253,7 +253,7 @@ void InitializeROMFilesystem_Internal(unsigned int channel)
     data_0211173c.arm9Data.size = 0;
     data_0211173c.arm7Data.start = NULL;
     data_0211173c.arm7Data.size = 0;
-    InitRawReadStructs_020d0ec4();
+    InitializeCardReading();
 
     NitroHandle_Initialize(&data_02111754);
     NitroHandle_AddToHandleList(&data_02111754, data_020f228c, 3);

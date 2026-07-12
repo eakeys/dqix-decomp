@@ -112,6 +112,10 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020afe6c end:0x020afec4
 
+//src/System/InterruptProcs.cpp:
+//    complete
+//    .text start:0x020c6954 end:0x020c6c90
+
 src/System/InterruptHandling.cpp:
     complete
     .text start:0x020c6c90 end:0x020c6d48
@@ -140,6 +144,10 @@ src/System/Interrupts.cpp:
     complete
     .text start:0x020c96e8 end:0x020c976c
 
+src/System/DMA.cpp:
+    complete
+    .text start:0x020c9c0c end:0x020ca0a8
+
 src/System/IPC.cpp:
     complete
     .bss start:0x021116a4 end:0x02111728
@@ -164,7 +172,7 @@ src/Filesystem/OverlayFSManagement.cpp:
 
 src/Filesystem/CardReadManagerInit.cpp:
     complete
-    .text start:0x020cfcbc end:0x020cff50
+    .text start:0x020cfcbc end:0x020cffcc
 
 src/Filesystem/CardReadManagerAcquireBus.cpp:
     complete

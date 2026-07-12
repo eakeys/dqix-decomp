@@ -72,9 +72,7 @@ copied from GBATek documentation:
 
 typedef void (*PFNInterrupt)();
 
-extern PFNInterrupt data_027e0000[];
-
-#define DMA_TIMER_INTERRUPTS_HANDLED_FLAGS (*(volatile unsigned int*)((int)data_027e0000 + 0x3ff8))
+//#define DMA_TIMER_INTERRUPTS_HANDLED_FLAGS (*(volatile unsigned int*)((int)data_027e0000 + 0x3ff8))
 
 unsigned int SetSpecificInterruptsEnabled(unsigned int which);
 // Returns the previous state of interrupts enabled

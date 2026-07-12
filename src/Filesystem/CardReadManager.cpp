@@ -4,6 +4,7 @@
 #include "System/Interrupts.h"
 #include "System/InterruptHandling.h"
 #include "System/Cache.h"
+#include "System/DMA.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
@@ -18,44 +19,30 @@
 #define GAMECARD_BUS_COMMAND_BYTE(n) *(unsigned char*)(0x040001a8 + n)
 
 #if defined(jpn)
-#define func_020c6aec func_020c85b8
 #define func_020c89e4 func_020ca4b0
-#define func_020c9f2c func_020cb9f8
 #define func_020ca8e8 func_020cc3b4
-#define func_020cfe08 func_020d18d4
-#define func_020cff28 func_020d19f4
-#define func_020cff50 func_020d1a1c
 #define func_020d1118 func_020d2be4
 #define func_020d1234 func_020d2d00
 #endif
 
-void SendTaskToReadContext(CardReadManager::PFNCartridgeRead);
+void SendTaskToReadContext(CardReadManager::ReadProc);
 
 extern "C"
 {
-    // Maybe sets interrupt table?
-    void func_020c6aec(unsigned int mask, const void* fn);
-
     // Gets the base of the tightly coupled memory region
     unsigned int func_020c89e4();
-
-    // Reset / initialize DMA channel
-    void func_020c9f2c(unsigned int);
 
     // Seems to set up DMA to repeatedly read from the read parameter into write
     // pointer, incrementing the write pointer but not the read pointer.
     void func_020ca8e8(unsigned int dmaChannel, const void* readFrom, void* writeTo, unsigned int length);
-
-    void func_020cfe08();
-
-    void func_020cff50();
     
     void func_020d1118();
 
     void func_020d1234(unsigned int);
 }
 
-Struct_02111f20::PFNRead GetCartridgeReadProc();
+void WaitForReadManagerIdle_Internal();
+Struct_02111f20::LowLevelReadProc GetLowLevelCartridgeReadProc();
 
 extern "C" bool TransferScratchBuffer(Struct_02111f20* input)
 {
@@ -105,21 +92,21 @@ void SendGamecardBusCommand(unsigned int firstWord, unsigned int secondWord)
 
 void ReadSingleSegmentFromCartridge()
 {
-    CardReadManager* s18e0 = &data_021118e0;
+    CardReadManager* readManager = &data_021118e0;
     void* readLocation = (void*)ADDR_GAMECARD_RECEIVED_DATA;
     Struct_02111f20* ps1f20 = &data_02111f00.innerStruct;
 
     DECLARE_ASM_NOP();
 
-    func_020ca8e8(s18e0->dmaChannel, readLocation, s18e0->writeDst, 0x200);
-    unsigned int offset = s18e0->cartridgeReadOffset;
+    func_020ca8e8(readManager->dmaChannel, readLocation, readManager->writeDst, 0x200);
+    unsigned int offset = readManager->cartridgeReadOffset;
     SendGamecardBusCommand(0xb7000000 | (offset >> 8), offset << 24);
     *(unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL = ps1f20->control_4;
 }
 
 void DMAChainSegmentInterruptHandler()
 {
-    func_020c9f2c(data_021118e0.dmaChannel);
+    ResetDMAChannel(data_021118e0.dmaChannel);
 
     CardReadManager* ptr = &data_021118e0;
     
@@ -138,14 +125,14 @@ void DMAChainSegmentInterruptHandler()
         func_020d1234(romChipID);
 
         readManager->pSharedData->unknown_0 = 0;
-        PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
-        NitroHandle* handle = readManager->handle_3c;
+        CardReadManager::CompletionCallback cleanProc = readManager->onComplete;
+        NitroHandle* handle = readManager->handle;
 
         int oldState = DisableIRQInterrupts();
-        readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
-        UnblockContexts(&readManager->list_10C);
+        readManager->flags &= ~((1 << READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS) | (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
+        UnblockContexts(&readManager->ongoingReadBlock);
 
-        if (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
+        if (readManager->flags & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
             MarkContextReadyAndSwitch(&readManager->cartridgeReadContext);
         SetIRQInterruptState(oldState);
 
@@ -202,12 +189,12 @@ extern "C" bool TryReadViaDMA(Struct_02111f20* handler)
     if (canDoDMARead)
     {
         int oldState = DisableIRQInterrupts();
-        if (length < readManager->maybeInstructionCacheLimit_118)
+        if (length < readManager->instructionCacheCleanThreshold)
             InvalidateInstructionCacheRange((void*)destination, length);
         else
             InvalidateInstructionCache();
 
-        if (length < readManager->maybeDataCacheLimit_11c)
+        if (length < readManager->dataCacheCleanThreshold)
         {
             if (alignmentMod32 != 0)
             {
@@ -224,8 +211,7 @@ extern "C" bool TryReadViaDMA(Struct_02111f20* handler)
             CleanInvalidateDataCache();
         }
 
-        // Set interrupt handler
-        func_020c6aec(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE, &DMAChainSegmentInterruptHandler);
+        SetInterruptHandler(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE, &DMAChainSegmentInterruptHandler);
         AcknowledgeSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
         EnableSpecificInterrupts(IRQ_MASK_GAMECARD_DATA_TRANSFER_DONE);
         SetIRQInterruptState(oldState);
@@ -316,36 +302,38 @@ extern "C" void SafeReadBlocksFromCartridge(CardReadManager*)
     Struct_02111f20* rawHandler = &data_02111f00.innerStruct;
     if (TransferScratchBuffer(rawHandler))
     {
-        Struct_02111f20::PFNRead readProc = rawHandler->readProc;
+        Struct_02111f20::LowLevelReadProc readProc = rawHandler->lowLevelReadProc;
+        // This is (usually?) ReadBlocksFromCartridge
         readProc(rawHandler);
     }
 
     CardReadManager* readManager = &data_021118e0;
     unsigned int romChipID = SetupNormalGamecardBusCommandMode();
-    // Might be checking if the cart has been ejected or similar
+    // Does a few things, but in the end it resets all four DMA channels,
+    // so it's some kind of cleanup
     func_020d1234(romChipID);
 
     readManager->pSharedData->unknown_0 = 0;
-    PFNNitroCleanup cleanProc = readManager->maybeCleanupProc_38;
-    NitroHandle* handle = readManager->handle_3c;
+    CardReadManager::CompletionCallback callback = readManager->onComplete;
+    NitroHandle* handle = readManager->handle;
 
     int oldState = DisableIRQInterrupts();
-    readManager->flags_114 &= ~((1 << CARTRIDGE_READ_CONTEXT_FLAG_2) | (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
-    UnblockContexts(&readManager->list_10C);
+    readManager->flags &= ~((1 << READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS) | (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING) | (1 << CARTRIDGE_READ_CONTEXT_FLAG_6));
+    UnblockContexts(&readManager->ongoingReadBlock);
 
-    if (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
+    if (readManager->flags & (1 << CARTRIDGE_READ_CONTEXT_FLAG_4))
         MarkContextReadyAndSwitch(&readManager->cartridgeReadContext);
     SetIRQInterruptState(oldState);
     
-    if (cleanProc != NULL)
-        cleanProc(handle);
+    if (callback != NULL)
+        callback(handle);
 
     DECLARE_ASM_NOP();
 }
 
 void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
     unsigned int cartridgeOffset, void* dest, unsigned int length,
-    PFNNitroCleanup cleanupProc, NitroHandle* handle, CBool unknownBool)
+    CardReadManager::CompletionCallback onComplete, NitroHandle* handle, CBool async)
 {
     Struct_02111f20* rawHandler = &data_02111f00.innerStruct;
     CardReadManager* readManager = &data_021118e0;
@@ -353,13 +341,13 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
 
     int oldState = DisableIRQInterrupts();
 
-    while (readManager->flags_114 & (1 << CARTRIDGE_READ_CONTEXT_FLAG_2))
+    while (readManager->flags & (1 << READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS))
     {
-        BlockCurrentContext(&readManager->list_10C);
+        BlockCurrentContext(&readManager->ongoingReadBlock);
     }
-    readManager->flags_114 |= (1 << CARTRIDGE_READ_CONTEXT_FLAG_2);
-    readManager->maybeCleanupProc_38 = cleanupProc;
-    readManager->handle_3c = handle;
+    readManager->flags |= (1 << READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS);
+    readManager->onComplete = onComplete;
+    readManager->handle = handle;
     SetIRQInterruptState(oldState);
     readManager->cartridgeReadOffset = cartridgeOffset + data_02111f00.number;
     readManager->dmaChannel = dmaChannel;
@@ -367,50 +355,50 @@ void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
     readManager->writeLength = length;
 
     if (dmaChannel <= 3)
-        func_020c9f2c(dmaChannel);
+        ResetDMAChannel(dmaChannel);
 
     if (TryReadViaDMA(rawHandler))
     {
-        if (!unknownBool)
-            func_020d0f28();
+        if (!async)
+            WaitForReadManagerIdle_Internal();
     }
-    else if (unknownBool)
+    else if (async)
     {
         SendTaskToReadContext(&SafeReadBlocksFromCartridge);
     }
     else
     {
-        readManager->pContext_104 = data_02111304.activeContext;
+        readManager->currentTaskExecutionContext = data_02111304.activeContext;
         SafeReadBlocksFromCartridge(readManager);
     }
 }
 
-extern "C" void InitRawReadStructs_020d0ec4()
+void InitializeCardReading()
 {
     CardReadManager* readManager = &data_021118e0;
-    if (readManager->flags_114 != 0)
+    if (readManager->flags != 0)
         return;
 
-    readManager->flags_114 = (1 << CARTRIDGE_READ_CONTEXT_FLAG_0);
+    readManager->flags = (1 << CARTRIDGE_READ_CONTEXT_FLAG_0);
     readManager->writeLength = 0;
     readManager->writeDst = NULL;
     readManager->cartridgeReadOffset = 0;
     readManager->dmaChannel = -1;
-    readManager->maybeCleanupProc_38 = NULL;
-    readManager->handle_3c = NULL;
+    readManager->onComplete = NULL;
+    readManager->handle = NULL;
 
     data_02111f00.number = 0;
     InitializeCardReadManager();
-    data_02111f00.innerStruct.readProc = GetCartridgeReadProc();
+    data_02111f00.innerStruct.lowLevelReadProc = GetLowLevelCartridgeReadProc();
     func_020d1118();
 }
 
-extern "C" void func_020d0f28()
+void WaitForReadManagerIdle_Internal()
 {
-    func_020cff50();
+    AwaitCardReadManagerIdle();
 }
 
-Struct_02111f20::PFNRead GetCartridgeReadProc()
+Struct_02111f20::LowLevelReadProc GetLowLevelCartridgeReadProc()
 {
     return &ReadBlocksFromCartridge;
 }
@@ -422,8 +410,8 @@ void IPCCommand11Proc(unsigned int command, unsigned int argument, unsigned int 
 
     CardReadManager* manager = (CardReadManager*)&data_021118e0;
     
-    ProcessorContext* context = manager->pContext_104;
-    manager->flags_114 &= ~(1 << READ_MANAGER_FLAG_AWAITING_ARM7_ACTION);
+    ProcessorContext* context = manager->currentTaskExecutionContext;
+    manager->flags &= ~(1 << READ_MANAGER_FLAG_AWAITING_ARM7_ACTION);
     
     MarkContextReadyAndSwitch(context);
 }
@@ -434,11 +422,11 @@ void CartridgeReadContextLoop()
     while (true)
     {
         int priorState = DisableIRQInterrupts();
-        if (!(readManager->flags_114 & (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING)))
+        if (!(readManager->flags & (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING)))
         {
             do {
-            BlockCurrentContext(NULL);
-            } while (!(readManager->flags_114 & (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING)));
+                BlockCurrentContext(NULL);
+            } while (!(readManager->flags & (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING)));
         }
         SetIRQInterruptState(priorState);
         readManager->cartridgeReadProc(readManager);

@@ -7,6 +7,17 @@
 // ...
 // SetIRQInterruptState(oldState);
 // to restore a prior state.
+#include "DMA.h"
+
+typedef void (*InterruptHandlerProc)();
+
+void WaitForInterrupt(bool onlySubsequent, unsigned int mask);
+void OnDMAOrTimerCompletion(int index);
+void SetInterruptHandler(unsigned int mask, const void* proc);
+InterruptHandlerProc GetInterruptHandler(unsigned int mask);
+void SetDMACompletionCallback(int channel, DMACompletionCallback callback, int userdata);
+void SetTimerOverflowCallback(int timer, DMACompletionCallback callback, int userdata);
+
 
 int EnableIRQInterrupts();
 int DisableIRQInterrupts();

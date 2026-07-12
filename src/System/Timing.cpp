@@ -1,6 +1,7 @@
 #include "System/Timing.h"
 #include "System/InterruptHandling.h"
 #include "System/Interrupts.h"
+#include "System/BiosData.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
@@ -18,17 +19,11 @@
 #pragma dont_inline on
 
 #if defined(jpn)
-#define func_020c6aec func_020c85b8
-#define func_020c6c48 func_020c8714
 #define func_020c9be0 func_020cb6ac
 #endif
 
 extern "C"
 {
-    // set specific interrupts according to mask
-    void func_020c6aec(int mask, PFNInterrupt);
-    void func_020c6c48(int timerID, PFNInterrupt, int unk);
-
     // something like abort() (never returns)
     void func_020c9be0();
 }
@@ -50,7 +45,7 @@ void Initialize64BitTimer()
     TIMER_N_COUNTER(0) = 0;
     TIMER_N_CONTROL(0) = TIMER_CONTROL_FLAGS_START | TIMER_CONTROL_FLAGS_ENABLE_IRQ_ON_OVERFLOW | TIMER_CONTROL_FLAGS_PRESCALE_64X;
 
-    func_020c6aec(IRQ_MASK_TIMER_0_OVERFLOW, &On16BitTimerOverflow);
+    SetInterruptHandler(IRQ_MASK_TIMER_0_OVERFLOW, &On16BitTimerOverflow);
     EnableSpecificInterrupts(IRQ_MASK_TIMER_0_OVERFLOW);
     data_02111638.reloadTimerOnNextInterrupt = false;
 }
@@ -60,7 +55,7 @@ int Is64BitTimerInitialized()
     return data_02111638.isInitialized;
 }
 
-void On16BitTimerOverflow()
+void On16BitTimerOverflow(int)
 {
     data_02111638.numTimerOverflows++;
     if (data_02111638.reloadTimerOnNextInterrupt)
@@ -71,7 +66,7 @@ void On16BitTimerOverflow()
         
         data_02111638.reloadTimerOnNextInterrupt = false;
     }
-    func_020c6c48(0, &On16BitTimerOverflow, 0);
+    SetTimerOverflowCallback(0, &On16BitTimerOverflow, 0);
 }
 
 uint64_t GetCurrentTimestamp()
@@ -97,7 +92,7 @@ void MarkNextAlarmToSound(Alarm *timing)
     uint64_t now = GetCurrentTimestamp();
     TIMER_N_CONTROL(1) = 0;
     int64_t timeRemaining = timing->alarmTime - now;
-    func_020c6c48(1, &Timer1OverflowInterruptRoutine, 0);
+    SetTimerOverflowCallback(1, &Timer1OverflowInterruptRoutine, 0);
     unsigned short counterValue = 0;
     if (timeRemaining < 0)
     {
@@ -259,7 +254,7 @@ void CancelAlarm(Alarm *alarm)
 }
 
 #ifdef __MWERKS__
-asm void Timer1OverflowInterruptRoutine()
+asm void Timer1OverflowInterruptRoutine(int)
 {
     stmdb sp!, {r0, lr}
     bl HandleTimer1Overflow
@@ -267,7 +262,7 @@ asm void Timer1OverflowInterruptRoutine()
     bx lr
 }
 #else
-void Timer1OverflowInterruptRoutine()
+void Timer1OverflowInterruptRoutine(int)
 {
     HandleTimer1Overflow();
 }
@@ -277,7 +272,7 @@ void HandleTimer1Overflow()
 {
     TIMER_N_CONTROL(1) = 0;
     DisableSpecificInterrupts(IRQ_MASK_TIMER_1_OVERFLOW);
-    DMA_TIMER_INTERRUPTS_HANDLED_FLAGS |= IRQ_MASK_TIMER_1_OVERFLOW;
+    INTERRUPT_DATA_3FF8 |= IRQ_MASK_TIMER_1_OVERFLOW;
     uint64_t now = GetCurrentTimestamp();
 
     Alarm* firstAlarm = data_02111648.pFirstAlarm;

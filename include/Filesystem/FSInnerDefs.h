@@ -55,12 +55,12 @@ struct Struct_0211173c
 
 struct Struct_02111f20
 {
-    typedef void (*PFNRead)(Struct_02111f20*);
+    typedef void (*LowLevelReadProc)(Struct_02111f20*);
 
-    PFNRead readProc;
+    LowLevelReadProc lowLevelReadProc;
     unsigned int control_4;
     unsigned int* alignedWrite;
-    unsigned int unknown_C[5];
+    unsigned int unknown_C[5]; // might be padding
     // 512 = 0x200 bytes of temporary space for unaligned writes
     unsigned char scratchBuffer[512];
 };
@@ -87,6 +87,3 @@ extern Arm7CardReadData data_02111880;
 extern CardReadManager data_021118e0;
 extern Struct_02111f00 data_02111f00;
 //extern Struct_02111f20 data_02111f20;
-
-// functions that still need to be put into a proper header
-void InitializeCardReadManager();

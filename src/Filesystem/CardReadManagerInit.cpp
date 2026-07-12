@@ -20,13 +20,13 @@ extern "C"
 extern int data_02111860;
 void MarkCardReadManagerInitialized(int to);
 
-void SendTaskToReadContext(CardReadManager::PFNCartridgeRead task)
+void SendTaskToReadContext(CardReadManager::ReadProc task)
 {
     CardReadManager* readManager = (CardReadManager*)&data_021118e0;
     ChangeContextPriority(&readManager->cartridgeReadContext, data_021118e0.contextPriority_108);
-    readManager->pContext_104 = &readManager->cartridgeReadContext;
+    readManager->currentTaskExecutionContext = &readManager->cartridgeReadContext;
     readManager->cartridgeReadProc = task;
-    readManager->flags_114 |= (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING);
+    readManager->flags |= (1 << READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING);
     MarkContextReadyAndSwitch(&readManager->cartridgeReadContext);
 }
 
@@ -96,8 +96,8 @@ void InitializeCardReadManager()
     
     func_020ca458(0, &data_02111880, sizeof(Arm7CardReadData));
     CleanInvalidateCacheRange(&data_02111880, sizeof(Arm7CardReadData));
-    manager->maybeInstructionCacheLimit_118 = 0xffffffff;
-    manager->maybeDataCacheLimit_11c = 0xffffffff;
+    manager->instructionCacheCleanThreshold = 0xffffffff;
+    manager->dataCacheCleanThreshold = 0xffffffff;
     
     if (!IsDownloadPlay())
         VectorizedInvertedMemcpy((void*)BIOS_ADDR_CARTRIDGE_HEADER, (void*)0x027ffa80, 0x160);
@@ -105,8 +105,8 @@ void InitializeCardReadManager()
     manager->contextPriority_108 = 4;
     manager->lock.waitingContexts.last = 0;
     manager->lock.waitingContexts.first = 0;
-    manager->list_10C.last = 0;
-    manager->list_10C.first = 0;
+    manager->ongoingReadBlock.last = 0;
+    manager->ongoingReadBlock.first = 0;
 
     PopulateContext(&manager->cartridgeReadContext, (unsigned int)&CartridgeReadContextLoop, 0, (unsigned int)(&data_021118e0 + 1), 0x400, manager->contextPriority_108);
     MarkContextReadyAndSwitch(&manager->cartridgeReadContext);
@@ -134,4 +134,26 @@ void VerifyCardReadManagerInitialized()
 void MarkCardReadManagerInitialized(int to)
 {
     data_02111860 = to;
+}
+
+bool AwaitCardReadManagerIdle()
+{
+    CardReadManager* manager = &data_021118e0;
+    int priorState = DisableIRQInterrupts();
+    while (manager->flags & (1 << READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS))
+        BlockCurrentContext(&manager->ongoingReadBlock);
+    SetIRQInterruptState(priorState);
+    return manager->pSharedData->unknown_0 == 0;
+}
+
+bool IsCardReadManagerIdle()
+{
+    CardReadManager* manager = &data_021118e0;
+    return !(manager->flags & (1 << READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS));
+}
+
+int GetCardReadManagerSharedStatus()
+{
+    CardReadManager* manager = &data_021118e0;
+    return manager->pSharedData->unknown_0;
 }

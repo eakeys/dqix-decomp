@@ -11,16 +11,6 @@
 #define IPC_FIFO_SEND (*(volatile unsigned int*)0x04000188)
 #define IPC_FIFO_RECEIVE (*(volatile unsigned int*)0x04100000)
 
-#if defined(jpn)
-#define func_020c6aec func_020c85b8
-#endif
-
-extern "C"
-{
-    // set interrupt table entries
-    void func_020c6aec(unsigned int mask, PFNInterrupt);
-}
-
 static unsigned short isIPCCommunicationInitialized = false;
 static IPCCommandHandler ipcArm9HandlerTable[32];
 
@@ -90,7 +80,7 @@ void ZeroInitializeIPCCommandHandling()
         IPC_FIFO_CONTROL = FIFO_CONTROL_MASK_ENABLE | FIFO_CONTROL_MASK_ERROR 
             | FIFO_CONTROL_MASK_ENABLE_RECEIVE_FIFO_IRQ | FIFO_CONTROL_MASK_FLUSH_SEND_FIFO;
         AcknowledgeSpecificInterrupts(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY);
-        func_020c6aec(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY, &HandleCommandReceivedFromArm7);
+        SetInterruptHandler(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY, &HandleCommandReceivedFromArm7);
         EnableSpecificInterrupts(IRQ_MASK_FIFO_RECEIVE_NOT_EMPTY);
 
         int timeoutCounter;

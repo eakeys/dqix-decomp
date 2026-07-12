@@ -55,7 +55,7 @@ void MarkAlarmInitializationFlagBit(int);
 
 void Initialize64BitTimer();
 int Is64BitTimerInitialized();
-void On16BitTimerOverflow();
+void On16BitTimerOverflow(int);
 
 uint64_t GetCurrentTimestamp();
 unsigned short GetMain16BitTimerCounter();
@@ -75,5 +75,5 @@ void SetInterval(Alarm* alarm, uint64_t residue, uint64_t interval,
     Alarm::PFNCompletion callback, ProcessorContext** ppContext);
 void CancelAlarm(Alarm* alarm);
 
-void Timer1OverflowInterruptRoutine(); // not sure if void() or void(int) or int(int)
+void Timer1OverflowInterruptRoutine(int); // not sure if void() or void(int) or int(int)
 void HandleTimer1Overflow();

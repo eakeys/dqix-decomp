@@ -4,7 +4,7 @@
 #include "LowNitroHandle.h"
 #include "FSStructs.h"
 
-typedef void (*PFNNitroCleanup)(NitroHandle*);
+
 
 // sizeof == 0x60
 struct Arm7CardReadData
@@ -15,7 +15,7 @@ struct Arm7CardReadData
 
 // sizeof <= 0x620
 #define CARTRIDGE_READ_CONTEXT_FLAG_0 0
-#define CARTRIDGE_READ_CONTEXT_FLAG_2 2
+#define READ_MANAGER_FLAG_HARDWARE_READ_IN_PROGRESS 2
 #define READ_MANAGER_FLAG_CONTEXT_HAS_TASK_PENDING 3
 #define CARTRIDGE_READ_CONTEXT_FLAG_4 4
 #define READ_MANAGER_FLAG_AWAITING_ARM7_ACTION 5
@@ -23,7 +23,8 @@ struct Arm7CardReadData
 
 struct CardReadManager
 {
-    typedef void (*PFNCartridgeRead)(CardReadManager*);
+    typedef void (*ReadProc)(CardReadManager*);
+    typedef void (*CompletionCallback)(NitroHandle*);
 
     Arm7CardReadData* pSharedData;
     int unknown_4;
@@ -40,20 +41,22 @@ struct CardReadManager
     unsigned int writeLength;
     unsigned int dmaChannel;
     int unknown_2c[3];
-    PFNNitroCleanup maybeCleanupProc_38;
-    NitroHandle* handle_3c;
-    PFNCartridgeRead cartridgeReadProc;
-    // populated as a call within func_020cfe08
+    CompletionCallback onComplete;
+    NitroHandle* handle;
+    ReadProc cartridgeReadProc;
+    // cartridgeReadContext runs a loop that handles incoming tasks, but
+    // if you request a synchronous task then execution can occur on a different
+    // context in the meantime
     ProcessorContext cartridgeReadContext;
-    ProcessorContext* pContext_104; // often points to the prior
+    ProcessorContext* currentTaskExecutionContext;
     // Set to 4 and 8 in different places
     unsigned int contextPriority_108;
-    BlockedContextList list_10C;
-    // bit 3: set when there is a task to be done by the read context
-    volatile unsigned int flags_114;
-    // see func_020d0a5c
-    unsigned int maybeInstructionCacheLimit_118;
-    unsigned int maybeDataCacheLimit_11c;
+    BlockedContextList ongoingReadBlock; 
+    volatile unsigned int flags;
+    // if you need to clean more than this amount of the cache, then just
+    // clean the whole thing instead
+    unsigned int instructionCacheCleanThreshold;
+    unsigned int dataCacheCleanThreshold;
 
     // Start of this seems to have game title, but can't find where it gets
     // copied in
@@ -61,7 +64,7 @@ struct CardReadManager
     char readContextStack[0x400];
 };
 
-void SendTaskToReadContext(CardReadManager::PFNCartridgeRead task);
+void SendTaskToReadContext(CardReadManager::ReadProc task);
 
 void LockCardReadManager(unsigned short ownerID, int taskType);
 void UnlockCardReadManager(unsigned short ownerID, int taskType);
@@ -70,6 +73,9 @@ void InitializeCardReadManager();
 int IsCardReadManagerInitialized();
 void VerifyCardReadManagerInitialized();
 
+bool AwaitCardReadManagerIdle();
+bool IsCardReadManagerIdle();
+int GetCardReadManagerSharedStatus();
 
 unsigned int SetReadContextPriority(unsigned int priority);
 void NitroVM_Command_AcquireCardReadResources(unsigned short ownerID);
@@ -81,15 +87,13 @@ void NitroVM_Command_ReleaseCardReadResources(unsigned short ownerID);
 
 void SendGamecardBusCommand(unsigned int firstWord, unsigned int secondWord);
 unsigned int SetupNormalGamecardBusCommandMode();
+// note: even if set to async, you'll still have to wait for any ongoing operation
+// to finish before this one can be dispatched
 void LoadDataFromCartridgeToMemory(unsigned int dmaChannel,
     unsigned int cartridgeOffset, void* dest, unsigned int length,
-    PFNNitroCleanup cleanupProc, NitroHandle* handle, CBool unknownBool);
+    CardReadManager::CompletionCallback onComplete, NitroHandle* handle, CBool async);
 
-extern "C"
-{
-    void InitRawReadStructs_020d0ec4();
-    void func_020d0f28();
-}
+void InitializeCardReading();
 
 void IPCCommand11Proc(unsigned int command, unsigned int argument, unsigned int flag);
 void CartridgeReadContextLoop();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FSStructs.h"
+#include "NitroVM.h"
 #include "LowNitroHandle.h"
 #include "FileAccessor.h"
 #include "CardReadManager.h"
@@ -30,14 +30,14 @@ extern "C"
 
 struct Struct_02111728
 {
-    NitroHandle* handle;
+    NitroHandle* firstHandle;
     NitroDirectoryAccessor romFSRoot;
 };
 
 struct Struct_0211173c
 {
     unsigned int busHolderID;
-    unsigned int maybeDMAChannel;
+    unsigned int dmaChannel;
 
     // For each overlay we have 0x20 bytes of metadata in the ROM.
     // The ARM9 overlays are all grouped together in a table, and the ARM7 overlays
@@ -80,7 +80,9 @@ extern Struct_02111728 data_02111728;
 extern NitroDirectoryAccessor data_0211172c;
 
 extern int data_02111738; // stores whether the rom fs is initialised
+// Extra data for cartridge filesystem
 extern Struct_0211173c data_0211173c;
+// Handle for the cartridge filesystem
 extern NitroHandle data_02111754;
 
 extern Arm7CardReadData data_02111880;

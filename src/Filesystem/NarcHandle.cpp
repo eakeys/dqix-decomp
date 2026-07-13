@@ -1,6 +1,6 @@
 #include "Filesystem/NarcHandle.h"
 #include "std_library_functions.h"
-#include "Filesystem/FSStructs.h"
+#include "Filesystem/NitroVM.h"
 #include "Filesystem/LowNitroHandle.h"
 #include "Filesystem/FileAccessor.h"
 #include <globaldefs.h>
@@ -77,12 +77,13 @@ bool NarcHandle::Initialize(const char* signatureString, const unsigned char* bu
     if (NitroHandle_Populate(&initial, imgPostHeader,
             (unsigned int)fatPtr + 12 - (unsigned int)imgPostHeader, fatPtr->sectionSize - 12,
             (unsigned int)fntPtr + 8 - (unsigned int)imgPostHeader, fntPtr->sectionSize - 8,
-            NULL, NULL))
+            NULL, NULL)) // use default (memcpy-based) read and write procs
         return true;
-
-    NitroHandle_RemoveFromHandleList(&initial);
-
-    return false;
+    else
+    {
+        NitroHandle_RemoveFromHandleList(&initial);
+        return false;
+    }
 }
 
 bool NarcHandle::Destroy()
@@ -102,7 +103,9 @@ const void* GetFileFromNARCInMemory(const char* filename)
 
     if (NitroVM_PrepareReadFileByPath(&machine, filename))
     {
-        // after running the previous function, base_B holds offset of file from file data
+        // after running the previous function, base_B holds offset of file from file data,
+        // and machine.linkedHandle should point to a NitroHandle that is actually
+        // an initial segment of a NarcHandle, so the cast is valid
         addr = (const unsigned char*)((NarcHandle*)machine.linkedHandle)->pFileDataStart + machine.regbase_abc.b.s32;
         NitroVM_FinishRead(&machine);
     }
@@ -111,11 +114,10 @@ const void* GetFileFromNARCInMemory(const char* filename)
 
 const void* NarcHandle::GetFileByIndex(unsigned int idx) const
 {
-    const FATBlock& fatb = *(const FATBlock*)pFATBSection;
     const void* ret = NULL;
 
-    if (idx < fatb.numFiles)
-        ret = (const unsigned char*)pFileDataStart + fatb.entries[idx].startOffset;
+    if (idx < pFATBSection->numFiles)
+        ret = (const unsigned char*)pFileDataStart + pFATBSection->entries[idx].startOffset;
 
     return ret;
 }
@@ -124,7 +126,7 @@ bool PrepareReadFileInNARCByID(NitroVM* vm, NarcHandle* handle, unsigned int id)
 {
     bool success = false;
 
-    if (id < ((NarcHandle::FATBlock*)handle->pFATBSection)->numFiles)
+    if (id < handle->pFATBSection->numFiles)
     {
         NitroFileAccessor accessor;
         accessor.handle = &handle->initial;

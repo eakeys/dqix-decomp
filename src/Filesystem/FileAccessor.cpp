@@ -18,8 +18,7 @@ CBool CreateFileAccessor(NitroFileAccessor* outAccessor, const char* path)
     NitroVM machine;
     NitroVM_Initialize(&machine);
 
-    int result = NitroVM_SearchFileOrDirectory(&machine, path, outAccessor, NULL);
-    return (result != 0);
+    return NitroVM_SearchFileOrDirectory(&machine, path, outAccessor, NULL) != false;
 }
 
 CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
@@ -35,8 +34,6 @@ CBool NitroVM_PrepareRead(NitroVM* vm, NitroHandle* handle,
     if (!NitroVM_QueueCommand(vm, NITROVM_OPCODE_COPY_REGISTERS))
         return false;
 
-    // Not sure about bit 4, but bit 5 is cleared because this is a file
-    // (so command 5 can run properly)
     vm->flags = (vm->flags | (1 << NITROVM_FLAG_READ_POSITIONS_CONFIGURED)) & ~(1 << NITROVM_FLAG_SEARCH_TARGET_IS_DIRECTORY);
     return true;
 }
@@ -205,7 +202,7 @@ void OnCartridgeDataLoadCompletion(NitroHandle* handle)
 
 int ROMFilesystemLoadProc(NitroHandle* handle, void* dst, unsigned offset, unsigned len)
 {
-    LoadDataFromCartridgeToMemory(data_0211173c.maybeDMAChannel, offset, dst, len, &OnCartridgeDataLoadCompletion, handle, true);
+    LoadDataFromCartridgeToMemory(data_0211173c.dmaChannel, offset, dst, len, &OnCartridgeDataLoadCompletion, handle, true);
     return NITRO_RESULT_TASK_STILL_RUNNING;
 }
 
@@ -247,7 +244,7 @@ int UnsupportedFilesystemOpcodeOverride(NitroVM*, int)
 
 void InitializeROMFilesystem_Internal(unsigned int channel)
 {
-    data_0211173c.maybeDMAChannel = channel;
+    data_0211173c.dmaChannel = channel;
     data_0211173c.busHolderID = GenerateLockOwnerID();
     data_0211173c.arm9Data.start = NULL;
     data_0211173c.arm9Data.size = 0;
@@ -293,9 +290,9 @@ void InitializeROMFilesystem_Internal(unsigned int channel)
 unsigned int ChangeROMLoadDMAChannel(unsigned int newChannel)
 {
     int oldState = DisableIRQInterrupts();
-    unsigned int oldChannel = data_0211173c.maybeDMAChannel;
+    unsigned int oldChannel = data_0211173c.dmaChannel;
     CBool destructionResult = NitroHandle_Pause(&data_02111754);
-    data_0211173c.maybeDMAChannel = newChannel;
+    data_0211173c.dmaChannel = newChannel;
     if (destructionResult)
         NitroHandle_Unpause(&data_02111754);
     SetIRQInterruptState(oldState);

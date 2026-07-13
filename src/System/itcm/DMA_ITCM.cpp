@@ -30,10 +30,10 @@ void ConfigureDMATransferSafeAtomic(int channel, unsigned src, unsigned dst, uns
 {
     int priorState = DisableIRQInterrupts();
 
-    volatile DMARegisterSet* regs = &DMARegisters(channel);
-    regs->sourceAddr = src;
-    regs->destAddr = dst;
-    regs->controlAndSize.u32 = ctrl;
+    volatile DMARegisterSet& regs = DMARegisters(channel);
+    regs.sourceAddr = src;
+    regs.destAddr = dst;
+    regs.controlAndSize.u32 = ctrl;
 
     // wastes 2 cycles, probably for timing purposes
     (void)DMARegisters(0).sourceAddr;
@@ -45,9 +45,9 @@ void ConfigureDMATransferSafeAtomic(int channel, unsigned src, unsigned dst, uns
     }
     else
     {
-        regs->sourceAddr = 0;
-        regs->destAddr = 0;
-        regs->controlAndSize.u32 = DMA_CHANNEL_0_DEFAULT_CONTROL;
+        regs.sourceAddr = 0;
+        regs.destAddr = 0;
+        regs.controlAndSize.u32 = DMA_CHANNEL_0_DEFAULT_CONTROL;
     }
 
     SetIRQInterruptState(priorState);
@@ -63,10 +63,10 @@ void ConfigureDMATransfer(int channel, unsigned src, unsigned dst, unsigned ctrl
 
 void ConfigureDMATransferSafe(int channel, unsigned src, unsigned dst, unsigned ctrl)
 {
-    volatile DMARegisterSet* regs = &DMARegisters(channel);
-    regs->sourceAddr = src;
-    regs->destAddr = dst;
-    regs->controlAndSize.u32 = ctrl;
+    volatile DMARegisterSet& regs = DMARegisters(channel);
+    regs.sourceAddr = src;
+    regs.destAddr = dst;
+    regs.controlAndSize.u32 = ctrl;
 
     // wastes 2 cycles, probably for timing purposes
     (void)DMARegisters(0).sourceAddr;
@@ -78,9 +78,9 @@ void ConfigureDMATransferSafe(int channel, unsigned src, unsigned dst, unsigned 
     }
     else
     {
-        regs->sourceAddr = 0;
-        regs->destAddr = 0;
-        regs->controlAndSize.u32 = DMA_CHANNEL_0_DEFAULT_CONTROL;
+        regs.sourceAddr = 0;
+        regs.destAddr = 0;
+        regs.controlAndSize.u32 = DMA_CHANNEL_0_DEFAULT_CONTROL;
     }
 
     (void)DMARegisters(0).sourceAddr;

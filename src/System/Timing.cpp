@@ -1,7 +1,6 @@
 #include "System/Timing.h"
-#include "System/InterruptHandling.h"
 #include "System/Interrupts.h"
-#include "System/BiosData.h"
+#include "System/DTCM.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
@@ -15,6 +14,8 @@
 #define TIMER_CONTROL_FLAGS_PRESCALE_64X (1 << 0)
 #define TIMER_CONTROL_FLAGS_PRESCALE_256X (2 << 0)
 #define TIMER_CONTROL_FLAGS_PRESCALE_1024X (3 << 0)
+
+#define INTERRUPT_REQUEST_FLAGS (*(volatile unsigned int*)0x04000214)
 
 #pragma dont_inline on
 
@@ -272,7 +273,7 @@ void HandleTimer1Overflow()
 {
     TIMER_N_CONTROL(1) = 0;
     DisableSpecificInterrupts(IRQ_MASK_TIMER_1_OVERFLOW);
-    INTERRUPT_DATA_3FF8 |= IRQ_MASK_TIMER_1_OVERFLOW;
+    DTCM_DATA_INTERRUPTS_FIRED |= IRQ_MASK_TIMER_1_OVERFLOW;
     uint64_t now = GetCurrentTimestamp();
 
     Alarm* firstAlarm = data_02111648.pFirstAlarm;

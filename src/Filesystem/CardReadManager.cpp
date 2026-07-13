@@ -2,13 +2,11 @@
 #include "System/BiosData.h"
 #include "System/Memory.h"
 #include "System/Interrupts.h"
-#include "System/InterruptHandling.h"
 #include "System/Cache.h"
 #include "System/DMA.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
-#pragma optimization_level 2
 #pragma optimize_for_size off
 
 #define ADDR_ITCM_START 0x01ff8000
@@ -17,6 +15,9 @@
 #define ADDR_GAMECARD_BUS_ROMCTRL 0x040001a4
 #define ADDR_GAMECARD_RECEIVED_DATA 0x04100010
 #define GAMECARD_BUS_COMMAND_BYTE(n) *(unsigned char*)(0x040001a8 + n)
+
+#define ROMCTRL_FLAG_WORD_READY (1u << 23)
+#define ROMCTRL_FLAG_BUSY (1u << 31)
 
 #if defined(jpn)
 #define func_020c89e4 func_020ca4b0
@@ -44,6 +45,7 @@ extern "C"
 void WaitForReadManagerIdle_Internal();
 Struct_02111f20::LowLevelReadProc GetLowLevelCartridgeReadProc();
 
+// Returns true if there's more to be copied after
 extern "C" bool TransferScratchBuffer(Struct_02111f20* input)
 {
     CardReadManager* ptr = &data_021118e0;
@@ -71,7 +73,7 @@ extern "C" bool TransferScratchBuffer(Struct_02111f20* input)
 void SendGamecardBusCommand(unsigned int firstWord, unsigned int secondWord)
 {
     volatile unsigned int* control = (unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL;
-    while (*control & (1 << 31)) {}
+    while (*control & ROMCTRL_FLAG_BUSY) {}
 
     // Upper byte of "AUXSPICNT - Gamecard ROM and SPI Control (R/W)"
     // Set byte 15 (enable NDS slot), set byte 14 (enable transfer ready IRQ)
@@ -93,12 +95,12 @@ void SendGamecardBusCommand(unsigned int firstWord, unsigned int secondWord)
 void ReadSingleSegmentFromCartridge()
 {
     CardReadManager* readManager = &data_021118e0;
-    void* readLocation = (void*)ADDR_GAMECARD_RECEIVED_DATA;
+    void* gamecardReceivedDataRegister = (void*)ADDR_GAMECARD_RECEIVED_DATA;
     Struct_02111f20* ps1f20 = &data_02111f00.innerStruct;
 
     DECLARE_ASM_NOP();
 
-    func_020ca8e8(readManager->dmaChannel, readLocation, readManager->writeDst, 0x200);
+    func_020ca8e8(readManager->dmaChannel, gamecardReceivedDataRegister, readManager->writeDst, 0x200);
     unsigned int offset = readManager->cartridgeReadOffset;
     SendGamecardBusCommand(0xb7000000 | (offset >> 8), offset << 24);
     *(unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL = ps1f20->control_4;
@@ -108,13 +110,13 @@ void DMAChainSegmentInterruptHandler()
 {
     ResetDMAChannel(data_021118e0.dmaChannel);
 
-    CardReadManager* ptr = &data_021118e0;
+    CardReadManager* manager = &data_021118e0;
     
-    ptr->cartridgeReadOffset += 512;
-    ptr->writeDst += 512;
-    ptr->writeLength -= 512;
+    manager->cartridgeReadOffset += 512;
+    manager->writeDst += 512;
+    manager->writeLength -= 512;
 
-    bool moreToWrite = ptr->writeLength != 0;
+    bool moreToWrite = manager->writeLength != 0;
 
     if (!moreToWrite)
     {
@@ -247,7 +249,7 @@ extern "C" void ReadBlocksFromCartridge(Struct_02111f20* handler)
         unsigned int bytesCopied = 0;
         do {
             control = *(volatile unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL;
-            if (control & (1 << 23))
+            if (control & ROMCTRL_FLAG_WORD_READY)
             {
                 unsigned int data = *(volatile unsigned int*)ADDR_GAMECARD_RECEIVED_DATA;
                 // The gamecard bus command only allows for reading 512 bytes,
@@ -260,7 +262,7 @@ extern "C" void ReadBlocksFromCartridge(Struct_02111f20* handler)
                     wordIndex++;
                 }
             }
-        } while (control & (1 << 31));
+        } while (control & ROMCTRL_FLAG_BUSY);
 
         // If we performed an aligned write, can just move on to the next
         // aligned write
@@ -291,7 +293,7 @@ unsigned int SetupNormalGamecardBusCommandMode()
     newSettings &=  0xffffe000; // disable bit 14 (unknown?) and 13 (don't KEY2 encrypt)
     *(volatile unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL = newSettings;
     do {
-    } while ((*(volatile unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL & (1 << 23)) == 0);
+    } while ((*(volatile unsigned int*)ADDR_GAMECARD_BUS_ROMCTRL & ROMCTRL_FLAG_WORD_READY) == 0);
     return *(volatile unsigned int*)ADDR_GAMECARD_RECEIVED_DATA;
 }
 

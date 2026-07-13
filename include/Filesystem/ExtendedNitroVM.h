@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FSStructs.h"
+#include "NitroVM.h"
 
 class Decompressor;
 
@@ -17,24 +17,38 @@ struct CompressionPrefix
 class ExtendedNitroVM
 {
 public:
-    unsigned short unknown_0;
-    unsigned short unknown_2;
+    enum Status {
+        Status_NotOpen = 0,
+        Status_Open = 1,
+        Status_2_Unknown = 2
+    };
+
+    unsigned short status;
+    unsigned short isBadState;
     NitroVM machine;
 
     void ZeroInitialize();
 
-    bool CheckUnknownFlagBit4();
+    // Probably more like IsOpen, but requires to be open and have the 
+    // underlying object be in a valid state. If status == 2 then always
+    // returns true, not sure what that's about 
+    bool IsInReadableState();
     unsigned int GetFileSize();
     bool Seek(unsigned int where);
-    bool MaybeReset();
+    // Completes the pending operation then resets the VM to a blank state.
+    // Returns true if successful
+    bool Close();
 
     // Not sure what the idea behind the bool is, but it's always false.
-    // If set to true, most of the function gets skipped
-    bool PrepareRead(const char* filePath, bool skip);
+    // If set to true, most of the function gets skipped. If a file is already
+    // open, it will be closed and the new file opened
+    bool Open(const char* filePath, bool skip);
     // Returns number of bytes copied
-    unsigned int LoadToBuffer(void* into, unsigned int capacity);
+    unsigned int Read(void* into, unsigned int capacity);
 
-    bool DoFlagStuff();
+    // Cancels any pending operation and leaves the VM in an invalid state.
+    // Returns true if a file was open
+    bool Abort();
 
     // Decompresses the current file using the Decompressor provided.
     // The numBytesToRead and readPosTracker variables will be decreased

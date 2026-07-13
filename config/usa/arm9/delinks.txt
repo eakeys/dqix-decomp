@@ -112,11 +112,11 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020afe6c end:0x020afec4
 
-//src/System/InterruptProcs.cpp:
+//src/System/InterruptHandler.cpp:
 //    complete
 //    .text start:0x020c6954 end:0x020c6c90
 
-src/System/InterruptHandling.cpp:
+src/System/InterruptEnableDisable.cpp:
     complete
     .text start:0x020c6c90 end:0x020c6d48
 
@@ -140,7 +140,7 @@ src/System/Timing.cpp:
     complete
     .text start:0x020c8c50 end:0x020c9288
 
-src/System/Interrupts.cpp:
+src/System/CPSRInterruptState.cpp:
     complete
     .text start:0x020c96e8 end:0x020c976c
 

@@ -17,7 +17,9 @@ extern "C"
     // abort() or fatal error or similar
     void func_020c9be0();
 }
+// is card read manager initialized
 extern int data_02111860;
+
 void MarkCardReadManagerInitialized(int to);
 
 void SendTaskToReadContext(CardReadManager::ReadProc task)

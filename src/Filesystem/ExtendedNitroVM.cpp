@@ -40,14 +40,16 @@ extern "C"
     // another memcpy-style function, cleans/invalidates the cache in destination after
     unsigned int func_020d8524(void*, const void*, unsigned);
 
+    // probably some kind of mutex lock/unlock
     void func_020d970c();
     void func_020d974c();
 
+    // Sleep for the specified number of milliseconds
     void func_020d9788(int);
 
-    void DecompressA  (Decompressor*, const void*, unsigned);
-    void DecompressB  (Decompressor*, const void*, unsigned);
-    void func_020ca95c(Decompressor*, const void*, unsigned);
+    void DecompressA(Decompressor*, const void*, unsigned);
+    void DecompressB(Decompressor*, const void*, unsigned);
+    void DecompressC(Decompressor*, const void*, unsigned);
 }
 // files to prepare accessors in cache for
 extern const char* cachedFilePaths[];
@@ -131,7 +133,7 @@ bool Decompressor::ProcessBytes(const void* input, unsigned int inputLength)
             DecompressB(this, input, inputLength);
             break;
         case 4:
-            func_020ca95c(this, input, inputLength);
+            DecompressC(this, input, inputLength);
             break;
         case 0: // uncompressed
         default:
@@ -211,17 +213,17 @@ void CacheMainFileAccessors()
 void ExtendedNitroVM::ZeroInitialize()
 {
     func_020d84f8(this, sizeof(ExtendedNitroVM));
-    unknown_0 = 0;
-    unknown_2 = 0;
+    status = Status_NotOpen;
+    isBadState = false;
 }
 
-bool ExtendedNitroVM::CheckUnknownFlagBit4()
+bool ExtendedNitroVM::IsInReadableState()
 {
-    switch (unknown_0)
+    switch (status)
     {
-    case 1:
+    case Status_Open:
         return GET_FLAG_BIT(machine.flags, NITROVM_FLAG_READ_POSITIONS_CONFIGURED);
-    case 2:
+    case Status_2_Unknown:
         return true;
     }
     return false;
@@ -229,11 +231,11 @@ bool ExtendedNitroVM::CheckUnknownFlagBit4()
 
 unsigned int ExtendedNitroVM::GetFileSize()
 {
-    switch (unknown_0)
+    switch (status)
     {
-    case 1:
+    case Status_Open:
         return machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
-    case 2:
+    case Status_2_Unknown:
         return 0;
     }
     return 0;
@@ -241,38 +243,38 @@ unsigned int ExtendedNitroVM::GetFileSize()
 
 bool ExtendedNitroVM::Seek(unsigned int where)
 {
-    if (!CheckUnknownFlagBit4())
+    if (!IsInReadableState())
         return false;
 
-    switch (unknown_0)
+    switch (status)
     {
-    case 1:
+    case Status_Open:
         return NitroVM_Seek(&machine, where, 0);
-    case 2:
+    case Status_2_Unknown:
         return false;
     }
     return false;
 }
 
-bool ExtendedNitroVM::MaybeReset()
+bool ExtendedNitroVM::Close()
 {
     bool didSomething = false;
 
-    if (unknown_0 != 1)
+    if (status != Status_Open)
     {
     }
     else if (NitroVM_FinishRead(&machine))
         didSomething = true;
 
     func_020d84f8(this, sizeof(ExtendedNitroVM));
-    unknown_0 = 0;
-    unknown_2 = 0;
+    status = Status_NotOpen;
+    isBadState = false;
     return didSomething;
 }
 
-bool ExtendedNitroVM::PrepareRead(const char *filePath, bool skip)
+bool ExtendedNitroVM::Open(const char *filePath, bool skip)
 {
-    MaybeReset();
+    Close();
 
     if (!skip)
     {
@@ -305,39 +307,39 @@ bool ExtendedNitroVM::PrepareRead(const char *filePath, bool skip)
         if (cacheIndex < NUM_CACHED_FILES)
         {
             if (NitroVM_PrepareReadFileByID(&machine, data_01ffda90[cacheIndex]))
-                unknown_0 = 1;
+                status = Status_Open;
         }
         else
         {
             if (NitroVM_PrepareReadFileByPath(&machine, filePath))
-                unknown_0 = 1;
+                status = Status_Open;
         }
     }
 
-    unknown_2 = 0;
-    return (unknown_0 != 0);
+    isBadState = false;
+    return (status != Status_NotOpen);
 }
 
-unsigned int ExtendedNitroVM::LoadToBuffer(void *into, unsigned int capacity)
+unsigned int ExtendedNitroVM::Read(void* into, unsigned int capacity)
 {
-    unknown_2 = 0;
+    isBadState = false;
 
-    if (!CheckUnknownFlagBit4())
+    if (!IsInReadableState())
         return false;
 
     unsigned int length = 0;
-    switch (unknown_0)
+    switch (status)
     {
-    case 1:
+    case Status_Open:
         length = NitroVM_ReadAsync(&machine, into, capacity);
         while (GET_FLAG_BIT(machine.flags, NITROVM_FLAG_IN_HANDLE_QUEUE))
             func_020d9788(1);
         break;
-    case 2:
+    case Status_2_Unknown:
         break;
     }
 
-    if (unknown_2 == 0)
+    if (!isBadState)
         CleanInvalidateCacheRange(into, length);
     else
         length = 0;
@@ -345,25 +347,25 @@ unsigned int ExtendedNitroVM::LoadToBuffer(void *into, unsigned int capacity)
     return length;
 }
 
-bool ExtendedNitroVM::DoFlagStuff()
+bool ExtendedNitroVM::Abort()
 {
-    bool success = false;
+    bool wasProcessing = false;
     func_020d970c();
 
-    if (unknown_0 == 1)
+    if (status == Status_Open)
     {
         NitroVM_CancelCommand(&machine);
-        success = true;
+        wasProcessing = true;
     }
-    unknown_2 = 1;
+    isBadState = true;
     
     func_020d974c();
-    return success;
+    return wasProcessing;
 }
 
-unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompressor, 
-    unsigned int &outDecompressedLength, unsigned int &remainingInputBytes,
-    unsigned int &readPosTracker, void *scratchSpace, unsigned int scratchSpaceCapacity)
+unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor& decompressor, 
+    unsigned int& outDecompressedLength, unsigned int& remainingInputBytes,
+    unsigned int& readPosTracker, void *scratchSpace, unsigned int scratchSpaceCapacity)
 {
     // 'easy case': scratch space is big enough to fit all output data and have
     // 256 bytes left. Presumably the extra 256 is to avoid any trouble with 
@@ -371,8 +373,8 @@ unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompres
     if (decompressor.remainingOutputBytes + 256 <= scratchSpaceCapacity)
     {
         void* loadLocation = (void*)(((int)scratchSpace + scratchSpaceCapacity - remainingInputBytes) & ~3);
-        unsigned int successfulLoadSize = LoadToBuffer(loadLocation, remainingInputBytes);
-        if (unknown_2 != 0)
+        unsigned int successfulLoadSize = Read(loadLocation, remainingInputBytes);
+        if (isBadState)
             return 0;
         decompressor.ProcessBytes(loadLocation, successfulLoadSize);
         remainingInputBytes -= successfulLoadSize;
@@ -386,8 +388,8 @@ unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompres
         {
             unsigned int loadSize = (remainingInputBytes - 256 + 3) & ~3;
             void* loadLocation = (void*)(((int)scratchSpace + scratchSpaceCapacity - loadSize) & ~3);
-            unsigned int successfulLoadSize = LoadToBuffer(loadLocation, loadSize);
-            if (unknown_2 != 0)
+            unsigned int successfulLoadSize = Read(loadLocation, loadSize);
+            if (isBadState)
                 return 0;
             decompressor.ProcessBytes(loadLocation, successfulLoadSize);
             remainingInputBytes -= successfulLoadSize;
@@ -397,8 +399,8 @@ unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompres
         if (remainingInputBytes != 0)
         {
             char stackScratchSpace[256];
-            unsigned int successfulLoadSize = LoadToBuffer(stackScratchSpace, remainingInputBytes);
-            if (unknown_2 != 0)
+            unsigned int successfulLoadSize = Read(stackScratchSpace, remainingInputBytes);
+            if (isBadState)
                 return 0;
             decompressor.ProcessBytes(stackScratchSpace, successfulLoadSize);
             remainingInputBytes -= successfulLoadSize;
@@ -408,7 +410,6 @@ unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompres
     unsigned int scratchSpaceUsedAmount = (decompressor.probablyDecompressedSize + 4) & ~3;
     if (scratchSpaceUsedAmount >= scratchSpaceCapacity)
         scratchSpaceUsedAmount = scratchSpaceCapacity;
-    // zero memory and flush
     func_020d84f8((unsigned char*)scratchSpace + decompressor.probablyDecompressedSize, 
         scratchSpaceUsedAmount - decompressor.probablyDecompressedSize);
     CleanInvalidateCacheRange(scratchSpace, scratchSpaceUsedAmount);
@@ -416,13 +417,13 @@ unsigned int ExtendedNitroVM::DecompressWithScratchSpace(Decompressor &decompres
     return readPosTracker; 
 }
 
-unsigned int ExtendedNitroVM::DecompressBytes(void *output,
-    unsigned int &outDecompressedSize, unsigned int numBytesToRead, unsigned int outputCapacity)
+unsigned int ExtendedNitroVM::DecompressBytes(void* output,
+    unsigned int& outDecompressedSize, unsigned int numBytesToRead, unsigned int outputCapacity)
 {
     outDecompressedSize = 0;
     if (output == NULL)
         return 0;
-    if (!CheckUnknownFlagBit4())
+    if (!IsInReadableState())
         return 0;
 
     unsigned int metadataLength = numBytesToRead;
@@ -437,9 +438,9 @@ unsigned int ExtendedNitroVM::DecompressBytes(void *output,
     if (metadataLength >= *pMaxLength)
         metadataLength = *pMaxLength;
     
-    unsigned int totalReadAmount = LoadToBuffer(&metadata, metadataLength);
+    unsigned int totalReadAmount = Read(&metadata, metadataLength);
 
-    if (unknown_2 != 0)
+    if (isBadState)
         return 0;
 
     Decompressor decompressor;  

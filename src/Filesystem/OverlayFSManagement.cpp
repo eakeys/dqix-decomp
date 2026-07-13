@@ -17,6 +17,7 @@
 #define func_020c0c3c func_020c2708
 #endif
 
+// might be some kind of overlay-like thing for download play
 extern struct UnknownDownloadPlayStruct
 {
     unsigned int unknown[5];
@@ -113,7 +114,7 @@ bool LoadOverlayMetadataFromNitro(OverlayMetadata *into, bool isArm7,
     arg_readEnd = start + size;
     DECLARE_ASM_NOP();
 
-    // NitroVM_PrepareRead(&machine, romHandle, start + (overlayIdx << 5), start + size, -1)
+    // equiv to NitroVM_PrepareRead(&machine, romHandle, start + (overlayIdx << 5), start + size, -1)
     if (!NitroVM_PrepareRead(arg_machine, arg_handle, arg_readStart, arg_readEnd, arg_capacity))
         return false;
     }
@@ -245,9 +246,8 @@ void DecompressAndStaticInitializeOverlay(const OverlayMetadata& overlay)
 {
     unsigned int initialSize = GetOverlaySizeOnCartridge(overlay);
 
-    BootIndicator* bootData = (BootIndicator*)BIOS_ADDR_BOOT_INDICATOR;
     // extremely weird code that never runs (only for DS Download Play?)
-    if (bootData->bootMode == 2)
+    if (IsDownloadPlay())
     {
         bool result = false;
         if (overlay.overlayFlags & (1 << OVERLAY_FLAG_DOWNLOAD_PLAY))
@@ -276,8 +276,8 @@ void DecompressAndStaticInitializeOverlay(const OverlayMetadata& overlay)
         func_02000970(overlay.loadAddress + initialSize);
     
     CleanInvalidateCacheRange((void*)overlay.loadAddress, overlay.uncompressedSize);
-    OverlayMetadata::PFNStaticInitializer* pInitializer = overlay.staticInitStart;
-    OverlayMetadata::PFNStaticInitializer* initializerEnd = overlay.staticInitEnd;
+    OverlayMetadata::StaticInitializer* pInitializer = overlay.staticInitStart;
+    OverlayMetadata::StaticInitializer* initializerEnd = overlay.staticInitEnd;
     if (pInitializer < initializerEnd)
     {
         do {

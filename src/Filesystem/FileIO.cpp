@@ -1,6 +1,6 @@
 #include "Filesystem/FileIO.h"
 #include "Filesystem/ExtendedNitroVM.h"
-#include "Filesystem/FSStructs.h"
+#include "Filesystem/NitroVM.h"
 #include "Filesystem/LowNitroHandle.h"
 #include "Filesystem/FileAccessor.h"
 #include "Filesystem/GPC.h"
@@ -44,6 +44,7 @@ extern "C"
     // Custom implementation of strlen
     int func_020d2ff0(const char* str);
 
+    // some kind of mutex lock/unlock or something
     void func_020d970c();
     void func_020d974c();
 
@@ -97,14 +98,14 @@ void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength
     bool alwaysFalse = alwaysNull != NULL;
     DECLARE_ASM_NOP();
 
-    if (reader.PrepareRead(replacedPath, alwaysFalse))
+    if (reader.Open(replacedPath, alwaysFalse))
     {
         output = buffer;
-        unsigned int fileSize = reader.LoadToBuffer(buffer, reader.GetFileSize());
+        unsigned int fileSize = reader.Read(buffer, reader.GetFileSize());
         if (outLength != NULL)
             *(unsigned int*)outLength = fileSize;
 
-        reader.MaybeReset();
+        reader.Close();
         if (fileSize == 0)
             return NULL;
     }
@@ -133,17 +134,17 @@ void* LoadFileIntoNewAllocation(const char* path, SafeAllocator& alloc, unsigned
     reader.ZeroInitialize();
 
     void* copyDst = NULL;
-    if (reader.PrepareRead(replacedPath, 0))
+    if (reader.Open(replacedPath, 0))
     {
         unsigned int size = reader.GetFileSize();
         copyDst = alloc.Allocate(size);
         if (copyDst != NULL)
         {
-            size = reader.LoadToBuffer(copyDst, size);
+            size = reader.Read(copyDst, size);
             if (outLength != NULL)
                 *outLength = size;
         }
-        reader.MaybeReset();
+        reader.Close();
         if (size == 0)
             return NULL;
     }
@@ -202,10 +203,10 @@ bool GetFileInNarcPermissive(const void *narcBuffer, const char *targetFilePath,
         char targetUpperCase[80];
         NitroVM_Initialize(&machine);
 
-        int minIdx7 = 0;
-        int maxIdx1 = 1000;
+        int fileSearchMinIdx = 0;
+        int fileSearchMaxIdx = 1000;
         if (handle.pFATBSection != NULL)
-            maxIdx1 = handle.pFATBSection->numFiles - 1;
+            fileSearchMaxIdx = handle.pFATBSection->numFiles - 1;
         
         
         VectorizedMemset(targetUpperCase, 0, 80);
@@ -214,18 +215,17 @@ bool GetFileInNarcPermissive(const void *narcBuffer, const char *targetFilePath,
             targetUpperCase[i] = MakeCharUpperCase(targetFilePath[i]);
         }
         unsigned int prefixLength = strlen(data_020f0dbc);
-        while (minIdx7 <= maxIdx1)
+        while (fileSearchMinIdx <= fileSearchMaxIdx)
         {
             int i = 0;
-            unsigned int midpoint = (minIdx7 + maxIdx1) / 2;
+            unsigned int midpoint = (fileSearchMinIdx + fileSearchMaxIdx) / 2;
             if (PrepareReadFileInNARCByID(&machine, &handle, midpoint))
             {
                 NitroVM_WriteOutFilePath(&machine, loopFilePathOutput, 80);
                 VectorizedMemset(loopFilePathUpperCase, 0, 80);
                 for (i = 0; i < 80 && loopFilePathOutput[i] != '.' && loopFilePathOutput[i] != '\0'; i++)
-                {
                     loopFilePathUpperCase[i] = MakeCharUpperCase(loopFilePathOutput[i]);
-                }
+                
                 int comparison = strcmp(loopFilePathUpperCase + prefixLength, targetUpperCase);
                 if (comparison == 0)
                 {
@@ -237,17 +237,14 @@ bool GetFileInNarcPermissive(const void *narcBuffer, const char *targetFilePath,
                     *pOutFileSize = endOffset - startOffset;
                 }
                 else if (comparison < 0)
-                {
-                    minIdx7 = midpoint + 1;
-                }
+                    fileSearchMinIdx = midpoint + 1;
                 else
-                {
-                    maxIdx1 = midpoint - 1;
-                }
+                    fileSearchMaxIdx = midpoint - 1;
+                
                 NitroVM_FinishRead(&machine);
             }
             else
-                maxIdx1 = midpoint - 1;
+                fileSearchMaxIdx = midpoint - 1;
 
             if ((int)success > 0)
                 break;
@@ -266,12 +263,12 @@ int MakeCharUpperCase(char ch)
     return (unsigned char)data_020e692c[ch];
 }
 
-unsigned int FindFilesInNarcBySubstring(const void *narcBuffer, const char *substr,
-    const void **pOutFilePtrs, unsigned int *pOutFileSizes, unsigned int maxOut)
+unsigned int FindFilesInNarcBySubstring(const void* narcBuffer, const char* substr,
+    const void** pOutFilePtrs, unsigned int* pOutFileSizes, unsigned int maxOut)
 {
     int maxOutputs;
     char* pLoopFilename;
-    NitroVM* pMachine;
+    NitroVM* pMachine; // will point to a stack variable created shortly
     int numFound = 0;
 
     func_020d970c();

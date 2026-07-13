@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FSStructs.h"
+#include "NitroVM.h"
 
 void NitroHandle_Initialize(NitroHandle*);
 NitroHandle* NitroHandle_FindBySignature(const char* str, int len);

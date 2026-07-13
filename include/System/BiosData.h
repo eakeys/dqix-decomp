@@ -2,31 +2,6 @@
 
 #include "ProcessorContext.h"
 
-struct InterruptData
-{
-    void (*interruptProcTable[24])();
-    BlockedContextList block_60;
-    char unknown_60[0x3ff8 - 0x68];
-    // Bit n is set when interrupt n fires, if it's a DMA / timer interrupt
-    unsigned int unknown_3ff8;
-    unsigned int interruptJumpAddress;
-};
-
-inline InterruptData& GetInterruptData()
-{
-    return *(InterruptData*)0x027e0000;
-}
-
-#define INTERRUPT_DATA (*(InterruptData*)0x027e0000)
-#define INTERRUPT_DATA_3FF8 (*(unsigned int*)((int)&data_027e0000 + 0x3ff8))
-
-extern InterruptData data_027e0000;
-
-inline BlockedContextList& GetInterruptDataBlockedContextList()
-{
-    return *(BlockedContextList*)(0x027e0000 + (unsigned)&((InterruptData*)0)->block_60);
-}
-
 // All of this comes from the documentation at:
 // https://problemkaputt.de/gbatek.htm
 

@@ -1,31 +1,6 @@
 #pragma once
 
-/*
-    To do: there is some trickery with volatile stuff. I'm trying to keep it as minimal
-    as possible, short of casting everything to volatile exclusively for the places
-    where it makes a difference, but some of this could definitely be wrong.
-
-    As it currently stands:
-    * reg9 in NitroVM needs to be volatile so that writing to the address it holds
-      in FS72_Command_GetFileByName happens in the right order. At least the pointer
-      member needs to be volatile.
-      
-    
-*/
-
 #include "System/ProcessorContext.h"
-
-struct FSLinkedListHeader
-{
-    void* pPrev;
-    void* pNext;
-};
-
-struct FSLinkedListChildSet
-{
-    void* pFirst;
-    void* pLast;
-};
 
 template<class T>
 struct FSListHeader
@@ -135,7 +110,7 @@ struct FSReadDescription
 #define NITROHANDLE_FLAG_NDS_BUS_HELD 4
 #define NITROHANDLE_FLAG_VM_LIST_DIRTY 5
 #define NITROHANDLE_FLAG_AWAITING_BUS_RELEASE 6
-#define NITROHANDLE_FLAG_MAYBE_DESTRUCTION_UNDERWAY 7
+#define NITROHANDLE_FLAG_DESTRUCTION_UNDERWAY 7
 #define NITROHANDLE_FLAG_ASYNC_COMMAND_IN_PROGRESS 8
 #define NITROHANDLE_FLAG_SYNC_COMMAND_IN_PROGRESS 9
 
@@ -350,11 +325,3 @@ CBool NitroVM_ExecuteAndUnlink(NitroVM* vm);
 // Note that operands 2 through 8 (i.e. everything except reading) is always
 // treated as being synchronous.
 CBool NitroVM_QueueCommand(NitroVM* vm, int opcode);
-
-struct FSStruct76
-{
-    unsigned short unknown_0;
-    unsigned short unknown_2;
-    NitroVM inner;
-};
-

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FSStructs.h"
+#include "NitroVM.h"
 
 #define OVERLAY_FLAG_COMPRESSED 0
 // Something related to download play, I don't know what exactly
@@ -10,7 +10,7 @@
 // Held as an array in 0x01FFD394
 struct OverlayMetadata
 {
-    typedef void (*PFNStaticInitializer)();
+    typedef void (*StaticInitializer)();
 
     unsigned int overlayIndex;
     unsigned int loadAddress;
@@ -18,8 +18,8 @@ struct OverlayMetadata
     unsigned int bssSectionSize;
     // From 020cd3a0 this seems to be start and end pointers
     // for an array of constructors (i.e. functions of signature void())
-    PFNStaticInitializer* staticInitStart;
-    PFNStaticInitializer* staticInitEnd;
+    StaticInitializer* staticInitStart;
+    StaticInitializer* staticInitEnd;
     unsigned int nitroFileID; // seems to match the overlay index, but is used with file loading stuff
 
     // GBATEK says this is reserved and should be zero, but in our case

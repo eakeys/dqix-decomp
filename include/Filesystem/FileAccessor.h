@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FSStructs.h"
+#include "NitroVM.h"
 
 CBool CreateFileAccessor(NitroFileAccessor* outAccessor, const char* path);
 

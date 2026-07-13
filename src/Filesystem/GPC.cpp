@@ -16,6 +16,7 @@
 
 extern "C"
 {
+    // Calculate CRC for a null-terminated string
     unsigned int func_01ff860c(const char*);
 
     // always zero. Based on where it is, and the fact that the argument
@@ -129,15 +130,15 @@ void ZeroDestroyGPCPointer(GPCFile** ppGPC)
 
 bool CheckGPCPairValid_020d917c(GPCFile* const& gpc, ExtendedNitroVM& machine)
 {
-    if (gpc != NULL && machine.CheckUnknownFlagBit4())
+    if (gpc != NULL && machine.IsInReadableState())
         return true;
     return false;
 }
 
 bool ResetGPCPair(GPCFile **ppGPC, ExtendedNitroVM &machine)
 {
-    if (machine.CheckUnknownFlagBit4())
-        machine.MaybeReset();
+    if (machine.IsInReadableState())
+        machine.Close();
     *ppGPC = NULL;
     return true;
 }
@@ -157,7 +158,7 @@ bool LoadAndDecompressGPCHeaderAndInnerFileInfo(GPCFile **ppGPC, ExtendedNitroVM
     ResetGPCPair(ppGPC, machine);
     int unknownPurposeButAlwaysZero = func_02075090(gpcFilePath);
     {
-    if (!machine.PrepareRead(gpcFilePath, unknownPurposeButAlwaysZero != 0))
+    if (!machine.Open(gpcFilePath, unknownPurposeButAlwaysZero != 0))
         goto end;
 
     if (pOutReadSuccessful != NULL)
@@ -167,10 +168,10 @@ bool LoadAndDecompressGPCHeaderAndInnerFileInfo(GPCFile **ppGPC, ExtendedNitroVM
     func_020d84f8(&header, sizeof(GPCFile::Header));
     unsigned int desiredSignature = data_020f27c0.gpc2Signature;
     header.signature = desiredSignature;
-    if (!machine.LoadToBuffer(&header, sizeof(GPCFile::Header)))
+    if (!machine.Read(&header, sizeof(GPCFile::Header)))
         goto end;
 
-    if (machine.unknown_2 != 0 || header.signature != desiredSignature)
+    if (machine.isBadState != 0 || header.signature != desiredSignature)
         goto end;
 
     unsigned int totalLength = (header.headerLength + header.decompressedFileInfoLength) * 4;
@@ -215,8 +216,8 @@ unsigned int GetGPCInnerFileLength(ExtendedNitroVM& machine,
     {
         machine.Seek((header.firstFileOffset + file->offset) * 4);
         unsigned int prefixU32 = 0;
-        machine.LoadToBuffer(&prefixU32, 4);
-        if (machine.unknown_2 == 0 && header.isUncompressed)
+        machine.Read(&prefixU32, 4);
+        if (machine.isBadState == 0 && header.isUncompressed)
             length = file->compressedSizeBytes;
         else
             length = ((CompressionPrefix*)&prefixU32)->GetDecompressedLength();
@@ -235,7 +236,7 @@ unsigned int GetGPCInnerFileLengthByName(GPCFile* const& gpc,
 unsigned int GetGPCInnerFileLengthByCRC(GPCFile *const &gpc, 
     ExtendedNitroVM &machine, unsigned int crc)
 {
-    if (gpc == NULL || !machine.CheckUnknownFlagBit4())
+    if (gpc == NULL || !machine.IsInReadableState())
         return 0;
     const GPCFile::Header& header = gpc->header;
     GPCFile::FileEntry* entry = gpc->GetFileByCRC(crc);
@@ -256,8 +257,8 @@ bool DecompressFileFromGPC(ExtendedNitroVM &machine, void *outputBuffer,
         // (because we aren't compressed on this branch!)
         bool success;
         if (outputCapacity >= file->compressedSizeBytes && 
-            machine.LoadToBuffer(outputBuffer, file->compressedSizeBytes) &&
-            machine.unknown_2 == 0)
+            machine.Read(outputBuffer, file->compressedSizeBytes) &&
+            machine.isBadState == 0)
         {
             success = true;
             outDecompressedLength = file->compressedSizeBytes;
@@ -288,7 +289,7 @@ bool DecompressFileFromGPCByCRC(GPCFile* const& gpc, ExtendedNitroVM& machine,
     unsigned int outputCapacity, unsigned int crc)
 {
     outDecompressedLength = 0;
-    if (gpc == NULL || !machine.CheckUnknownFlagBit4())
+    if (gpc == NULL || !machine.IsInReadableState())
         return false;
     
     const GPCFile::Header& header = gpc->header;

@@ -1,6 +1,5 @@
 #include "System/IPC.h"
 #include "System/Interrupts.h"
-#include "System/InterruptHandling.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 

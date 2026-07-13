@@ -120,6 +120,7 @@ extern "C" void* UnknownImplementedFunction_020c72bc(void* input)
         Entry* last;
     } *list = (List*)input;
 
+    // Pop and return front entry
     Entry* front = list->first;
     if (front != NULL)
     {
@@ -181,6 +182,7 @@ void SwitchContext()
 
     Struct_02111304* contextData = &data_021112e0.substruct_24;
 
+    // 0x12 = interrupt handling mode
     if (data_021112e0.substruct_24.unknown_2 != 0 || GetProcessorMode() == 0x12)
     {
         contextData->unknown_0 = true;

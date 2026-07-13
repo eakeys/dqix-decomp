@@ -1,4 +1,8 @@
-#include "System/InterruptHandling.h"
+#include "System/Interrupts.h"
+
+#define INTERRUPT_MASTER_ENABLE (*(volatile unsigned short*)0x04000208)
+#define INTERRUPT_ENABLE (*(volatile unsigned int*)0x04000210)
+#define INTERRUPT_REQUEST_FLAGS (*(volatile unsigned int*)0x04000214)
 
 unsigned int SetSpecificInterruptsEnabled(unsigned int which)
 {

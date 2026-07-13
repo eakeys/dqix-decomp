@@ -6,6 +6,7 @@
 
 extern "C"
 {
+    // abort() or similar
     void func_020c9be0();
 }
 

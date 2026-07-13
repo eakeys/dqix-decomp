@@ -231,7 +231,7 @@ struct FNTMainTableEntry
     unsigned short numDirectoriesOrParentID; // first (root) entry holds num directories, rest hold parent ID
 };
 
-extern "C" int NitroVM_DefaultCommand_GetDirectoryData(NitroVM* vm)
+int NitroVM_DefaultCommand_GetDirectoryData(NitroVM* vm)
 {
     NitroHandle* nitroHandle = vm->linkedHandle;
     FSRegisterTriple* extendedRegs = &vm->regext_abc;
@@ -442,7 +442,6 @@ int NitroVM_DefaultCommand_GetFileOrDirectoryByName(NitroVM* vm)
 
 int NitroVM_DefaultCommand_GetPath(NitroVM* vm)
 {
-    
     FileDataStore storage;
     NitroVM tempVM;
 
@@ -661,7 +660,7 @@ int NitroVM_DefaultCommand_GetPath(NitroVM* vm)
 
 int NitroVM_DefaultCommand_GetFATEntry(NitroVM* vm)
 {
-    unsigned int offsets[2];
+    unsigned int offsets[2]; // [0] = start, [1] = end
     FSReadDescription readHandle;
 
     unsigned int entryIdx = vm->regext_abc.b.u32;
@@ -767,7 +766,7 @@ NitroVM* NitroHandle_AdvanceCommandQueue(NitroHandle* handle)
                     if (handle->linkToFirstVM.pNext == currentVM)
                         handle->linkToFirstVM.pNext = nextVM;
                     NitroVM_UnlinkAndStoreResult(currentVM, NITRO_RESULT_INVALID_HANDLE);
-                    // Effect of this: if last VM in the list has the flag set,
+                    // Effect of this: if last VM in the list marked for unlink,
                     // need to do another pass through...?
                     if (nextVM == NULL)
                         nextVM = handle->linkToFirstVM.pNext;
@@ -874,7 +873,7 @@ CBool NitroVM_QueueCommand(NitroVM* vm, int opcode)
     vm->flags |= (1 << NITROVM_FLAG_IN_HANDLE_QUEUE);
 
     int oldState = DisableIRQInterrupts();
-    if (handle->flags & (1 << NITROHANDLE_FLAG_MAYBE_DESTRUCTION_UNDERWAY))
+    if (handle->flags & (1 << NITROHANDLE_FLAG_DESTRUCTION_UNDERWAY))
     {
         NitroVM_UnlinkAndStoreResult(vm, NITRO_RESULT_INVALID_HANDLE);
         SetIRQInterruptState(oldState);

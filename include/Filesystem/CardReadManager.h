@@ -2,9 +2,7 @@
 
 #include "System/ProcessorContext.h"
 #include "LowNitroHandle.h"
-#include "FSStructs.h"
-
-
+#include "NitroVM.h"
 
 // sizeof == 0x60
 struct Arm7CardReadData

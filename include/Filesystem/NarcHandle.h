@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FSStructs.h"
+#include "NitroVM.h"
 
 bool IsFileValidNarc(const unsigned char* buffer);
 

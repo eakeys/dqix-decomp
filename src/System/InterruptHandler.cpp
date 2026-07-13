@@ -1,8 +1,9 @@
 #include "System/Interrupts.h"
-#include "System/InterruptHandling.h"
 #include "System/DMA.h"
 #include "System/BiosData.h"
+#include "System/DTCM.h"
 #include <globaldefs.h>
+#include <asmhacks.h>
 
 #pragma optimize_for_size off
 
@@ -35,23 +36,23 @@ inline int& CallbackUserdataByIndex(int n, int base = 0)
 
 // Start of exposed functions
 
-// This function matches but with instructions out of order
 void WaitForInterrupt(bool onlySubsequent, unsigned int mask)
 {
     int priorState = DisableIRQInterrupts();
     if (onlySubsequent)
-        GetInterruptData().unknown_3ff8 &= ~mask;
+        DTCM_DATA.interruptsFired &= ~mask;
     SetIRQInterruptState(priorState);
     
-    if (!(mask & GetInterruptData().unknown_3ff8))
+    if (!(mask & DTCM_DATA.interruptsFired))
     {
         BlockedContextList* list = &data_027e0000.block_60;
         unsigned int* pData;
         do {
-            pData = &GetInterruptData().unknown_3ff8;
+            pData = &DTCM_DATA.interruptsFired;
             BlockCurrentContext(list);
         } while (!(mask & *pData));
     }
+    DECLARE_ASM_NOP();
 }
 
 void EmptyInterruptHandler() {}
@@ -68,10 +69,13 @@ void OnDMAOrTimerCompletion(int index)
     if (callback != NULL)
         callback(CallbackUserdataByIndex(index));
         
-    unsigned int unk = GetInterruptData().unknown_3ff8;
-    unsigned int stayEnabled;
+    
+    unsigned int stayEnabled = 0;
+    
+    DTCMData& itcm = DTCM_DATA;
     stayEnabled = ShouldStayEnabledByIndex(index);
-    GetInterruptData().unknown_3ff8 = unk | irqMask;
+    itcm.interruptsFired |= irqMask;
+    
 
     if (!stayEnabled)
     {

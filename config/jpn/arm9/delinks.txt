@@ -50,7 +50,7 @@ src/Grotto/Main/TreasureMapMetadata.c:
 	complete
 	.text start:0x020a7a5c end:0x020a7e28
 
-src/System/Random.c:
+src/Util/Random.cpp:
 	complete
 	.text start:0x0207535c end:0x02075634
 

@@ -153,7 +153,7 @@ src/System/IPC.cpp:
     .bss start:0x021116a4 end:0x02111728
     .text start:0x020cad18 end:0x020cb034
 
-src/Filesystem/FSStruct.cpp:
+src/Filesystem/NitroVM.cpp:
     complete
     .rodata start:0x020ed6c8 end:0x020ed6ec
     .text start:0x020cb034 end:0x020cc0fc

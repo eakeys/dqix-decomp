@@ -112,9 +112,17 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020b1938 end:0x020b1990
 
-src/System/InterruptHandling.cpp:
+//src/System/InterruptHandler.cpp:
+//    complete
+//    .text start:0x020c8420 end:0x020c875c
+
+src/System/InterruptEnableDisable.cpp:
     complete
     .text start:0x020c875c end:0x020c8814
+
+src/System/GamecardBusOwnership.cpp:
+    complete
+    .text start:0x020c8914 end:0x020c8bfc
 
 src/System/ContextList.cpp:
     complete
@@ -132,16 +140,20 @@ src/System/Timing.cpp:
     complete
     .text start:0x020ca71c end:0x020cad54
 
-src/System/Interrupts.cpp:
+src/System/CPSRInterruptState.cpp:
     complete
     .text start:0x020cb1b4 end:0x020cb238
+
+src/System/DMA.cpp:
+    complete
+    .text start:0x020cb6d8 end:0x020cbb74
 
 src/System/IPC.cpp:
     complete
     .bss start:0x02111344 end:0x021113c8
     .text start:0x020cc7e4 end:0x020ccb00
 
-src/Filesystem/FSStruct.cpp:
+src/Filesystem/NitroVM.cpp:
     complete
     .rodata start:0x020ed7d4 end:0x020ed7f8
     .text start:0x020ccb00 end:0x020cdbc8
@@ -158,11 +170,15 @@ src/Filesystem/OverlayFSManagement.cpp:
     complete
     .text start:0x020cea48 end:0x020cef60
 
-src/Filesystem/ReadTasks.cpp:
+src/Filesystem/CardReadManagerInit.cpp:
     complete
-    .text start:0x020d1788 end:0x020d17c4
+    .text start:0x020d1788 end:0x020d1a98
 
-src/Filesystem/FileIOPorts.cpp:
+src/Filesystem/CardReadManagerAcquireBus.cpp:
+    complete
+    .text start:0x020d1a98 end:0x020d1b0c
+
+src/Filesystem/CardReadManager.cpp:
     complete
     .text start:0x020d2318 end:0x020d2a90
 

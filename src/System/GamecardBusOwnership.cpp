@@ -20,6 +20,10 @@ extern int data_021112dc;
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020ca7e0 func_020cc2ac
+#endif
+
 extern "C"
 {
     void WaitByLoop(int);

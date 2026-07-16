@@ -3,6 +3,7 @@
 #include "Grotto/Main/GrottoStruct.h"
 #include "Grotto/Overlay_17/Struct44C8.h"
 #include "Filesystem/FileIO.h"
+#include "Filesystem/BackgroundLoader.h"
 #include "System/Memory.h"
 #include "std_library_functions.h"
 #include <asmhacks.h>
@@ -12,9 +13,6 @@
 #define func_020a1e54 func_020a3bcc
 
 #define func_0200fdcc func_0200fc28
-
-#define func_0202f7c8 func_0202f338
-#define func_0202f7e8 func_0202f358
 
 #define func_02075098 func_02076224
 #define func_02075248 func_02076378
@@ -45,9 +43,6 @@ extern "C"
     // lack of support for German & Italian.
     // not used in jpn version
     int func_0200fb08(BattleStruct*);
-
-    void func_0202f7c8();
-    void func_0202f7e8();
 }
 
 #define BINARY_READ_AND_ADVANCE(buffer, offset, dst, len) \
@@ -1225,7 +1220,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
         return;
     }
     
-    func_0202f7c8();
+    BGFileLoad_Global_AddBit();
     unsigned int archiveSize = 0;
     const unsigned char* usedArchive = data_0211e33c;
     
@@ -1235,7 +1230,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
     {
         if (!LoadFileIntoMemory(data_020f1ae4, const_cast<unsigned char*>(usedArchive), &archiveSize))
         {
-            func_0202f7e8();
+            BGFileLoad_Global_RemoveBit();
             return;
         }
     }
@@ -1246,11 +1241,11 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
     unsigned int innerFileSize;
     if (!GetFileInNarc(usedArchive, innerFileName, reinterpret_cast<const void**>(&innerFileData), &innerFileSize, 0))
     {
-        func_0202f7e8();
+        BGFileLoad_Global_RemoveBit();
         return;
     }
 
-    func_0202f7e8();
+    BGFileLoad_Global_RemoveBit();
 
     const unsigned char* copyOfInnerFilePtr;
     unsigned int loadlevel = legacy.level;

@@ -13,6 +13,10 @@ src/Grotto/Main/GrottoStruct.c:
     complete
     .text start:0x02011738 end:0x02011744
 
+src/Filesystem/BackgroundLoader.cpp:
+    complete
+    .text start:0x0202f700 end:0x02030634
+
 src/Grotto/Main/ActiveGrottoClass.c:
     complete
     .text start:0x0208fe68 end:0x02090294

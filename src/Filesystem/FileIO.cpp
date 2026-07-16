@@ -6,14 +6,13 @@
 #include "Filesystem/GPC.h"
 #include "Combat/Main/BattleList.h"
 #include "Filesystem/NarcHandle.h"
+#include "Filesystem/BackgroundLoader.h"
 #include "System/Memory.h"
 #include "std_library_functions.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
 #ifdef jpn
-#define func_0202f7a8 func_0202f318
-
 #define func_020d970c func_020db118
 #define func_020d974c func_020db158
 
@@ -28,8 +27,6 @@ extern "C"
 {
     // zero memory
     void func_0200f374(void*, unsigned);
-
-    void func_0202f7a8();
 
     // some sort of bit test of a struct member at offset 0
     bool func_02046708(void*, unsigned int);
@@ -89,7 +86,7 @@ void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength
     void* alwaysNull = NULL;
     
     if (buffer >= data_0211e33c && buffer < &data_0211e33c[0x30000])
-        func_0202f7a8();
+        BGFileLoad_Global_Cleanup();
 
     ExtendedNitroVM reader;
     reader.ZeroInitialize();

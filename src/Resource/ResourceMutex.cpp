@@ -1,14 +1,11 @@
 #include "Resource/ResourceMutex.h"
 
 #ifdef jpn
-#define data_0214e4a8 data_0214fc70
-
 #define func_020c745c func_020c8f28
 #define func_020c75a4 func_020c9070
-
 #endif
 
-extern struct Struct_0214e4a8
+struct ResourceMutex
 {
     unsigned char unknown_0;
     bool lockPrerequisiteA_;
@@ -16,7 +13,9 @@ extern struct Struct_0214e4a8
     char padding_3;
     unsigned int lockCount_;
     Mutex mutex_;
-} data_0214e4a8;
+};
+
+static ResourceMutex s_resourceMutex;
 
 extern "C"
 {
@@ -31,40 +30,40 @@ void InitializeResourceMutex()
     if (!func_020c75a4())
         func_020c745c();
 
-    ZeroInitializeMutex(&data_0214e4a8.mutex_);
-    data_0214e4a8.lockPrerequisiteB_ = true;
-    data_0214e4a8.unknown_0 = 1;
-    data_0214e4a8.lockPrerequisiteA_ = true;
-    data_0214e4a8.lockCount_ = 0;
+    ZeroInitializeMutex(&s_resourceMutex.mutex_);
+    s_resourceMutex.lockPrerequisiteB_ = true;
+    s_resourceMutex.unknown_0 = 1;
+    s_resourceMutex.lockPrerequisiteA_ = true;
+    s_resourceMutex.lockCount_ = 0;
 }
 
 bool SetResourceMutexOperational(bool to)
 {
-    bool oldStatus = data_0214e4a8.lockPrerequisiteA_;
-    data_0214e4a8.lockPrerequisiteA_ = to;
+    bool oldStatus = s_resourceMutex.lockPrerequisiteA_;
+    s_resourceMutex.lockPrerequisiteA_ = to;
     return oldStatus;
 }
 
 void LockResourceMutex()
 {
-    if (data_0214e4a8.lockPrerequisiteB_ && data_0214e4a8.lockPrerequisiteA_)
+    if (s_resourceMutex.lockPrerequisiteB_ && s_resourceMutex.lockPrerequisiteA_)
     {
-        LockMutex(&data_0214e4a8.mutex_);
-        data_0214e4a8.lockCount_++;
+        LockMutex(&s_resourceMutex.mutex_);
+        s_resourceMutex.lockCount_++;
     }
 }
 
 void UnlockResourceMutex()
 {
-    if (data_0214e4a8.lockPrerequisiteB_ && data_0214e4a8.lockPrerequisiteA_)
+    if (s_resourceMutex.lockPrerequisiteB_ && s_resourceMutex.lockPrerequisiteA_)
     {
-        data_0214e4a8.lockCount_--;
-        UnlockMutex(&data_0214e4a8.mutex_);
+        s_resourceMutex.lockCount_--;
+        UnlockMutex(&s_resourceMutex.mutex_);
     }
 }
 
 void SleepIfResourceMutexNotLocked(unsigned int milliseconds)
 {
-    if (data_0214e4a8.lockCount_ == 0)
+    if (s_resourceMutex.lockCount_ == 0)
         SleepCurrentContext(milliseconds);
 }

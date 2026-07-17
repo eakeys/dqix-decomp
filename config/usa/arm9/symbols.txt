@@ -7909,8 +7909,6 @@ data_02141110 kind:bss addr:0x02141110
 data_0214e33c kind:bss addr:0x0214e33c
 data_0214e34c kind:bss addr:0x0214e34c
 data_0214e4a0 kind:bss addr:0x0214e4a0
-data_0214e4a8 kind:bss addr:0x0214e4a8
-data_0214e4b0 kind:bss addr:0x0214e4b0
 data_0214e4c8 kind:bss addr:0x0214e4c8
 data_0214e5b0 kind:bss addr:0x0214e5b0
 data_0214e5bc kind:bss addr:0x0214e5bc

@@ -99,8 +99,8 @@ void BackgroundLoader::InitializeOrReset()
 
     scratchSpace_ = 0;
     scratchSpaceSize_ = 0;
-    lastBlockEnd_118_ = 0;
-    unknown_11c_ = 0;
+    rightmostAllocationByte_ = 0;
+    scratchRightArenaUsage_ = 0;
     unknown_120_ = 0x10000;
     numPendingTasks_ = 0;
     processLockBits_ = 0; 
@@ -459,7 +459,7 @@ void BackgroundLoader::MaybeReset()
     }
 
     numPendingTasks_ = 0;
-    lastBlockEnd_118_ = 0;
+    rightmostAllocationByte_ = 0;
     processLockBits_ = 0;
     flags_78c_1_ = false;
     flags_78c_0_ = true;
@@ -545,7 +545,7 @@ void BackgroundLoader::RemoveTask(int taskID)
                 {
                     *qTask = *(qTask + numToRemoveFromFront);
                 }
-                lastBlockEnd_118_ = 0;
+                rightmostAllocationByte_ = 0;
                 flags_78c_1_ = false;
             }
             break;
@@ -594,7 +594,7 @@ void* BackgroundLoader::AllocateInScratchSpace(BackgroundLoader::Task::ScratchSp
     {
         unsigned int requiredBytesRounded = (filesize + 3) & ~3;
         // interpretation of this is still pretty shaky
-        unsigned int leftoverCapacity = scratchSpaceSize_ - unknown_11c_;
+        unsigned int leftoverCapacity = scratchSpaceSize_ - scratchRightArenaUsage_;
         
         unsigned int initialNumBlocks = 0;
         unsigned int initialNumUsedWords = 0;
@@ -622,6 +622,8 @@ void* BackgroundLoader::AllocateInScratchSpace(BackgroundLoader::Task::ScratchSp
             initialNumUsedWords += pTask->scratchAlloc_.numWords_;
         }
 
+        // necessary but not sufficient condition: there's collectively enough
+        // space available. Now we'll check if there's a single free block big enough
         if (initialNumUsedWords + requiredWords <= (leftoverCapacity >> 2))
         {
             int allocationPosition = -1;
@@ -694,19 +696,19 @@ bool BackgroundLoader::FreeScratchSpace(Task::ScratchSpaceAllocation* block)
 
 void BackgroundLoader::RefreshCounters()
 {
-    lastBlockEnd_118_ = 0;
+    rightmostAllocationByte_ = 0;
     BackgroundLoader::Task* pTask = queuedTasks_;
     for (unsigned int i = 0; i < numPendingTasks_; i++, pTask++)
     {
         if (pTask->scratchAlloc_.numWords_ == 0)
             continue;
         unsigned int sectionEndWord = pTask->scratchAlloc_.firstWord_ + pTask->scratchAlloc_.numWords_;
-        int newVal = lastBlockEnd_118_;
+        int newVal = rightmostAllocationByte_;
         if (newVal <= sectionEndWord * 4)
             newVal = sectionEndWord * 4;
-        lastBlockEnd_118_ = newVal;
+        rightmostAllocationByte_ = newVal;
     }
-    unsigned int unk = lastBlockEnd_118_ + unknown_11c_;
+    unsigned int unk = rightmostAllocationByte_ + scratchRightArenaUsage_;
     if (unk > unknown_120_)
         unknown_120_ = unk;
 }

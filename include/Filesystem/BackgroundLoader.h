@@ -65,10 +65,19 @@ struct BackgroundLoader
     // func_ov_033_022a21a8. The context's execution repeatedly calls this function
     ProcessorContext context_;
     ExtendedNitroVM reader_;
+    // The scratch space is used for two purposes. On the left, we have block-based
+    // allocation, roughly like HPXEAllocator, used for files loaded without
+    // a SafeAllocator, and on the right we have an arena that grows leftward
+    // used by the processing thread to store GP2-related metadata. (Note that
+    // only one archive's worth of metadata is ever in the arena at a time)
     void* scratchSpace_;
     volatile unsigned int scratchSpaceSize_;
-    volatile int lastBlockEnd_118_;
-    volatile unsigned int unknown_11c_;
+    volatile int rightmostAllocationByte_;
+    volatile unsigned int scratchRightArenaUsage_;
+    // I think this is just for benchmarking / debugging, I don't see any reads
+    // from it. It holds the maximum recorded value of (rightmostAllocationByte
+    // + scratchRightArenaUsage), i.e. maximum historical memory usage.
+    // It's initialized to 0x10000 (64k, 1/3 of the size used in practice).
     int unknown_120_;
     volatile int numPendingTasks_;
     Task queuedTasks_[24];
@@ -79,6 +88,7 @@ struct BackgroundLoader
     volatile unsigned int processLockBits_;
     volatile int flags_78c_0_ : 1;
     volatile int flags_78c_1_ : 1;
+    // might be something like 'scratch space allocation is up to date'
     volatile int flags_78c_2_ : 1;
     volatile int flags_78c_3_ : 1;
     volatile int flagMaybeGP2OperationInFlight_ : 1;

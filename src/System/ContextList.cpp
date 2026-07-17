@@ -1,4 +1,5 @@
 #include "System/ProcessorContext.h"
+#include "System/Mutex.h"
 #include "System/Interrupts.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
@@ -106,30 +107,17 @@ ProcessorContext* BlockedContextList::Remove(ProcessorContext* context)
     return searchNode;
 }
 
-extern "C" void* UnknownImplementedFunction_020c72bc(void* input)
+Mutex* PopFrontMutexFromList(MutexList* list)
 {
-    struct Entry {
-        BlockedContextList contexts;
-        unsigned int unknown[2];
-        Entry* next; // strange
-        Entry* prev;
-    };
-
-    struct List {
-        Entry* first;
-        Entry* last;
-    } *list = (List*)input;
-
-    // Pop and return front entry
-    Entry* front = list->first;
+    Mutex* front = list->pFirst;
     if (front != NULL)
     {
-        Entry* next = front->next;
-        list->first = next;
+        Mutex* next = front->pNext;
+        list->pFirst = next;
         if (next != NULL)  
-            next->prev = NULL;
+            next->pPrev = NULL;
         else
-            list->last = NULL;
+            list->pLast = NULL;
     }
     return front;
 }

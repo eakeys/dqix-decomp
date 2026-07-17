@@ -3,6 +3,13 @@
 #include "Timing.h"
 
 struct ProcessorContext;
+struct Mutex;
+
+struct MutexList
+{
+    Mutex* pFirst;
+    Mutex* pLast;
+};
 
 struct BlockedContextList
 {
@@ -45,9 +52,8 @@ struct ProcessorContext
     BlockedContextList* containerBlockedQueue;
     ProcessorContext* pPrevBlocked;
     ProcessorContext* pNextBlocked;
-    unsigned int unknown_84;
-    unsigned int unknown_88;
-    unsigned int unknown_8C;
+    Mutex* blockingMutex; // the mutex currently stopping this context from executing
+    MutexList lockedMutexes; // all mutexes currently locked by this context
     unsigned int stackTop;
     unsigned int stackBottom;
     unsigned int stackUnknownTopSubspaceSize;
@@ -108,12 +114,7 @@ extern Struct_02111304 data_02111304;
 extern ProcessorContext data_02111314;
 extern ProcessorContext data_021113d4;
 
-// The two pointers at offset 0x88 and 0x8C in ProcessorContext
-// are to the ends of yet another doubly linked list. The entries in this contain
-// a BlockedContextList. So it's some sort of 'list of lists' but I have no idea
-// what for. This function can pop the first list here. Only implemented to avoid
-// having to use another translation unit.
-extern "C" void* UnknownImplementedFunction_020c72bc(void*);
+Mutex* PopFrontMutexFromList(MutexList* list);
 
 ProcessorContext* InsertContextIntoGlobalList(ProcessorContext* context);
 void RemoveContextFromGlobalList(ProcessorContext* context);

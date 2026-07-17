@@ -1,4 +1,5 @@
 #include "System/ProcessorContext.h"
+#include "System/Mutex.h"
 #include "System/Timing.h"
 #include "System/Interrupts.h"
 #include <globaldefs.h>
@@ -10,7 +11,6 @@
 #if defined(jpn)
 #define func_020c9bf0 func_020cb6bc
 #define func_020c9be0 func_020cb6ac
-#define func_020c8154 func_020c9c20
 #define func_020ca3ec func_020cbeb8
 #endif
 
@@ -21,8 +21,6 @@ extern "C"
 
     // something like abort()
     void func_020c9be0();
-
-    void func_020c8154(ProcessorContext*);
 
     // memset with silly signature and assuming alignment
     void func_020ca3ec(int value, void* dst, unsigned len);
@@ -53,9 +51,9 @@ void PopulateContext(ProcessorContext *context, unsigned int startAddress,
     context->userModeRegisters[14] = (unsigned int)&ContextExecutionReturnProc;
 
     func_020ca3ec(0, (void*)(stackBottom - stackSize + 4), stackSize - 8);
-    context->unknown_84 = 0;
-    context->unknown_88 = 0;
-    context->unknown_8C = 0;
+    context->blockingMutex = NULL;
+    context->lockedMutexes.pFirst = NULL;
+    context->lockedMutexes.pLast = NULL;
     SetContextEndProc(context, NULL);
 
     context->containerBlockedQueue = NULL;
@@ -77,6 +75,8 @@ void ExitContext(ProcessorContext *context, int exitCode)
 {
     if (data_021112e0.unknown_1C != 0)
     {
+        // context will resume execution with pc at ExitCurrentContext invocation
+        // and with IRQ interrupts disabled.
         InitializeContextRegisters(context, (unsigned int)&ExitCurrentContext, data_021112e0.unknown_1C);
         context->userModeRegisters[0] = exitCode;
         context->programStatusRegister |= (1 << 7); // disable IRQ interrupts here
@@ -106,7 +106,7 @@ void ShutdownCurrentContext()
 {
     ProcessorContext* context = *data_021112e0.ppActiveContext;
     AddContextSwitchLock();
-    func_020c8154(context);
+    UnlockAllMutexesLockedByContext(context);
     if (context->containerBlockedQueue != NULL)
         context->containerBlockedQueue->Remove(context);
 
@@ -126,7 +126,7 @@ void ShutdownContext(ProcessorContext* context)
         ShutdownCurrentContext(); // function call will not return
 
     AddContextSwitchLock();
-    func_020c8154(context);
+    UnlockAllMutexesLockedByContext(context);
     CancelContextSleepAlarm(context);
     if (context->containerBlockedQueue != NULL)
         context->containerBlockedQueue->Remove(context);

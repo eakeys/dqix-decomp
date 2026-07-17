@@ -2,6 +2,7 @@
 #include "std_library_functions.h"
 #include "Combat/Main/BattleList.h"
 #include "Filesystem/FileIO.h"
+#include "Resource/ResourceMutex.h"
 
 #pragma dont_inline on
 
@@ -14,12 +15,6 @@ extern "C"
 
     // abort() or similar
     void func_020c9be0();
-
-    // some sort of mutex lock/unlock, used in many other places
-    void func_020d970c();
-    void func_020d974c();
-
-    void func_020d9788(int); // sleep context for n milliseconds
 
     // Populates context with priority = relPrio + 16
     void func_020d97a8(ProcessorContext* context, void* stackSpace, unsigned stackSize, int relPrio, const void* entry, int arg);
@@ -131,15 +126,15 @@ void BackgroundLoader::MaybeWaitIdle()
     AddLock();
     while (true)
     {
-        func_020d970c();
+        LockResourceMutex();
         bool keepWaiting = true;
         if (!flags_78c_3_ && flagMaybeGP2OperationInFlight_ == false)
             keepWaiting = false;
 
-        func_020d974c();
+        UnlockResourceMutex();
         if (!keepWaiting)
             return;
-        func_020d9788(1);
+        SleepIfResourceMutexNotLocked(1);
     }
 }
 
@@ -162,7 +157,7 @@ void BackgroundLoader::RemoveLock()
     {
         flags_78c_2_ = false;
         if (numPendingTasks_ != 0)
-            func_020d9788(1);
+            SleepIfResourceMutexNotLocked(1);
     }
 }
 
@@ -174,13 +169,13 @@ void BackgroundLoader::RemoveAllLocks()
     flags_78c_2_ = false;
 
     if (numPendingTasks_ != 0)
-        func_020d9788(1);
+        SleepIfResourceMutexNotLocked(1);
 }
 
 int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* innerFile, SafeAllocator* alloc)
 {
     int newID = -1;
-    func_020d970c();
+    LockResourceMutex();
     int language = func_0200fb08(GetBattleStruct());
 
     char replacedFilename[80];
@@ -249,14 +244,14 @@ int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* 
             }
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return newID;
 }
 
 int BackgroundLoader::QueueOverlayTask(unsigned int id, bool load)
 {
     int newID = -1;
-    func_020d970c();
+    LockResourceMutex();
     if (numPendingTasks_ >= 24)
         func_020c9be0();
     else
@@ -272,7 +267,7 @@ int BackgroundLoader::QueueOverlayTask(unsigned int id, bool load)
         data_02104304.counter = (newID + 1) & 0x3ff;
         flags_78c_0_ = false;
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return newID;
 }
 
@@ -298,7 +293,7 @@ int BackgroundLoader::QueueLoadOverlay(unsigned int id)
 
 void BackgroundLoader::AddFence()
 {
-    func_020d970c();
+    LockResourceMutex();
     if (numPendingTasks_ > 0)
     {
         if (numPendingTasks_ >= 24)
@@ -313,13 +308,13 @@ void BackgroundLoader::AddFence()
             flags_78c_0_ = false;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
 }
 
 int BackgroundLoader::GetTaskStatus(int taskID)
 {
     int status = -1;
-    func_020d970c();
+    LockResourceMutex();
     if (taskID >= 0)
     {
         BackgroundLoader::Task* pTask = &queuedTasks_[0];
@@ -338,7 +333,7 @@ int BackgroundLoader::GetTaskStatus(int taskID)
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return status;
 }
 
@@ -350,7 +345,7 @@ int BackgroundLoader::GetFlag0()
 int BackgroundLoader::GetDetailedTaskStatus(int taskID)
 {
     int status = -1;
-    func_020d970c();
+    LockResourceMutex();
     if (taskID >= 0)
     {
         BackgroundLoader::Task* pTask = &queuedTasks_[0];
@@ -362,13 +357,13 @@ int BackgroundLoader::GetDetailedTaskStatus(int taskID)
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return status;
 }
 
 void BackgroundLoader::GetLoadedFileByID(int id, void **outPtr, unsigned int *outLength)
 {
-    func_020d970c();
+    LockResourceMutex();
     *outPtr = NULL;
     *outLength = 0;
     if (id >= 0)
@@ -384,13 +379,13 @@ void BackgroundLoader::GetLoadedFileByID(int id, void **outPtr, unsigned int *ou
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
 }
 
 int BackgroundLoader::GetLoadedFileByName(const char *filename, void **outPtr, unsigned int *outLength)
 {
     int taskID = -1;
-    func_020d970c();
+    LockResourceMutex();
     *outPtr = NULL;
     *outLength = 0;
     BackgroundLoader::Task* pTask = &queuedTasks_[0];
@@ -410,14 +405,14 @@ int BackgroundLoader::GetLoadedFileByName(const char *filename, void **outPtr, u
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return taskID;
 }
 
 int BackgroundLoader::GetLoadedFileInArchive(const char *outerFile, const char* innerFile, void **outPtr, unsigned int *outLength)
 {
     int taskID = -1;
-    func_020d970c();
+    LockResourceMutex();
     *outPtr = NULL;
     *outLength = 0;
     BackgroundLoader::Task* pTask = &queuedTasks_[0];
@@ -437,13 +432,13 @@ int BackgroundLoader::GetLoadedFileInArchive(const char *outerFile, const char* 
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return taskID;
 }
 
 void BackgroundLoader::MaybeReset()
 {
-    func_020d970c();
+    LockResourceMutex();
     BackgroundLoader::Task* pTask = &queuedTasks_[0];
     for (int i = 0; i < numPendingTasks_; i++, pTask++)
     {
@@ -458,7 +453,7 @@ void BackgroundLoader::MaybeReset()
     flags_78c_0_ = true;
     flags_78c_2_ = true;
 
-    func_020d974c();
+    UnlockResourceMutex();
 }
 
 void BackgroundLoader::MaybeFreeAllocations()
@@ -466,7 +461,7 @@ void BackgroundLoader::MaybeFreeAllocations()
     if (numPendingTasks_ == 0)
         return;
 
-    func_020d970c();
+    LockResourceMutex();
     BackgroundLoader::Task* pTask = &queuedTasks_[0];
     for (int i = 0; i < numPendingTasks_; i++, pTask++)
     {
@@ -491,7 +486,7 @@ void BackgroundLoader::MaybeFreeAllocations()
     reader_.Abort();
     flags_78c_0_ = false;
     flags_78c_2_ = true;
-    func_020d974c();
+    UnlockResourceMutex();
 }
 
 void BackgroundLoader::RemoveTask(int taskID)
@@ -499,7 +494,7 @@ void BackgroundLoader::RemoveTask(int taskID)
     if (taskID < 0)
         return;
 
-    func_020d970c();
+    LockResourceMutex();
     if (taskID >= 0)
     {
         BackgroundLoader::Task* pTask = &queuedTasks_[0];
@@ -544,7 +539,7 @@ void BackgroundLoader::RemoveTask(int taskID)
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
 }
 
 // here goes BackgroundLoader::Task::operator=
@@ -558,7 +553,7 @@ int BackgroundLoader::GetNumQueuedTasks()
 bool BackgroundLoader::GetTaskFilename(int taskID, char* outBuffer)
 {
     bool success = false;
-    func_020d970c();
+    LockResourceMutex();
     if (taskID >= 0)
     {
         BackgroundLoader::Task* pTask = &queuedTasks_[0];
@@ -572,7 +567,7 @@ bool BackgroundLoader::GetTaskFilename(int taskID, char* outBuffer)
             break;
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return success;
 }
 
@@ -581,7 +576,7 @@ void* BackgroundLoader::AllocateInScratchSpace(BackgroundLoader::Task::ScratchSp
     BackgroundLoader::Task::ScratchSpaceAllocation* orderedBlocks[24];
     unsigned int* returnAddress = NULL;
 
-    func_020d970c();
+    LockResourceMutex();
     if (filesize != 0)
     {
         unsigned int requiredBytesRounded = (filesize + 3) & ~3;
@@ -667,14 +662,14 @@ void* BackgroundLoader::AllocateInScratchSpace(BackgroundLoader::Task::ScratchSp
             }
         }
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return returnAddress;
 }
 
 bool BackgroundLoader::FreeScratchSpace(Task::ScratchSpaceAllocation* block)
 {
     bool success = false;
-    func_020d970c();
+    LockResourceMutex();
     if (block->numWords_ != 0)
     {
         block->firstWord_ = 0;
@@ -682,7 +677,7 @@ bool BackgroundLoader::FreeScratchSpace(Task::ScratchSpaceAllocation* block)
         success = true;
         RefreshCounters();
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return success;
 }
 

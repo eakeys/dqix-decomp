@@ -8,13 +8,12 @@
 #include "Filesystem/NarcHandle.h"
 #include "Filesystem/BackgroundLoader.h"
 #include "System/Memory.h"
+#include "Resource/ResourceMutex.h"
 #include "std_library_functions.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
 #ifdef jpn
-#define func_020d970c func_020db118
-#define func_020d974c func_020db158
 
 #define data_020e692c data_020e71d4
 
@@ -40,10 +39,6 @@ extern "C"
     char* func_020d2f88(char* searchString, const char* targetString);
     // Custom implementation of strlen
     int func_020d2ff0(const char* str);
-
-    // some kind of mutex lock/unlock or something
-    void func_020d970c();
-    void func_020d974c();
 
     void LZ77UnCompReadNormalWrite8bit(const void* src, void* dst);
 }
@@ -153,7 +148,7 @@ bool GetFileInNarc(const void *narcBuffer, const char *targetFilePath,
     const void **pOutFilePtr, unsigned int *pOutFileSize, unsigned int firstFileIdx)
 {
     bool success = false;
-    func_020d970c();
+    LockResourceMutex();
     NarcHandle handle;
     if (handle.Initialize(data_020f0db8, (const unsigned char*)narcBuffer))
     {
@@ -182,7 +177,7 @@ bool GetFileInNarc(const void *narcBuffer, const char *targetFilePath,
         }
         handle.Destroy();
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return success;
 }
 
@@ -190,7 +185,7 @@ bool GetFileInNarcPermissive(const void *narcBuffer, const char *targetFilePath,
     const void **pOutFilePtr, unsigned int *pOutFileSize, unsigned int firstFileIdx)
 {
     bool success = false;
-    func_020d970c();
+    LockResourceMutex();
     NarcHandle handle;
     if (handle.Initialize(data_020f0db8, (const unsigned char*)narcBuffer))
     {
@@ -249,7 +244,7 @@ bool GetFileInNarcPermissive(const void *narcBuffer, const char *targetFilePath,
 
         handle.Destroy();
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return success;
 }
 
@@ -268,7 +263,7 @@ unsigned int FindFilesInNarcBySubstring(const void* narcBuffer, const char* subs
     NitroVM* pMachine; // will point to a stack variable created shortly
     int numFound = 0;
 
-    func_020d970c();
+    LockResourceMutex();
 
     NarcHandle handle;
     if (handle.Initialize(data_020f0db8, (const unsigned char*)narcBuffer))
@@ -306,7 +301,7 @@ unsigned int FindFilesInNarcBySubstring(const void* narcBuffer, const char* subs
         }
         handle.Destroy();
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return numFound;
 }
 

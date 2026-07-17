@@ -1,5 +1,6 @@
 #include "Filesystem/Overlay_33/Ov33BackgroundLoader.h"
 #include "Filesystem/GPC.h"
+#include "Resource/ResourceMutex.h"
 
 extern "C"
 {
@@ -10,13 +11,6 @@ extern "C"
     void func_020a1a40(int);
     // alternate unload overlay
     void func_020a1ccc(int);
-
-    // mutex lock/unlock
-    void func_020d970c();
-    void func_020d974c();
-
-    // sleep thread
-    void func_020d9788(int);
 }
 
 extern Ov33BackgroundLoader data_ov033_022a2a2c;
@@ -29,7 +23,7 @@ void PopulateOv33BackgroundLoader(void* fileLoadSpace, unsigned int capacity, in
 int Ov33BackgroundLoader::Process()
 {
     GPCFile* pGPC;
-    func_020d970c();    
+    LockResourceMutex();    
     ZeroInitGPCPointer(&pGPC);
     unsigned int currentArchiveCRC = 0;
     while (true)
@@ -44,18 +38,18 @@ int Ov33BackgroundLoader::Process()
             case TaskType_LoadOverlay:
             {
                 pTask->status_ = TaskStatus_InFlight;
-                func_020d974c();
+                UnlockResourceMutex();
                 func_020a1a40(pTask->fileLengthOrOverlayID_);
-                func_020d970c();
+                LockResourceMutex();
                 pTask->status_ = TaskStatus_Complete;
                 break;
             }
             case TaskType_UnloadOverlay:
             {
                 pTask->status_ = TaskStatus_InFlight;
-                func_020d974c();
+                UnlockResourceMutex();
                 func_020a1ccc(pTask->fileLengthOrOverlayID_);
-                func_020d970c();
+                LockResourceMutex();
                 pTask->status_ = TaskStatus_Complete;
                 break;
             }
@@ -151,7 +145,7 @@ int Ov33BackgroundLoader::Process()
         Task inFlightTask;
         inFlightTask = *gpcTask; // work with a copy, we'll copy changes back at the end
         flags_78c_3_ = true;
-        func_020d974c();
+        UnlockResourceMutex();
         char fullName[80];
         inFlightTask.GetFullFilename(fullName);
         inFlightTask.pFileData = NULL;
@@ -289,7 +283,7 @@ int Ov33BackgroundLoader::Process()
         if (inFlightTask.pFileData != NULL)
             inFlightTask.status_ = TaskStatus_Complete;
         
-        func_020d970c();
+        LockResourceMutex();
         flags_78c_3_ = false;
         RefreshCounters();
         Task* pTaskToUpdate = NULL;
@@ -326,7 +320,7 @@ int Ov33BackgroundLoader::Process()
     }
 
 end:
-    func_020d974c();
+    UnlockResourceMutex();
     if (CheckGPCPairValid_020d917c(pGPC, reader_))
     {
         ResetGPCPair(&pGPC, reader_);
@@ -334,7 +328,7 @@ end:
         flagMaybeGP2OperationInFlight_ = false;
     }
     if (numPendingTasks_ <= 0)
-        func_020d9788(5);
+        SleepIfResourceMutexNotLocked(5);
     ZeroDestroyGPCPointer(&pGPC);
     return 0;
 }

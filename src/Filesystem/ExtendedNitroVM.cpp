@@ -1,5 +1,6 @@
 #include "Filesystem/ExtendedNitroVM.h"
 #include "Filesystem/FSInnerDefs.h"
+#include "Resource/ResourceMutex.h"
 #include "System/Cache.h"
 #include "std_library_functions.h"
 #include <globaldefs.h>
@@ -8,11 +9,6 @@
 #if defined(jpn)
 #define func_020d84f8 func_020d9e5c
 #define func_020d8524 func_020d9e88
-
-#define func_020d970c func_020db118
-#define func_020d974c func_020db158
-
-#define func_020d9788 func_020db194
 
 #define func_020ca95c func_020cc428
 
@@ -39,13 +35,6 @@ extern "C"
     void func_020d84f8(void*, unsigned);
     // another memcpy-style function, cleans/invalidates the cache in destination after
     unsigned int func_020d8524(void*, const void*, unsigned);
-
-    // probably some kind of mutex lock/unlock
-    void func_020d970c();
-    void func_020d974c();
-
-    // Sleep for the specified number of milliseconds
-    void func_020d9788(int);
 
     void DecompressA(Decompressor*, const void*, unsigned);
     void DecompressB(Decompressor*, const void*, unsigned);
@@ -119,7 +108,7 @@ bool Decompressor::InitAndDecompress(void *out, unsigned int outCapacity, const 
 bool Decompressor::ProcessBytes(const void* input, unsigned int inputLength)
 {
     bool success = false;
-    func_020d970c();
+    LockResourceMutex();
     unsigned char* writeStart = writeOutputPtr;
     if (writeOutputPtr != NULL && compressionType < 5 && input != NULL && inputLength != NULL)
     {
@@ -145,7 +134,7 @@ bool Decompressor::ProcessBytes(const void* input, unsigned int inputLength)
         CleanInvalidateCacheRange(writeStart, writeOutputPtr - writeStart);
         success = true;
     }
-    func_020d974c();
+    UnlockResourceMutex();
     return success;
 }
 
@@ -333,7 +322,7 @@ unsigned int ExtendedNitroVM::Read(void* into, unsigned int capacity)
     case Status_Open:
         length = NitroVM_ReadAsync(&machine, into, capacity);
         while (GET_FLAG_BIT(machine.flags, NITROVM_FLAG_IN_HANDLE_QUEUE))
-            func_020d9788(1);
+            SleepIfResourceMutexNotLocked(1);
         break;
     case Status_2_Unknown:
         break;
@@ -350,7 +339,7 @@ unsigned int ExtendedNitroVM::Read(void* into, unsigned int capacity)
 bool ExtendedNitroVM::Abort()
 {
     bool wasProcessing = false;
-    func_020d970c();
+    LockResourceMutex();
 
     if (status == Status_Open)
     {
@@ -359,7 +348,7 @@ bool ExtendedNitroVM::Abort()
     }
     isBadState = true;
     
-    func_020d974c();
+    UnlockResourceMutex();
     return wasProcessing;
 }
 

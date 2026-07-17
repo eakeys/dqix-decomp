@@ -197,3 +197,7 @@ src/Filesystem/ExtendedNitroVM.cpp:
 src/Filesystem/GPC.cpp:
     complete
     .text start:0x020d8fcc end:0x020d96b0
+
+src/Resource/ResourceMutex.cpp:
+    complete
+    .text start:0x020d96b0 end:0x020d97a8

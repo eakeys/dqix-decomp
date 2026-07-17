@@ -178,6 +178,10 @@ protected:
     void RefreshCounters();
 };
 
+#ifdef jpn
+#define data_02104304 data_02104044
+#endif
+
 struct Struct_02104304
 {
     unsigned short counter;

@@ -6,6 +6,17 @@
 
 #pragma dont_inline on
 
+#ifdef jpn
+#define func_020c9be0 func_020cb6ac
+
+#define func_020d97a8 func_020db1b4
+#define func_020d9828 func_020db234
+
+#define data_020ef8a4 data_020ef794
+#define data_020ef908 data_020ef7f8
+#define data_020ef90f data_020ef7ff
+#endif
+
 extern "C"
 {
     // zero memory
@@ -176,11 +187,12 @@ int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* 
 {
     int newID = -1;
     LockResourceMutex();
+#if defined(usa)
     int language = func_0200fb08(GetBattleStruct());
-
     char replacedFilename[80];
     func_0200f374(replacedFilename, sizeof(replacedFilename));
     StringReplaceLanguageTag(filename, replacedFilename, language);
+#endif
 
     if (filename != NULL)
     {
@@ -196,11 +208,19 @@ int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* 
             entry->type_ = type;
             if (type == BackgroundLoader::TaskType_LoadFromGP2 && innerFile != NULL)
             {
+#if defined(usa)
                 char replacedInnerFile[128];
                 func_0200f374(replacedInnerFile, sizeof(replacedInnerFile));
                 StringReplaceLanguageTag(innerFile, replacedInnerFile, language);
                 strcpy(entry->innerFilename_, replacedInnerFile);
+#elif defined(jpn)     
+                strcpy(entry->innerFilename_, innerFile);     
+#endif
             }
+#if defined(jpn)
+            char replacedFilename[80];
+            strcpy(replacedFilename, filename);
+#endif
             for (char* ptr = replacedFilename; *ptr != '\0'; ptr++)
             {
                 if (*ptr == '\\')

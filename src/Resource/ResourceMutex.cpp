@@ -1,5 +1,13 @@
 #include "Resource/ResourceMutex.h"
 
+#ifdef jpn
+#define data_0214e4a8 data_0214fc70
+
+#define func_020c745c func_020c8f28
+#define func_020c75a4 func_020c9070
+
+#endif
+
 extern struct Struct_0214e4a8
 {
     unsigned char unknown_0;

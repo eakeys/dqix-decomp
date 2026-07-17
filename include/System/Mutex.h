@@ -10,8 +10,8 @@ struct Mutex
     ProcessorContext* ownedContext_;
     // you can lock the mutex multiple times on the same thread
     unsigned int ownerRefcount_;
-    Mutex* pNext;
-    Mutex* pPrev;
+    Mutex* pNext_;
+    Mutex* pPrev_;
 };
 
 // usa: func_020c805c

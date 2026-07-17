@@ -112,10 +112,10 @@ Mutex* PopFrontMutexFromList(MutexList* list)
     Mutex* front = list->pFirst;
     if (front != NULL)
     {
-        Mutex* next = front->pNext;
+        Mutex* next = front->pNext_;
         list->pFirst = next;
         if (next != NULL)  
-            next->pPrev = NULL;
+            next->pPrev_ = NULL;
         else
             list->pLast = NULL;
     }

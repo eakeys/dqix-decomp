@@ -108,10 +108,10 @@ void AddMutexToContextLockedList(ProcessorContext* context, Mutex* mutex)
     if (oldLast == NULL)
         context->lockedMutexes.pFirst = mutex;
     else
-        oldLast->pNext = mutex;
+        oldLast->pNext_ = mutex;
 
-    mutex->pPrev = oldLast;
-    mutex->pNext = NULL;
+    mutex->pPrev_ = oldLast;
+    mutex->pNext_ = NULL;
     context->lockedMutexes.pLast = mutex;
 }
 
@@ -119,16 +119,16 @@ void AddMutexToContextLockedList(ProcessorContext* context, Mutex* mutex)
 // can be made static later
 void RemoveMutexFromContextLockedList(ProcessorContext* context, Mutex* mutex)
 {
-    Mutex* after = mutex->pNext;
-    Mutex* before = mutex->pPrev;
+    Mutex* after = mutex->pNext_;
+    Mutex* before = mutex->pPrev_;
 
     if (after == NULL)
         context->lockedMutexes.pLast = before;
     else
-        after->pPrev = before;
+        after->pPrev_ = before;
 
     if (before == NULL)
         context->lockedMutexes.pFirst = after;
     else
-        before->pNext = after;
+        before->pNext_ = after;
 }

@@ -1220,7 +1220,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
         return;
     }
     
-    BGFileLoad_Global_AddBit();
+    BackgroundLoader::AddLockGlobal();
     unsigned int archiveSize = 0;
     const unsigned char* usedArchive = data_0211e33c;
     
@@ -1230,7 +1230,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
     {
         if (!LoadFileIntoMemory(data_020f1ae4, const_cast<unsigned char*>(usedArchive), &archiveSize))
         {
-            BGFileLoad_Global_RemoveBit();
+            BackgroundLoader::RemoveLockGlobal();
             return;
         }
     }
@@ -1241,11 +1241,11 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
     unsigned int innerFileSize;
     if (!GetFileInNarc(usedArchive, innerFileName, reinterpret_cast<const void**>(&innerFileData), &innerFileSize, 0))
     {
-        BGFileLoad_Global_RemoveBit();
+        BackgroundLoader::RemoveLockGlobal();
         return;
     }
 
-    BGFileLoad_Global_RemoveBit();
+    BackgroundLoader::RemoveLockGlobal();
 
     const unsigned char* copyOfInnerFilePtr;
     unsigned int loadlevel = legacy.level;

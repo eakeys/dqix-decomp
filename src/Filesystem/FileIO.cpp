@@ -86,7 +86,7 @@ void* LoadFileIntoMemory(const char* path, void* buffer, unsigned int* outLength
     void* alwaysNull = NULL;
     
     if (buffer >= data_0211e33c && buffer < &data_0211e33c[0x30000])
-        BGFileLoad_Global_Cleanup();
+        BackgroundLoader::FreeAllocationsGlobal();
 
     ExtendedNitroVM reader;
     reader.ZeroInitialize();

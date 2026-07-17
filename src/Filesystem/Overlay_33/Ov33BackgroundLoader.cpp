@@ -23,7 +23,7 @@ extern Ov33BackgroundLoader data_ov033_022a2a2c;
 
 void PopulateOv33BackgroundLoader(void* fileLoadSpace, unsigned int capacity, int relativePrio)
 {
-    BGFileLoad_Populate(&data_ov033_022a2a2c, fileLoadSpace, capacity, relativePrio);
+    data_ov033_022a2a2c.Populate(fileLoadSpace, capacity, relativePrio);
 }
 
 int Ov33BackgroundLoader::Process()
@@ -34,28 +34,29 @@ int Ov33BackgroundLoader::Process()
     unsigned int crc = 0;
     while (true)
     {
-        this->flags_78c_0 = true;
-        Task* pTask = this->queuedTasks;
-        for (int i = 0; i < this->numPendingTasks; i++, pTask++)
+        flags_78c_0_ = true;
+        // Begin by doing overlay load/unload operations
+        Task* pTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            switch (pTask->type)
+            switch (pTask->type_)
             {
             case TaskType_LoadOverlay:
             {
-                pTask->status_32_low = TaskStatus_InFlight;
+                pTask->status_ = TaskStatus_InFlight;
                 func_020d974c();
-                func_020a1a40(pTask->fileLengthOrOverlayID);
+                func_020a1a40(pTask->fileLengthOrOverlayID_);
                 func_020d970c();
-                pTask->status_32_low = TaskStatus_Complete;
+                pTask->status_ = TaskStatus_Complete;
                 break;
             }
             case TaskType_UnloadOverlay:
             {
-                pTask->status_32_low = TaskStatus_InFlight;
+                pTask->status_ = TaskStatus_InFlight;
                 func_020d974c();
-                func_020a1ccc(pTask->fileLengthOrOverlayID);
+                func_020a1ccc(pTask->fileLengthOrOverlayID_);
                 func_020d970c();
-                pTask->status_32_low = TaskStatus_Complete;
+                pTask->status_ = TaskStatus_Complete;
                 break;
             }
             default:
@@ -64,21 +65,21 @@ int Ov33BackgroundLoader::Process()
             // If we get here, we actually did something, so remove the task
             // and shift things up
             Task* qTask = pTask;
-            for (int j = i + 1; j < this->numPendingTasks; j++, qTask++)
+            for (int j = i + 1; j < numPendingTasks_; j++, qTask++)
             {
                 qTask[0] = qTask[1];
             }
             pTask--;
-            this->numPendingTasks--;
+            numPendingTasks_--;
         }
 
         bool allCompleteTasksAreExternallyAllocated = true;
-        if (this->lastBlockEnd_118 != 0)
+        if (lastBlockEnd_118_ != 0)
         {
-            Task* pTask = this->queuedTasks;
-            for (int i = 0; i < this->numPendingTasks; i++, pTask++)
+            Task* pTask = &queuedTasks_[0];
+            for (int i = 0; i < numPendingTasks_; i++, pTask++)
             {
-                if (pTask->externalAllocator == NULL && pTask->status_32_low == TaskStatus_Complete)
+                if (pTask->externalAllocator_ == NULL && pTask->status_ == TaskStatus_Complete)
                 {
                     allCompleteTasksAreExternallyAllocated = false;
                     break;
@@ -86,32 +87,32 @@ int Ov33BackgroundLoader::Process()
             }
         }
         if (allCompleteTasksAreExternallyAllocated)
-            this->lastBlockEnd_118 = 0;
+            lastBlockEnd_118_ = 0;
 
-        if (this->numPendingTasks <= 0)
-            break;
-        if (this->bits_788 != 0)
+        if (numPendingTasks_ <= 0)
+            goto end;
+        if (processLockBits_ != 0)
         {
-            this->flags_78c_0 = false;
-            break;
+            flags_78c_0_ = false;
+            goto end;
         }
 
         Task* gpcTask = NULL;
-        if (CheckGPCPairValid_020d917c(pGPC, this->reader))
+        if (CheckGPCPairValid_020d917c(pGPC, reader_))
         {
-            for (int j = 0; j < this->numPendingTasks; j++)
+            for (int j = 0; j < numPendingTasks_; j++)
             {
-                if (this->queuedTasks[j].status_32_low == TaskStatus_NewlyCreated)
+                if (queuedTasks_[j].status_ == TaskStatus_Unknown5)
                 {
-                    this->flags_78c_0 = false;
+                    flags_78c_0_ = false;
                     goto end;
                 }
-                else if (this->queuedTasks[j].status_32_low == TaskStatus_Unallocated &&
-                    this->queuedTasks[j].type == TaskType_LoadFromGP2 &&
-                    crc == func_01ff860c(this->queuedTasks[j].outerFilename))
+                else if (queuedTasks_[j].status_ == TaskStatus_Unallocated &&
+                    queuedTasks_[j].type_ == TaskType_LoadFromGP2 &&
+                    crc == func_01ff860c(queuedTasks_[j].outerFilename_))
                 {
-                    this->flags_78c_0 = false;
-                    gpcTask = &this->queuedTasks[j];
+                    flags_78c_0_ = false;
+                    gpcTask = &queuedTasks_[j];
                     break;
                 }
             }
@@ -119,24 +120,24 @@ int Ov33BackgroundLoader::Process()
         
         if (gpcTask == NULL)
         {
-            if (CheckGPCPairValid_020d917c(pGPC, this->reader))
+            if (CheckGPCPairValid_020d917c(pGPC, reader_))
             {
-                ResetGPCPair(&pGPC, this->reader);
+                ResetGPCPair(&pGPC, reader_);
                 crc = 0;
-                this->unknown_11c = 0;
-                this->flags_78c_4 = false;
+                unknown_11c_ = 0;
+                flagMaybeGP2OperationInFlight_ = false;
             }
-            Task* qTask = this->queuedTasks;
-            for (int j = 0; j < this->numPendingTasks; j++, qTask++)
+            Task* qTask = &queuedTasks_[0];
+            for (int j = 0; j < numPendingTasks_; j++, qTask++)
             {
-                if (qTask->status_32_low == TaskStatus_NewlyCreated)
+                if (qTask->status_ == TaskStatus_Unknown5)
                 {
-                    this->flags_78c_0 = false;
+                    flags_78c_0_ = false;
                     goto end;
                 }
-                else if (qTask->status_32_low == TaskStatus_Unallocated)
+                else if (qTask->status_ == TaskStatus_Unallocated)
                 {
-                    this->flags_78c_0 = false;
+                    flags_78c_0_ = false;
                     gpcTask = qTask;
                     break;
                 }
@@ -146,185 +147,184 @@ int Ov33BackgroundLoader::Process()
         if (gpcTask == NULL)
             goto end;
 
-        gpcTask->status_32_low = TaskStatus_InFlight;
-        Task taskCopy;
-        taskCopy = *gpcTask; // call copy-assignment operator instead of copy constructor
-        this->flags_78c_3 = true;
+        gpcTask->status_ = TaskStatus_InFlight;
+        Task inFlightTask;
+        inFlightTask = *gpcTask; // work with a copy, we'll copy changes back at the end
+        flags_78c_3_ = true;
         func_020d974c();
         char fullName[80];
-        BGFileLoadEntry_GetFullName(&taskCopy, fullName);
-        taskCopy.pFileData = NULL;
-        taskCopy.fileLengthOrOverlayID = 0;
-        switch (taskCopy.type)
+        inFlightTask.GetFullFilename(fullName);
+        inFlightTask.pFileData = NULL;
+        inFlightTask.fileLengthOrOverlayID_ = 0;
+        switch (inFlightTask.type_)
         {
         case TaskType_LoadFileDefault:
         case TaskType_LoadGP1:
         {
-            this->reader.ZeroInitialize();
-            if (!this->reader.Open(fullName, false))
-                taskCopy.status_32_low = TaskStatus_LoadFileFailed;
+            reader_.ZeroInitialize();
+            if (!reader_.Open(fullName, false))
+                inFlightTask.status_ = TaskStatus_LoadFileFailed;
             else
             {
-                if (taskCopy.type == TaskType_LoadFileDefault)
-                    taskCopy.fileLengthOrOverlayID = this->reader.GetFileSize();
+                if (inFlightTask.type_ == TaskType_LoadFileDefault)
+                    inFlightTask.fileLengthOrOverlayID_ = reader_.GetFileSize();
                 else
                 {
                     CompressionPrefix prefix;
                     *(unsigned int*)&prefix = 0;
-                    this->reader.Read(&prefix, 4);
-                    taskCopy.fileLengthOrOverlayID = prefix.GetDecompressedLength();
-                    this->reader.Seek(0);
+                    reader_.Read(&prefix, 4);
+                    inFlightTask.fileLengthOrOverlayID_ = prefix.GetDecompressedLength();
+                    reader_.Seek(0);
                 }
                 unsigned int allocSize;
-                if (taskCopy.type == TaskType_LoadFileDefault)
-                    allocSize = taskCopy.fileLengthOrOverlayID;
+                if (inFlightTask.type_ == TaskType_LoadFileDefault)
+                    allocSize = inFlightTask.fileLengthOrOverlayID_;
                 else
-                    allocSize = (taskCopy.fileLengthOrOverlayID + 7) & ~3;
+                    allocSize = (inFlightTask.fileLengthOrOverlayID_ + 7) & ~3;
 
-                if (taskCopy.externalAllocator != NULL)
+                if (inFlightTask.externalAllocator_ != NULL)
                 {
-                    taskCopy.pFileData = taskCopy.externalAllocator->Allocate(allocSize);
-                    if (taskCopy.pFileData == NULL)
-                        taskCopy.status_32_low = TaskStatus_Unallocated;
+                    inFlightTask.pFileData = inFlightTask.externalAllocator_->Allocate(allocSize);
+                    if (inFlightTask.pFileData == NULL)
+                        inFlightTask.status_ = TaskStatus_Unallocated;
                 }
                 else
                 {
-                    taskCopy.pFileData = BGFileLoad_AllocateBlock(this, &taskCopy.mainBlockAllocation, allocSize);
-                    if (taskCopy.pFileData == NULL)
-                        taskCopy.status_32_low = TaskStatus_Unallocated;
+                    inFlightTask.pFileData = AllocateInScratchSpace(&inFlightTask.scratchAlloc_, allocSize);
+                    if (inFlightTask.pFileData == NULL)
+                        inFlightTask.status_ = TaskStatus_Unallocated;
                 }
 
-                if (taskCopy.pFileData != NULL && taskCopy.status_32_low == TaskStatus_InFlight)
+                if (inFlightTask.pFileData != NULL && inFlightTask.status_ == TaskStatus_InFlight)
                 {
-                    if (taskCopy.type == TaskType_LoadFileDefault)
+                    if (inFlightTask.type_ == TaskType_LoadFileDefault)
                     {
-                        this->reader.Read(taskCopy.pFileData, taskCopy.fileLengthOrOverlayID);
+                        reader_.Read(inFlightTask.pFileData, inFlightTask.fileLengthOrOverlayID_);
                     }
-                    else
+                    else // TaskType_LoadGP1
                     {
-                        unsigned int compressedSize = this->reader.GetFileSize();
-                        this->reader.DecompressBytes(taskCopy.pFileData, taskCopy.fileLengthOrOverlayID,
+                        unsigned int compressedSize = reader_.GetFileSize();
+                        reader_.DecompressBytes(inFlightTask.pFileData, inFlightTask.fileLengthOrOverlayID_,
                             compressedSize, allocSize);
                     }
                 }
                 else
                 {
-                    BGFileLoad_FreeBlock(this, &taskCopy.mainBlockAllocation);
-                    taskCopy.fileLengthOrOverlayID = 0;
+                    FreeScratchSpace(&inFlightTask.scratchAlloc_);
+                    inFlightTask.fileLengthOrOverlayID_ = 0;
                 }
-                this->reader.Close();
+                reader_.Close();
             }
             break;
         }
         case TaskType_LoadFromGP2:
         {
-            this->flags_78c_4 = true;
+            flagMaybeGP2OperationInFlight_ = true;
             GPCFile::Header header;
-            unsigned int outputCapacity = this->genericFileLoadCapacity_114 - this->lastBlockEnd_118 - this->unknown_11c;
-            unsigned char* outputBuffer = (unsigned char*)this->genericFileLoadPtr_110 + this->lastBlockEnd_118;
+            unsigned int outputCapacity = scratchSpaceSize_ - lastBlockEnd_118_ - unknown_11c_;
+            unsigned char* outputBuffer = (unsigned char*)scratchSpace_ + lastBlockEnd_118_;
             unsigned int outLength = 0;
             bool outSuccess = false;
-            if (!CheckGPCPairValid_020d917c(pGPC, this->reader) &&
-                !LoadAndDecompressGPCHeaderAndInnerFileInfo(&pGPC, this->reader, fullName, outputBuffer,
+            if (!CheckGPCPairValid_020d917c(pGPC, reader_) &&
+                !LoadAndDecompressGPCHeaderAndInnerFileInfo(&pGPC, reader_, fullName, outputBuffer,
                     outLength, outputCapacity, true, &outSuccess))
             {
-                this->flags_78c_4 = false;
+                flagMaybeGP2OperationInFlight_ = false;
                 if (outSuccess)
-                    taskCopy.status_32_low = TaskStatus_Unallocated;
+                    inFlightTask.status_ = TaskStatus_Unallocated;
                 else
-                    taskCopy.status_32_low = TaskStatus_LoadFileFailed;
+                    inFlightTask.status_ = TaskStatus_LoadFileFailed;
             }
             else
             {
-                crc = func_01ff860c(taskCopy.outerFilename);
-                this->unknown_11c += outLength;
-                unsigned int innerFileLength = GetGPCInnerFileLengthByName(pGPC, this->reader, taskCopy.innerFilename);
+                crc = func_01ff860c(inFlightTask.outerFilename_);
+                unknown_11c_ += outLength;
+                unsigned int innerFileLength = GetGPCInnerFileLengthByName(pGPC, reader_, inFlightTask.innerFilename_);
                 unsigned int allocSize = (innerFileLength + 7) & ~3;
-                if (taskCopy.externalAllocator != NULL)
+                if (inFlightTask.externalAllocator_ != NULL)
                 {
-                    taskCopy.pFileData = taskCopy.externalAllocator->Allocate(allocSize);
-                    if (taskCopy.pFileData == NULL)
-                        taskCopy.status_32_low = TaskStatus_Unallocated;
+                    inFlightTask.pFileData = inFlightTask.externalAllocator_->Allocate(allocSize);
+                    if (inFlightTask.pFileData == NULL)
+                        inFlightTask.status_ = TaskStatus_Unallocated;
                     else
                     {
-                        if (!DecompressFileFromGPCByName(pGPC, this->reader, taskCopy.pFileData, taskCopy.fileLengthOrOverlayID, allocSize, taskCopy.innerFilename))
+                        if (!DecompressFileFromGPCByName(pGPC, reader_, inFlightTask.pFileData, inFlightTask.fileLengthOrOverlayID_, allocSize, inFlightTask.innerFilename_))
                         {
-                            taskCopy.externalAllocator->Free(taskCopy.pFileData);
-                            taskCopy.pFileData = NULL;
-                            taskCopy.fileLengthOrOverlayID = 0;
-                            taskCopy.status_32_low = TaskStatus_DecompressionFailed;
+                            inFlightTask.externalAllocator_->Free(inFlightTask.pFileData);
+                            inFlightTask.pFileData = NULL;
+                            inFlightTask.fileLengthOrOverlayID_ = 0;
+                            inFlightTask.status_ = TaskStatus_DecompressionFailed;
                         }
                     }
                 }
                 else
                 {
-                    taskCopy.pFileData = BGFileLoad_AllocateBlock(this, &taskCopy.mainBlockAllocation, allocSize);
-                    if (taskCopy.pFileData == NULL)
-                        taskCopy.status_32_low = TaskStatus_Unallocated;
+                    inFlightTask.pFileData = AllocateInScratchSpace(&inFlightTask.scratchAlloc_, allocSize);
+                    if (inFlightTask.pFileData == NULL)
+                        inFlightTask.status_ = TaskStatus_Unallocated;
                     else
                     {
-                        if (!DecompressFileFromGPCByName(pGPC, this->reader, taskCopy.pFileData, taskCopy.fileLengthOrOverlayID, allocSize, taskCopy.innerFilename))
+                        if (!DecompressFileFromGPCByName(pGPC, reader_, inFlightTask.pFileData, inFlightTask.fileLengthOrOverlayID_, allocSize, inFlightTask.innerFilename_))
                         {
-                            BGFileLoad_FreeBlock(this, &taskCopy.mainBlockAllocation);
-                            taskCopy.pFileData = NULL;
-                            taskCopy.fileLengthOrOverlayID = 0;
-                            taskCopy.status_32_low = TaskStatus_DecompressionFailed;
+                            FreeScratchSpace(&inFlightTask.scratchAlloc_);
+                            inFlightTask.pFileData = NULL;
+                            inFlightTask.fileLengthOrOverlayID_ = 0;
+                            inFlightTask.status_ = TaskStatus_DecompressionFailed;
                         }
                     }
                 }
             }
-
-            break;
+            break; // switch statement
         }
         }
-        if (taskCopy.pFileData != NULL)
-            taskCopy.status_32_low = TaskStatus_Complete;
+        if (inFlightTask.pFileData != NULL)
+            inFlightTask.status_ = TaskStatus_Complete;
         
         func_020d970c();
-        this->flags_78c_3 = false;
-        BGFileLoad_RecalculateCounters(this);
+        flags_78c_3_ = false;
+        RefreshCounters();
         Task* pTaskToUpdate = NULL;
-        Task* qTask = this->queuedTasks;
-        for (int i = 0; i < this->numPendingTasks; i++, qTask++)
+        Task* qTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, qTask++)
         {
-            if (qTask->loaderID != taskCopy.loaderID)
+            if (qTask->taskID_ != inFlightTask.taskID_)
                 continue;
 
-            if (qTask->status_32_low == TaskStatus_InFlight)
+            if (qTask->status_ == TaskStatus_InFlight)
                 pTaskToUpdate = qTask;
             break;
         }
 
         if (pTaskToUpdate != NULL)
         {
-            *pTaskToUpdate = taskCopy;
+            *pTaskToUpdate = inFlightTask;
         }
         else
         {
-            BGFileLoad_FreeBlock(this, &taskCopy.mainBlockAllocation);
-            if (taskCopy.status_32_low == TaskStatus_Complete && taskCopy.externalAllocator != NULL)
-                taskCopy.externalAllocator->Free(taskCopy.pFileData);
-            if (CheckGPCPairValid_020d917c(pGPC, this->reader))
+            FreeScratchSpace(&inFlightTask.scratchAlloc_);
+            if (inFlightTask.status_ == TaskStatus_Complete && inFlightTask.externalAllocator_ != NULL)
+                inFlightTask.externalAllocator_->Free(inFlightTask.pFileData);
+            if (CheckGPCPairValid_020d917c(pGPC, reader_))
             {
-                ResetGPCPair(&pGPC, this->reader);
+                ResetGPCPair(&pGPC, reader_);
                 crc = 0;
-                this->unknown_11c = 0;
-                this->flags_78c_4 = false;
+                unknown_11c_ = 0;
+                flagMaybeGP2OperationInFlight_ = false;
             }
         }
 
-        BGFileLoadEntry_Initialize(&taskCopy);
+        inFlightTask.ZeroInitialize();
     }
 
 end:
     func_020d974c();
-    if (CheckGPCPairValid_020d917c(pGPC, this->reader))
+    if (CheckGPCPairValid_020d917c(pGPC, reader_))
     {
-        ResetGPCPair(&pGPC, this->reader);
-        this->unknown_11c = 0;
-        this->flags_78c_4 = false;
+        ResetGPCPair(&pGPC, reader_);
+        unknown_11c_ = 0;
+        flagMaybeGP2OperationInFlight_ = false;
     }
-    if (this->numPendingTasks <= 0)
+    if (numPendingTasks_ <= 0)
         func_020d9788(5);
     ZeroDestroyGPCPointer(&pGPC);
     return 0;

@@ -4,10 +4,6 @@
 #include "System/ProcessorContext.h"
 #include "Memory/SafeAllocator.h"
 
-#define USE_BITFIELD
-
-extern "C" void InitializeBGFileLoadData(struct BackgroundLoader* data);
-
 // sizeof == 0x794 == 1940 bytes. This struct is passed as the first
 // parameter to various functions in the 0202fxxx range, and an instance
 // of it is constructed in overlay 33's bss section (at 0x022a2a2c, usa).
@@ -20,20 +16,25 @@ struct BackgroundLoader
     // sizeof == 0x44 == 68 bytes
     struct Task
     {
-        char outerFilename[0x18];
-        char innerFilename[0x18];
-        short loaderID; // unrelated to nitro file ID or cache index
-        char status_32_low : 4; // probably task status
-        char type : 4; // e.g. 2 = archive or similar
-        unsigned char containerDirectoryIndex; // this is indexing directories within data/
-        SafeAllocator* externalAllocator;
+        char outerFilename_[0x18];
+        char innerFilename_[0x18];
+        short taskID_; // unrelated to nitro file ID or cache index
+        char status_ : 4;
+        char type_ : 4;
+        unsigned char containerDirectoryIndex_; // this is indexing directories within data/
+        SafeAllocator* externalAllocator_;
         void* pFileData;
-        unsigned int fileLengthOrOverlayID;
-        struct Allocation {
-            unsigned short firstWord;
-            unsigned short numWords;
+        unsigned int fileLengthOrOverlayID_;
+        struct ScratchSpaceAllocation {
+            unsigned short firstWord_;
+            unsigned short numWords_;
         }; 
-        Allocation mainBlockAllocation;
+        ScratchSpaceAllocation scratchAlloc_;
+
+        // usa: func_0202f700
+        void ZeroInitialize();
+        // usa: func_0202f760
+        bool GetFullFilename(char* outBuffer);
     };
 
     enum TaskStatus
@@ -44,7 +45,7 @@ struct BackgroundLoader
         TaskStatus_Complete = 2, // probably means done
         TaskStatus_DecompressionFailed = 3,
         TaskStatus_LoadFileFailed = 4,
-        TaskStatus_NewlyCreated = 5,
+        TaskStatus_Unknown5 = 5,
     };
 
     enum TaskType
@@ -62,22 +63,105 @@ struct BackgroundLoader
 
     // points to 0x022a2a08, which in turn points to the function
     // func_ov_033_022a21a8. The context's execution repeatedly calls this function
-    ProcessorContext context;
-    ExtendedNitroVM reader;
-    void* genericFileLoadPtr_110;
-    volatile unsigned int genericFileLoadCapacity_114;
-    volatile int lastBlockEnd_118;
-    volatile unsigned int unknown_11c;
-    int unknown_120;
-    volatile int numPendingTasks;
-    Task queuedTasks[24];
-    volatile unsigned int bits_788; // this gets left shifted and 1s inserted
-    volatile int flags_78c_0 : 1;
-    volatile int flags_78c_1 : 1;
-    volatile int flags_78c_2 : 1;
-    volatile int flags_78c_3 : 1;
-    volatile int flags_78c_4 : 1;
-    int unknown_790;
+    ProcessorContext context_;
+    ExtendedNitroVM reader_;
+    void* scratchSpace_;
+    volatile unsigned int scratchSpaceSize_;
+    volatile int lastBlockEnd_118_;
+    volatile unsigned int unknown_11c_;
+    int unknown_120_;
+    volatile int numPendingTasks_;
+    Task queuedTasks_[24];
+    // like a refcount, but works by going << 1 and | 1 to increment, >> 1 to decrement.
+    // While nonzero, the processing thread will not do any tasks. This is useful
+    // if e.g. you want to load a file into the same scratch space (see e.g.
+    // DetailedTreasureMapData::LoadLegacyBossStats())
+    volatile unsigned int processLockBits_;
+    volatile int flags_78c_0_ : 1;
+    volatile int flags_78c_1_ : 1;
+    volatile int flags_78c_2_ : 1;
+    volatile int flags_78c_3_ : 1;
+    volatile int flagMaybeGP2OperationInFlight_ : 1;
+    int unknown_790_;
+
+    // usa: func_0202f798
+    static BackgroundLoader* GetInstance();
+    // usa: func_0202f7a8
+    static void FreeAllocationsGlobal();
+    // usa: func_0202f7c8
+    static void AddLockGlobal();
+    // usa: func_0202f7e8
+    static void RemoveLockGlobal();
+
+    // usa: func_0202f808
+    void InitializeOrReset();
+    // usa: func_0202f894
+    void Populate(void* scratchSpace, unsigned int scratchSize, int relativePrio);
+    // usa: func_0202f920
+    void MaybeWaitIdle();
+    // usa: func_0202f984
+    void AddLock();
+    // usa: func_0202f9b4
+    void RemoveLock();
+    // usa: func_0202fa00
+    void RemoveAllLocks();
+    // usa: func_0202fa38
+    // If alloc is not null, the file will be loaded into dynamically allocated
+    // memory from the allocator, otherwise, the scratch space will be used
+    int QueueFileTask(const char* filename, int type, const char* innerFile, SafeAllocator* alloc);
+    // usa: func_0202fc38
+    // Queues a load or unload of an overlay.
+    int QueueOverlayTask(unsigned int id, bool load);
+
+    // usa: func_0202fcfc
+    int QueueLoadFile(const char* filename, SafeAllocator* alloc);
+    // usa: func_0202fd14
+    int QueueLoadGP1(const char* filename, SafeAllocator* alloc);
+    // usa: func_0202fd2c
+    int QueueLoadFileInGP2(const char* gp2, const char* innerFile, SafeAllocator* alloc);
+    // usa: func_0202fd44
+    int QueueLoadOverlay(unsigned int id);
+    // usa: func_0202fd54
+    void QueueTaskStatus5();
+
+    // usa: func_0202fdd0
+    // -1 = failed, 0 = underway/queued maybe?, 1 = successfully completed
+    int GetTaskStatus(int taskID);
+    // usa: func_0202fe58
+    int GetFlag0();
+    // usa: func_0202fe68
+    int GetDetailedTaskStatus(int taskID);
+
+    // usa: func_0202fec8
+    void GetLoadedFileByID(int taskID, void** outPtr, unsigned int* outLength);
+    // usa: func_0202ff34
+    // returns the ID of the task that loaded this file, or -1 if not loaded.
+    int GetLoadedFileByName(const char* name, void** outPtr, unsigned int* outLength);
+    // usa: func_0202ffd8
+    // returns the ID of the task that loaded this file, or -1 if not loaded.
+    int GetLoadedFileInArchive(const char* archive, const char* innerFile, void** outPtr, unsigned int* outLength);
+
+    // usa: func_02030090
+    void MaybeReset();
+    // usa: func_02030110
+    void MaybeFreeAllocations();
+    // usa: func_020301c8
+    void RemoveTask(int taskID);
+
+    // implicitly created: func_02030310 = Task::operator=(const Task&)
+
+    // usa: func_02030390
+    int GetNumQueuedTasks();
+    // usa: func_02030398
+    // returns true if a task of the specified id was found
+    bool GetTaskFilename(int taskID, char* outBuffer);
+
+    // usa: func_02030400
+    void* AllocateInScratchSpace(Task::ScratchSpaceAllocation* output, unsigned int allocSize);
+    // usa: func_02030584
+    bool FreeScratchSpace(Task::ScratchSpaceAllocation* block);
+    // usa: func_020305c8
+    void RefreshCounters();
 };
 
 struct Struct_02104304
@@ -86,73 +170,3 @@ struct Struct_02104304
     BackgroundLoader* pFileLoadData;
     char stackSpace[0x800];
 } extern data_02104304;
-
-extern "C"
-{
-    // usa: func_0202f700
-    void BGFileLoadEntry_Initialize(BackgroundLoader::Task* entry);
-    // usa: func_0202f744
-    void BGFileLoad_ThreadFunction(BackgroundLoader* loader);
-    // usa: func_0202f760
-    bool BGFileLoadEntry_GetFullName(BackgroundLoader::Task* entry, char* outName);
-    // usa: func_0202f798
-    BackgroundLoader* BGFileLoad_GetGlobalInstance();
-
-    // usa: func_0202f7a8
-    void BGFileLoad_Global_Cleanup();
-    // usa: func_0202f7c8
-    void BGFileLoad_Global_AddBit();
-    // usa: func_0202f7e8
-    void BGFileLoad_Global_RemoveBit();
-    // usa: func_0202f808
-    void InitializeBGFileLoadData(BackgroundLoader* data);
-    // usa: func_0202f894
-    void BGFileLoad_Populate(BackgroundLoader* loader, void* fileLoadSpace, unsigned int spaceCapacity, int relativePrio);
-    // usa: func_0202f920
-    void BGFileLoad_AwaitFlagBits3And4Clear_0202f920(BackgroundLoader* loader);
-    // usa: func_0202f984
-    void BGFileLoad_AddBit(BackgroundLoader* loader);
-    // usa: func_0202f9b4
-    void BGFileLoad_RemoveBit(BackgroundLoader* loader);
-    // usa: func_0202fa00
-    void BGFileLoad_ClearAllBits(BackgroundLoader* loader);
-    // usa: func_0202fa38
-    int BGFileLoad_CreateFileEntry(BackgroundLoader* loader, const char* filename, int type, const char* innerFile, SafeAllocator& alloc);
-    // usa: func_0202fc38
-    int BGFileLoad_QueueOverlayTask(BackgroundLoader* loader, unsigned int id, bool toLoad);
-
-    int BGFileLoad_QueueLoadFileByName(BackgroundLoader* loader, const char* filename, SafeAllocator& alloc);
-    int BGFileLoad_QueueLoadGP1Archive(BackgroundLoader* loader, const char* filename, SafeAllocator& alloc);
-    int BGFileLoad_QueueLoadFileFromGP2(BackgroundLoader* loader, const char* archive, const char* innerfile, SafeAllocator& alloc);
-    int BGFileLoad_QueueLoadOverlay(BackgroundLoader* loader, unsigned int overlayID);
-
-    void BGFileLoad_CreateEntryWith32Low5(BackgroundLoader* loader);
-    // returns -1, 0 or 1. I believe: -1 = invalid/fail, 0 = pending, 1 = done
-    int BGFileLoad_GetTaskStatus_0202fdd0(BackgroundLoader* loader, int taskID);
-    int BGFileLoad_GetFlagBit0(BackgroundLoader* loader);
-    int BGFileLoad_GetDetailedTaskStatus_0202fe68(BackgroundLoader* loader, int taskID);
-
-    void BGFileLoad_GetFilePointerById(BackgroundLoader* loader, int id, void** outPtr, unsigned int* outLength);
-    int BGFileLoad_GetFilePointerByName_0202ff34(BackgroundLoader* loader,
-        const char* filename, void** outPtr, unsigned int* outLength);
-    int BGFileLoad_GetInnerFilePointerByName_0202ffd8(BackgroundLoader* loader,
-        const char* outerFile, const char* innerFile, void** outPtr, unsigned int* outLength);
-
-    // usa: func_02030090
-    void BGFileLoad_InitOrReset_02030090(BackgroundLoader* loader);
-    // usa: func_02030110
-    void BGFileLoad_Cleanup_02030110(BackgroundLoader* loader);
-    // usa: func_020301c8
-    void BGFileLoad_020301c8(BackgroundLoader* loader, int taskID);
-    // func_02030310 is BGFileLoadData::Task::operator=(const Task&)
-    // usa: func_02030390
-    int BGFileLoad_GetNumQueuedTasks(BackgroundLoader* loader);
-    // usa: func_02030398
-    bool BGFileLoad_GetTaskFilename(BackgroundLoader* loader, int taskID, char* outBuffer);
-    // usa: func_02030400
-    void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLoader::Task::Allocation* output, unsigned int filesize);
-    // usa: func_02030584
-    bool BGFileLoad_FreeBlock(BackgroundLoader* loader, BackgroundLoader::Task::Allocation* block);
-    // usa: func_020305c8
-    void BGFileLoad_RecalculateCounters(BackgroundLoader* loader);
-}

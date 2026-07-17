@@ -38,21 +38,21 @@ extern "C"
     char data_020ef90f[]; // "data/"
 }
 
-extern "C" void BGFileLoadEntry_Initialize(BackgroundLoader::Task *entry)
+void BackgroundLoader::Task::ZeroInitialize()
 {
-    entry->outerFilename[0] = '\0';
-    entry->innerFilename[0] = '\0';
-    entry->loaderID = 0;
-    entry->status_32_low = BackgroundLoader::TaskStatus_Invalid;
-    entry->externalAllocator = NULL;
-    entry->pFileData = NULL;
-    entry->fileLengthOrOverlayID = 0;
-    entry->type = 0;
-    entry->mainBlockAllocation.firstWord = 0;
-    entry->mainBlockAllocation.numWords = 0;
+    outerFilename_[0] = '\0';
+    innerFilename_[0] = '\0';
+    taskID_ = 0;
+    status_ = BackgroundLoader::TaskStatus_Invalid;
+    externalAllocator_ = NULL;
+    pFileData = NULL;
+    fileLengthOrOverlayID_ = 0;
+    type_ = 0;
+    scratchAlloc_.firstWord_ = 0;
+    scratchAlloc_.numWords_ = 0;
 }
 
-void BGFileLoad_ThreadFunction(BackgroundLoader *loader)
+void BackgroundLoaderThreadFunction(BackgroundLoader *loader)
 {
     while (true)
     {
@@ -60,137 +60,131 @@ void BGFileLoad_ThreadFunction(BackgroundLoader *loader)
     }
 }
 
-extern "C" bool BGFileLoadEntry_GetFullName(BackgroundLoader::Task *entry, char *outName)
+bool BackgroundLoader::Task::GetFullFilename(char *outBuffer)
 {
-    sprintf(outName, data_020ef908, // "%s%s%s"
+    sprintf(outBuffer, data_020ef908, // "%s%s%s"
         data_020ef90f, // "data/"
-        data_020ef8a4[entry->containerDirectoryIndex], // e.g. "ani/" or "bin/tbox/"
-        entry->outerFilename);
+        data_020ef8a4[containerDirectoryIndex_], // e.g. "ani/" or "bin/tbox/"
+        outerFilename_);
     return true;
 }
 
-extern "C" BackgroundLoader *BGFileLoad_GetGlobalInstance()
+BackgroundLoader* BackgroundLoader::GetInstance()
 {
     return data_02104304.pFileLoadData;
 }
 
-extern "C" void BGFileLoad_Global_Cleanup()
+void BackgroundLoader::FreeAllocationsGlobal()
 {
     if (data_02104304.pFileLoadData)
-        BGFileLoad_Cleanup_02030110(data_02104304.pFileLoadData);
+        data_02104304.pFileLoadData->MaybeFreeAllocations();
 }
 
-extern "C" void BGFileLoad_Global_AddBit()
+void BackgroundLoader::AddLockGlobal()
 {
     if (data_02104304.pFileLoadData)
-        BGFileLoad_AddBit(data_02104304.pFileLoadData);
+        data_02104304.pFileLoadData->AddLock();
 }
 
-extern "C" void BGFileLoad_Global_RemoveBit()
+void BackgroundLoader::RemoveLockGlobal()
 {
     if (data_02104304.pFileLoadData)
-        BGFileLoad_RemoveBit(data_02104304.pFileLoadData);
+        data_02104304.pFileLoadData->RemoveLock();
 }
 
-extern "C" void InitializeBGFileLoadData(BackgroundLoader* data)
+void BackgroundLoader::InitializeOrReset()
 {
-    data->reader.ZeroInitialize();
-    data_02104304.pFileLoadData = data;
+    reader_.ZeroInitialize();
+    data_02104304.pFileLoadData = this;
 
-    data->genericFileLoadPtr_110 = 0;
-    data->genericFileLoadCapacity_114 = 0;
-    data->lastBlockEnd_118 = 0;
-    data->unknown_11c = 0;
-    data->unknown_120 = 0x10000;
-    data->numPendingTasks = 0;
-    data->bits_788 = 0; 
+    scratchSpace_ = 0;
+    scratchSpaceSize_ = 0;
+    lastBlockEnd_118_ = 0;
+    unknown_11c_ = 0;
+    unknown_120_ = 0x10000;
+    numPendingTasks_ = 0;
+    processLockBits_ = 0; 
 
-    data->flags_78c_0 = true;
-    data->flags_78c_3 = false;
-    data->flags_78c_4 = false;
+    flags_78c_0_ = true;
+    flags_78c_3_ = false;
+    flagMaybeGP2OperationInFlight_ = false;
 
-    BackgroundLoader::Task* pSubstruct = data->queuedTasks;
-    for (int i = 0; i < 24; i++, pSubstruct++)
+    BackgroundLoader::Task* pTask = &queuedTasks_[0];
+    for (int i = 0; i < 24; i++, pTask++)
     {
-        BGFileLoadEntry_Initialize(pSubstruct);
+        pTask->ZeroInitialize();
     }
 }
 
-extern "C" void BGFileLoad_Populate(BackgroundLoader *loader, void* fileLoadSpace,
-    unsigned int spaceCapacity, int relativePrio)
+void BackgroundLoader::Populate(void* fileLoadSpace, unsigned int spaceCapacity, int relativePrio)
 {
-    InitializeBGFileLoadData(loader);
-    loader->genericFileLoadPtr_110 = fileLoadSpace;
-    loader->genericFileLoadCapacity_114 = spaceCapacity;
-    loader->bits_788 = 0;
-#ifdef USE_BITFIELD
-    ((volatile BackgroundLoader*)loader)->flags_78c_1 = false;
-    ((volatile BackgroundLoader*)loader)->flags_78c_0 = true;
-    ((volatile BackgroundLoader*)loader)->flags_78c_2 = true;
-#else
-    ((volatile BGFileLoadData*)loader)->flags_78c = loader->flags_78c & ~BGFILELOADDATA_FLAG_1;
-    ((volatile BGFileLoadData*)loader)->flags_78c = loader->flags_78c & ~BGFILELOADDATA_FLAG_0 | BGFILELOADDATA_FLAG_0;
-    ((volatile BGFileLoadData*)loader)->flags_78c = loader->flags_78c | BGFILELOADDATA_FLAG_2;
-#endif
-    func_020d97a8(&loader->context, &data_02104304.stackSpace,
+    InitializeOrReset();
+    scratchSpace_ = fileLoadSpace;
+    scratchSpaceSize_ = spaceCapacity;
+    processLockBits_ = 0;
+    flags_78c_1_ = false;
+    flags_78c_0_ = true;
+    flags_78c_2_ = true;
+
+    func_020d97a8(&context_, &data_02104304.stackSpace,
         sizeof(data_02104304.stackSpace), relativePrio,
-        &BGFileLoad_ThreadFunction, (int)loader);
-    func_020d9828(&loader->context);
+        &BackgroundLoaderThreadFunction, (int)this);
+    func_020d9828(&context_);
 }
 
-extern "C" void BGFileLoad_AwaitFlagBits3And4Clear_0202f920(BackgroundLoader* loader)
+void BackgroundLoader::MaybeWaitIdle()
 {
-    BGFileLoad_Cleanup_02030110(loader);
-    BGFileLoad_AddBit(loader);
+    MaybeFreeAllocations();
+    AddLock();
     while (true)
     {
         func_020d970c();
-        bool canStop = true;
-        if (!loader->flags_78c_3 && loader->flags_78c_4 == 0)
-            canStop = false;
+        bool keepWaiting = true;
+        if (!flags_78c_3_ && flagMaybeGP2OperationInFlight_ == false)
+            keepWaiting = false;
 
         func_020d974c();
-        if (!canStop)
+        if (!keepWaiting)
             return;
         func_020d9788(1);
     }
 }
 
-extern "C" void BGFileLoad_AddBit(BackgroundLoader* loader)
+void BackgroundLoader::AddLock()
 {
-    if (loader->numPendingTasks == 0 && loader->bits_788 == 0)
+    if (numPendingTasks_ == 0 && processLockBits_ == 0)
         return;
 
-    loader->bits_788 <<= 1;
-    loader->bits_788 |= 1;
+    processLockBits_ <<= 1;
+    processLockBits_ |= 1;
 }
 
-extern "C" void BGFileLoad_RemoveBit(BackgroundLoader* loader)
+void BackgroundLoader::RemoveLock()
 {
-    if (loader->bits_788 == 0)
+    if (processLockBits_ == 0)
         return;
 
-    loader->bits_788 >>= 1;
-    if (loader->bits_788 == 0)
+    processLockBits_ >>= 1;
+    if (processLockBits_ == 0)
     {
-        loader->flags_78c_2 = false;
-        if (loader->numPendingTasks != 0)
+        flags_78c_2_ = false;
+        if (numPendingTasks_ != 0)
             func_020d9788(1);
     }
 }
 
-extern "C" void BGFileLoad_ClearAllBits(BackgroundLoader *loader)
+void BackgroundLoader::RemoveAllLocks()
 {
-    if (loader->bits_788 != 0)
-        loader->bits_788 = 0;
+    if (processLockBits_ != 0)
+        processLockBits_ = 0;
 
-    loader->flags_78c_2 = false;
+    flags_78c_2_ = false;
 
-    if (loader->numPendingTasks != 0)
+    if (numPendingTasks_ != 0)
         func_020d9788(1);
 }
 
-extern "C" int BGFileLoad_CreateFileEntry(BackgroundLoader *loader, const char *filename, int type, const char *innerFile, SafeAllocator &alloc)
+int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* innerFile, SafeAllocator* alloc)
 {
     int newID = -1;
     func_020d970c();
@@ -202,22 +196,22 @@ extern "C" int BGFileLoad_CreateFileEntry(BackgroundLoader *loader, const char *
 
     if (filename != NULL)
     {
-        if (loader->numPendingTasks >= 24)
+        if (numPendingTasks_ >= 24)
             func_020c9be0();
         else
         {   
-            BackgroundLoader::Task* entry = &loader->queuedTasks[loader->numPendingTasks];
-            entry->loaderID = data_02104304.counter;
-            entry->status_32_low = BackgroundLoader::TaskStatus_Unallocated;
-            entry->externalAllocator = &alloc;
+            BackgroundLoader::Task* entry = &queuedTasks_[numPendingTasks_];
+            entry->taskID_ = data_02104304.counter;
+            entry->status_ = BackgroundLoader::TaskStatus_Unallocated;
+            entry->externalAllocator_ = alloc;
             entry->pFileData = NULL;
-            entry->type = type;
+            entry->type_ = type;
             if (type == BackgroundLoader::TaskType_LoadFromGP2 && innerFile != NULL)
             {
                 char replacedInnerFile[128];
                 func_0200f374(replacedInnerFile, sizeof(replacedInnerFile));
                 StringReplaceLanguageTag(innerFile, replacedInnerFile, language);
-                strcpy(entry->innerFilename, replacedInnerFile);
+                strcpy(entry->innerFilename_, replacedInnerFile);
             }
             for (char* ptr = replacedFilename; *ptr != '\0'; ptr++)
             {
@@ -244,8 +238,8 @@ extern "C" int BGFileLoad_CreateFileEntry(BackgroundLoader *loader, const char *
                         unsigned int filenameLength = strlen(innerDirPtr + subdirLength);
                         if (filenameLength + 1 > 0x18)
                             func_020c9be0();
-                        entry->containerDirectoryIndex = subdirIdx;
-                        strcpy(entry->outerFilename, innerDirPtr + subdirLength);
+                        entry->containerDirectoryIndex_ = subdirIdx;
+                        strcpy(entry->outerFilename_, innerDirPtr + subdirLength);
                         success = true;
                         goto BreakOutOfLoopSuccess;
                     }
@@ -256,9 +250,9 @@ extern "C" int BGFileLoad_CreateFileEntry(BackgroundLoader *loader, const char *
             if (success)
             {
                 newID = data_02104304.counter;
-                loader->numPendingTasks++;
+                numPendingTasks_++;
                 data_02104304.counter = (newID + 1) & 0x3ff;
-                loader->flags_78c_0 = false;
+                flags_78c_0_ = false;
             }
         }
     }
@@ -266,85 +260,85 @@ extern "C" int BGFileLoad_CreateFileEntry(BackgroundLoader *loader, const char *
     return newID;
 }
 
-extern "C" int BGFileLoad_QueueOverlayTask(BackgroundLoader *loader, unsigned int id, bool toLoad)
+int BackgroundLoader::QueueOverlayTask(unsigned int id, bool load)
 {
     int newID = -1;
     func_020d970c();
-    if (loader->numPendingTasks >= 24)
+    if (numPendingTasks_ >= 24)
         func_020c9be0();
     else
     {
-        BackgroundLoader::Task* entry = &loader->queuedTasks[loader->numPendingTasks];
-        entry->loaderID = data_02104304.counter;
-        entry->status_32_low = BackgroundLoader::TaskStatus_Unallocated;
-        entry->fileLengthOrOverlayID = id;
-        entry->type = (toLoad ? BackgroundLoader::TaskType_LoadOverlay : BackgroundLoader::TaskType_UnloadOverlay);
+        BackgroundLoader::Task* entry = &queuedTasks_[numPendingTasks_];
+        entry->taskID_ = data_02104304.counter;
+        entry->status_ = BackgroundLoader::TaskStatus_Unallocated;
+        entry->fileLengthOrOverlayID_ = id;
+        entry->type_ = (load ? BackgroundLoader::TaskType_LoadOverlay : BackgroundLoader::TaskType_UnloadOverlay);
 
         newID = data_02104304.counter;
-        loader->numPendingTasks++;
+        numPendingTasks_++;
         data_02104304.counter = (newID + 1) & 0x3ff;
-        loader->flags_78c_0 = false;
+        flags_78c_0_ = false;
     }
     func_020d974c();
     return newID;
 }
 
-extern "C" int BGFileLoad_QueueLoadFileByName(BackgroundLoader* loader, const char* filename, SafeAllocator& alloc)
-{
-    return BGFileLoad_CreateFileEntry(loader, filename, BackgroundLoader::TaskType_LoadFileDefault, NULL, alloc);
+int BackgroundLoader::QueueLoadFile(const char* filename, SafeAllocator* alloc)
+{  
+    return QueueFileTask(filename, TaskType_LoadFileDefault, NULL, alloc);
 }
 
-extern "C" int BGFileLoad_QueueLoadGP1Archive(BackgroundLoader* loader, const char* filename, SafeAllocator& alloc)
+int BackgroundLoader::QueueLoadGP1(const char* filename, SafeAllocator* alloc)
 {
-    return BGFileLoad_CreateFileEntry(loader, filename, BackgroundLoader::TaskType_LoadGP1, NULL, alloc);
+    return QueueFileTask(filename, TaskType_LoadGP1, NULL, alloc);
 }
 
-extern "C" int BGFileLoad_QueueLoadFileFromGP2(BackgroundLoader* loader, const char* archive, const char* innerfile, SafeAllocator& alloc)
+int BackgroundLoader::QueueLoadFileInGP2(const char* gp2, const char* innerFile, SafeAllocator* alloc)
 {
-    return BGFileLoad_CreateFileEntry(loader, archive, BackgroundLoader::TaskType_LoadFromGP2, innerfile, alloc);
+    return QueueFileTask(gp2, TaskType_LoadFromGP2, innerFile, alloc);
 }
 
-extern "C" int BGFileLoad_QueueLoadOverlay(BackgroundLoader* loader, unsigned int overlayID)
+int BackgroundLoader::QueueLoadOverlay(unsigned int id)
 {
-    BGFileLoad_QueueOverlayTask(loader, overlayID, true);
+    return QueueOverlayTask(id, true);
 }
 
-extern "C" void BGFileLoad_CreateEntryWith32Low5(BackgroundLoader* loader)
+void BackgroundLoader::QueueTaskStatus5()
 {
     func_020d970c();
-    if (loader->numPendingTasks > 0)
+    if (numPendingTasks_ > 0)
     {
-        if (loader->numPendingTasks >= 24)
+        if (numPendingTasks_ >= 24)
             func_020c9be0();
         else
         {
-            BackgroundLoader::Task* task = &loader->queuedTasks[loader->numPendingTasks];
-            BGFileLoadEntry_Initialize(task);
-            task->loaderID = -1;
-            task->status_32_low = BackgroundLoader::TaskStatus_NewlyCreated;
-            loader->numPendingTasks++;
-            loader->flags_78c_0 = false;
+            BackgroundLoader::Task* task = &queuedTasks_[numPendingTasks_];
+            task->ZeroInitialize();
+            task->taskID_ = -1;
+            task->status_ = BackgroundLoader::TaskStatus_Unknown5;
+            numPendingTasks_++;
+            flags_78c_0_ = false;
         }
     }
     func_020d974c();
 }
 
-extern "C" int BGFileLoad_GetTaskStatus_0202fdd0(BackgroundLoader* loader, int taskID)
+int BackgroundLoader::GetTaskStatus(int taskID)
 {
     int status = -1;
     func_020d970c();
     if (taskID >= 0)
     {
-        BackgroundLoader::Task* pTask = loader->queuedTasks;
-        for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+        BackgroundLoader::Task* pTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            if (taskID != pTask->loaderID)
+            if (taskID != pTask->taskID_)
                 continue;
-            if (pTask->status_32_low == BackgroundLoader::TaskStatus_Complete)
+            if (pTask->status_ == BackgroundLoader::TaskStatus_Complete)
                 status = 1;
-            else if (pTask->status_32_low == BackgroundLoader::TaskStatus_DecompressionFailed)
+            else if (pTask->status_ == BackgroundLoader::TaskStatus_DecompressionFailed)
                 status = -1;
-            else if (pTask->status_32_low == BackgroundLoader::TaskStatus_LoadFileFailed)
+            else if (pTask->status_ == BackgroundLoader::TaskStatus_LoadFileFailed)
                 status = -1;
             else
                 status = 0;
@@ -355,23 +349,23 @@ extern "C" int BGFileLoad_GetTaskStatus_0202fdd0(BackgroundLoader* loader, int t
     return status;
 }
 
-extern "C" int BGFileLoad_GetFlagBit0(BackgroundLoader* loader)
+int BackgroundLoader::GetFlag0()
 {
-    return loader->flags_78c_0;
+    return flags_78c_0_;
 }
 
-extern "C" int BGFileLoad_GetDetailedTaskStatus_0202fe68(BackgroundLoader* loader, int taskID)
+int BackgroundLoader::GetDetailedTaskStatus(int taskID)
 {
     int status = -1;
     func_020d970c();
     if (taskID >= 0)
     {
-        BackgroundLoader::Task* pTask = loader->queuedTasks;
-        for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+        BackgroundLoader::Task* pTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            if (taskID != pTask->loaderID)
+            if (taskID != pTask->taskID_)
                 continue;
-            status = pTask->status_32_low;
+            status = pTask->status_;
             break;
         }
     }
@@ -379,137 +373,135 @@ extern "C" int BGFileLoad_GetDetailedTaskStatus_0202fe68(BackgroundLoader* loade
     return status;
 }
 
-extern "C" void BGFileLoad_GetFilePointerById(BackgroundLoader *loader, int id, void **outPtr, unsigned int *outLength)
+void BackgroundLoader::GetLoadedFileByID(int id, void **outPtr, unsigned int *outLength)
 {
     func_020d970c();
     *outPtr = NULL;
     *outLength = 0;
     if (id >= 0)
     {
-        BackgroundLoader::Task* pSubstruct = loader->queuedTasks;
-        for (int i = 0; i < loader->numPendingTasks; i++, pSubstruct++)
+        BackgroundLoader::Task* pTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            if (id != pSubstruct->loaderID)
+            if (id != pTask->taskID_)
                 continue;
             
-            *outPtr = pSubstruct->pFileData;
-            *outLength = pSubstruct->fileLengthOrOverlayID;
+            *outPtr = pTask->pFileData;
+            *outLength = pTask->fileLengthOrOverlayID_;
             break;
         }
     }
     func_020d974c();
 }
 
-extern "C" int BGFileLoad_GetFilePointerByName_0202ff34(BackgroundLoader *loader,
-    const char *filename, void **outPtr, unsigned int *outLength)
+int BackgroundLoader::GetLoadedFileByName(const char *filename, void **outPtr, unsigned int *outLength)
 {
-    int ret = -1;
+    int taskID = -1;
     func_020d970c();
     *outPtr = NULL;
     *outLength = 0;
-    BackgroundLoader::Task* pSubstruct = loader->queuedTasks;
-    for (int i = 0; i < loader->numPendingTasks; i++, pSubstruct++)
+    BackgroundLoader::Task* pTask = &queuedTasks_[0];
+    for (int i = 0; i < numPendingTasks_; i++, pTask++)
     {
         char fullname[80];
-        BGFileLoadEntry_GetFullName(pSubstruct, fullname);
+        pTask->GetFullFilename(fullname);
 
         if (strcmp(fullname, filename) == 0)
         {
-            if (pSubstruct->status_32_low == BackgroundLoader::TaskStatus_Complete)
+            if (pTask->status_ == BackgroundLoader::TaskStatus_Complete)
             {
-                *outPtr = pSubstruct->pFileData;
-                *outLength = pSubstruct->fileLengthOrOverlayID;
+                *outPtr = pTask->pFileData;
+                *outLength = pTask->fileLengthOrOverlayID_;
             }
-            ret = pSubstruct->loaderID;
+            taskID = pTask->taskID_;
             break;
         }
     }
     func_020d974c();
-    return ret;
+    return taskID;
 }
 
-extern "C" int BGFileLoad_GetInnerFilePointerByName_0202ffd8(BackgroundLoader *loader,
-    const char *outerFile, const char* innerFile, void **outPtr, unsigned int *outLength)
+int BackgroundLoader::GetLoadedFileInArchive(const char *outerFile, const char* innerFile, void **outPtr, unsigned int *outLength)
 {
-    int ret = -1;
+    int taskID = -1;
     func_020d970c();
     *outPtr = NULL;
     *outLength = 0;
-    BackgroundLoader::Task* pTask = loader->queuedTasks;
-    for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+    BackgroundLoader::Task* pTask = &queuedTasks_[0];
+    for (int i = 0; i < numPendingTasks_; i++, pTask++)
     {
         char fullname[80];
-        BGFileLoadEntry_GetFullName(pTask, fullname);
+        pTask->GetFullFilename(fullname);
 
-        if (strcmp(fullname, outerFile) == 0 && strcmp(pTask->innerFilename, innerFile) == 0)
+        if (strcmp(fullname, outerFile) == 0 && strcmp(pTask->innerFilename_, innerFile) == 0)
         {
-            if (pTask->status_32_low == BackgroundLoader::TaskStatus_Complete)
+            if (pTask->status_ == BackgroundLoader::TaskStatus_Complete)
             {
                 *outPtr = pTask->pFileData;
-                *outLength = pTask->fileLengthOrOverlayID;
+                *outLength = pTask->fileLengthOrOverlayID_;
             }
-            ret = pTask->loaderID;
+            taskID = pTask->taskID_;
             break;
         }
     }
     func_020d974c();
-    return ret;
+    return taskID;
 }
 
-extern "C" void BGFileLoad_InitOrReset_02030090(BackgroundLoader* loader)
+void BackgroundLoader::MaybeReset()
 {
     func_020d970c();
-    BackgroundLoader::Task* pTask = loader->queuedTasks;
-    for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+    BackgroundLoader::Task* pTask = &queuedTasks_[0];
+    for (int i = 0; i < numPendingTasks_; i++, pTask++)
     {
-        BGFileLoad_FreeBlock(loader, &pTask->mainBlockAllocation);
-        BGFileLoadEntry_Initialize(pTask);
+        FreeScratchSpace(&pTask->scratchAlloc_);
+        pTask->ZeroInitialize();
     }
 
-    loader->numPendingTasks = 0;
-    loader->lastBlockEnd_118 = 0;
-    loader->bits_788 = 0;
-    loader->flags_78c_1 = false;
-    loader->flags_78c_0 = true;
-    loader->flags_78c_2 = true;
+    numPendingTasks_ = 0;
+    lastBlockEnd_118_ = 0;
+    processLockBits_ = 0;
+    flags_78c_1_ = false;
+    flags_78c_0_ = true;
+    flags_78c_2_ = true;
 
     func_020d974c();
 }
 
-extern "C" void BGFileLoad_Cleanup_02030110(BackgroundLoader* loader)
+void BackgroundLoader::MaybeFreeAllocations()
 {
-    if (loader->numPendingTasks == 0)
+    if (numPendingTasks_ == 0)
         return;
 
     func_020d970c();
-    BackgroundLoader::Task* pTask = loader->queuedTasks;
-    for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+    BackgroundLoader::Task* pTask = &queuedTasks_[0];
+    for (int i = 0; i < numPendingTasks_; i++, pTask++)
     {
-        switch (pTask->status_32_low)
+        switch (pTask->status_)
         {
         case BackgroundLoader::TaskStatus_Complete:
         {
-            BGFileLoad_FreeBlock(loader, &pTask->mainBlockAllocation);
-            if (pTask->externalAllocator != NULL)
+            FreeScratchSpace(&pTask->scratchAlloc_);
+            if (pTask->externalAllocator_ != NULL)
             {
-                pTask->externalAllocator->Free(pTask->pFileData);
+                pTask->externalAllocator_->Free(pTask->pFileData);
             }
             pTask->pFileData = NULL;
-            pTask->fileLengthOrOverlayID = 0;
+            pTask->fileLengthOrOverlayID_ = 0;
             break;
         }
-        case BackgroundLoader::TaskStatus_NewlyCreated:
+        case BackgroundLoader::TaskStatus_Unknown5:
             continue; 
         }
-        pTask->status_32_low = BackgroundLoader::TaskStatus_Unallocated;
+        pTask->status_ = BackgroundLoader::TaskStatus_Unallocated;
     }
-    loader->reader.Abort();
-    loader->flags_78c_0 = false;
-    loader->flags_78c_2 = true;
+    reader_.Abort();
+    flags_78c_0_ = false;
+    flags_78c_2_ = true;
     func_020d974c();
 }
 
-extern "C" void BGFileLoad_MaybeRemoveTask_020301c8(BackgroundLoader* loader, int taskID)
+void BackgroundLoader::RemoveTask(int taskID)
 {
     if (taskID < 0)
         return;
@@ -517,42 +509,44 @@ extern "C" void BGFileLoad_MaybeRemoveTask_020301c8(BackgroundLoader* loader, in
     func_020d970c();
     if (taskID >= 0)
     {
-        BackgroundLoader::Task* pTask = loader->queuedTasks;
-        for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+        BackgroundLoader::Task* pTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            if (taskID != pTask->loaderID)
+            if (taskID != pTask->taskID_)
                 continue;
             
-            BGFileLoad_FreeBlock(loader, &pTask->mainBlockAllocation);
-            BGFileLoadEntry_Initialize(pTask);
+            FreeScratchSpace(&pTask->scratchAlloc_);
+            pTask->ZeroInitialize();
 
-            BackgroundLoader::Task* pLaterTask = &loader->queuedTasks[i];
-            for (int j = i + 1; j < loader->numPendingTasks; j++, pLaterTask++)
+            // Shift tasks on the right one space to the left
+            BackgroundLoader::Task* pLaterTask = &queuedTasks_[i];
+            for (int j = i + 1; j < numPendingTasks_; j++, pLaterTask++)
             {
                 *pLaterTask = *(pLaterTask + 1);
             }
             // Now pLaterTask points to index numPendingTasks-1, i.e. 1 past the new end
-            BGFileLoadEntry_Initialize(pLaterTask);
-            loader->numPendingTasks--;
+            pLaterTask->ZeroInitialize();
+            numPendingTasks_--;
 
-            int iVar2 = 0;
-            BackgroundLoader::Task* qTask = loader->queuedTasks;
-            for (int j = 0; j < loader->numPendingTasks; j++, qTask++)
+            // All tasks at the front before one of status 5 can be removed.
+            int numToRemoveFromFront = 0;
+            BackgroundLoader::Task* qTask = &queuedTasks_[0];
+            for (int j = 0; j < numPendingTasks_; j++, qTask++)
             {
-                if (qTask->status_32_low != 5)
+                if (qTask->status_ != BackgroundLoader::TaskStatus_Unknown5)
                     break;
-                iVar2++;
+                numToRemoveFromFront++;
             }
-            if (iVar2 > 0)
+            if (numToRemoveFromFront > 0)
             {
-                BackgroundLoader::Task* qTask = loader->queuedTasks;
-                loader->numPendingTasks -= iVar2;
-                for (int k = 0; k < loader->numPendingTasks; k++, qTask++)
+                BackgroundLoader::Task* qTask = &queuedTasks_[0];
+                numPendingTasks_ -= numToRemoveFromFront;
+                for (int k = 0; k < numPendingTasks_; k++, qTask++)
                 {
-                    *qTask = *(qTask + iVar2);
+                    *qTask = *(qTask + numToRemoveFromFront);
                 }
-                loader->lastBlockEnd_118 = 0;
-                loader->flags_78c_1 = false;
+                lastBlockEnd_118_ = 0;
+                flags_78c_1_ = false;
             }
             break;
         }
@@ -560,24 +554,27 @@ extern "C" void BGFileLoad_MaybeRemoveTask_020301c8(BackgroundLoader* loader, in
     func_020d974c();
 }
 
-extern "C" int BGFileLoad_GetNumQueuedTasks(BackgroundLoader* loader)
+// here goes BackgroundLoader::Task::operator=
+// (the linker will remove duplicates in overlays)
+
+int BackgroundLoader::GetNumQueuedTasks()
 {
-    return loader->numPendingTasks;
+    return numPendingTasks_;
 }
 
-extern "C" bool BGFileLoad_GetTaskFilename(BackgroundLoader* loader, int taskID, char* outBuffer)
+bool BackgroundLoader::GetTaskFilename(int taskID, char* outBuffer)
 {
     bool success = false;
     func_020d970c();
     if (taskID >= 0)
     {
-        BackgroundLoader::Task* pTask = loader->queuedTasks;
-        for (int i = 0; i < loader->numPendingTasks; i++, pTask++)
+        BackgroundLoader::Task* pTask = &queuedTasks_[0];
+        for (int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            if (taskID != pTask->loaderID)
+            if (taskID != pTask->taskID_)
                 continue;
 
-            BGFileLoadEntry_GetFullName(pTask, outBuffer);
+            pTask->GetFullFilename(outBuffer);
             success = true;
             break;
         }
@@ -587,9 +584,9 @@ extern "C" bool BGFileLoad_GetTaskFilename(BackgroundLoader* loader, int taskID,
 }
 
 #if 1
-extern "C" void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLoader::Task::Allocation* output, unsigned int filesize)
+void* BackgroundLoader::AllocateInScratchSpace(BackgroundLoader::Task::ScratchSpaceAllocation* output, unsigned int filesize)
 {
-    BackgroundLoader::Task::Allocation* orderedBlocks[24];
+    BackgroundLoader::Task::ScratchSpaceAllocation* orderedBlocks[24];
     unsigned int* returnAddress = NULL;
 
     func_020d970c();
@@ -597,32 +594,32 @@ extern "C" void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLo
     {
         unsigned int requiredBytesRounded = (filesize + 3) & ~3;
         // interpretation of this is still pretty shaky
-        unsigned int leftoverCapacity = loader->genericFileLoadCapacity_114 - loader->unknown_11c;
+        unsigned int leftoverCapacity = scratchSpaceSize_ - unknown_11c_;
         
         unsigned int initialNumBlocks = 0;
         unsigned int initialNumUsedWords = 0;
         unsigned int requiredWords = requiredBytesRounded >> 2;        
 
         // Populate the ordered pointer list
-        BackgroundLoader::Task* pTask = loader->queuedTasks;
-        for (unsigned int i = 0; i < loader->numPendingTasks; i++, pTask++)
+        BackgroundLoader::Task* pTask = &queuedTasks_[0];
+        for (unsigned int i = 0; i < numPendingTasks_; i++, pTask++)
         {
-            if (pTask->mainBlockAllocation.numWords == 0)
+            if (pTask->scratchAlloc_.numWords_ == 0)
                 continue;
 
             // insertion sort (later entries get shifted right)
-            BackgroundLoader::Task::Allocation** shiftPtr = &orderedBlocks[initialNumBlocks];
+            BackgroundLoader::Task::ScratchSpaceAllocation** shiftPtr = &orderedBlocks[initialNumBlocks];
             for (int j = initialNumBlocks; j != 0; j--, shiftPtr--)
             {
-                if (pTask->mainBlockAllocation.firstWord > shiftPtr[-1]->firstWord)
+                if (pTask->scratchAlloc_.firstWord_ > shiftPtr[-1]->firstWord_)
                     break;
                 
                 shiftPtr[0] = shiftPtr[-1];
             }
             // perform the insertion
-            shiftPtr[0] = &pTask->mainBlockAllocation;
+            shiftPtr[0] = &pTask->scratchAlloc_;
             initialNumBlocks++;
-            initialNumUsedWords += pTask->mainBlockAllocation.numWords;
+            initialNumUsedWords += pTask->scratchAlloc_.numWords_;
         }
 
         if (initialNumUsedWords + requiredWords <= (leftoverCapacity >> 2))
@@ -633,8 +630,8 @@ extern "C" void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLo
                 allocationPosition = 0;
             else
             {
-                BackgroundLoader::Task::Allocation** searchPtr = &orderedBlocks[0];
-                if (requiredWords <= orderedBlocks[0]->firstWord)
+                BackgroundLoader::Task::ScratchSpaceAllocation** searchPtr = &orderedBlocks[0];
+                if (requiredWords <= orderedBlocks[0]->firstWord_)
                     allocationPosition = 0;
                 
                 if (allocationPosition < 0)
@@ -644,10 +641,10 @@ extern "C" void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLo
                         // Test to see if we can put it between searchPtr[0]
                         // and searchPtr[1] (that's why we start i from 1).
                         // If so, place it right after the end of searchPtr[0]
-                        if (requiredWords + (searchPtr[0]->firstWord + searchPtr[0]->numWords) <= searchPtr[1]->firstWord)
+                        if (requiredWords + (searchPtr[0]->firstWord_ + searchPtr[0]->numWords_) <= searchPtr[1]->firstWord_)
                         {
-                            allocationPosition = searchPtr[0]->firstWord;
-                            allocationPosition += searchPtr[0]->numWords;
+                            allocationPosition = searchPtr[0]->firstWord_;
+                            allocationPosition += searchPtr[0]->numWords_;
                             break;
                         }
                     }
@@ -659,20 +656,20 @@ extern "C" void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLo
                 {
                     // this makes me think leftover capacity is the amount on the
                     // right of the scratch space
-                    if (requiredWords + (searchPtr[0]->firstWord + searchPtr[0]->numWords) <= (leftoverCapacity >> 2))
+                    if (requiredWords + (searchPtr[0]->firstWord_ + searchPtr[0]->numWords_) <= (leftoverCapacity >> 2))
                     {
-                        allocationPosition = searchPtr[0]->firstWord;
-                        allocationPosition += searchPtr[0]->numWords;
+                        allocationPosition = searchPtr[0]->firstWord_;
+                        allocationPosition += searchPtr[0]->numWords_;
                     }
                 }
             }
 
             if (allocationPosition >= 0)
             {
-                output->firstWord = allocationPosition;
-                output->numWords = requiredWords;
-                returnAddress = ((unsigned int*)loader->genericFileLoadPtr_110) + allocationPosition;
-                BGFileLoad_RecalculateCounters(loader);
+                output->firstWord_ = allocationPosition;
+                output->numWords_ = requiredWords;
+                returnAddress = ((unsigned int*)scratchSpace_) + allocationPosition;
+                RefreshCounters();
             }
         }
     }
@@ -680,37 +677,37 @@ extern "C" void* BGFileLoad_AllocateBlock(BackgroundLoader* loader, BackgroundLo
     return returnAddress;
 }
 
-extern "C" bool BGFileLoad_FreeBlock(BackgroundLoader* loader, BackgroundLoader::Task::Allocation* block)
+bool BackgroundLoader::FreeScratchSpace(Task::ScratchSpaceAllocation* block)
 {
     bool success = false;
     func_020d970c();
-    if (block->numWords != 0)
+    if (block->numWords_ != 0)
     {
-        block->firstWord = 0;
-        block->numWords = 0;
+        block->firstWord_ = 0;
+        block->numWords_ = 0;
         success = true;
-        BGFileLoad_RecalculateCounters(loader);
+        RefreshCounters();
     }
     func_020d974c();
     return success;
 }
 
-extern "C" void BGFileLoad_RecalculateCounters(BackgroundLoader* loader)
+void BackgroundLoader::RefreshCounters()
 {
-    loader->lastBlockEnd_118 = 0;
-    BackgroundLoader::Task* pTask = loader->queuedTasks;
-    for (unsigned int i = 0; i < loader->numPendingTasks; i++, pTask++)
+    lastBlockEnd_118_ = 0;
+    BackgroundLoader::Task* pTask = queuedTasks_;
+    for (unsigned int i = 0; i < numPendingTasks_; i++, pTask++)
     {
-        if (pTask->mainBlockAllocation.numWords == 0)
+        if (pTask->scratchAlloc_.numWords_ == 0)
             continue;
-        unsigned int sectionEndWord = pTask->mainBlockAllocation.firstWord + pTask->mainBlockAllocation.numWords;
-        int newVal = loader->lastBlockEnd_118;
+        unsigned int sectionEndWord = pTask->scratchAlloc_.firstWord_ + pTask->scratchAlloc_.numWords_;
+        int newVal = lastBlockEnd_118_;
         if (newVal <= sectionEndWord * 4)
             newVal = sectionEndWord * 4;
-        loader->lastBlockEnd_118 = newVal;
+        lastBlockEnd_118_ = newVal;
     }
-    unsigned int unk = loader->lastBlockEnd_118 + loader->unknown_11c;
-    if (unk > loader->unknown_120)
-        loader->unknown_120 = unk;
+    unsigned int unk = lastBlockEnd_118_ + unknown_11c_;
+    if (unk > unknown_120_)
+        unknown_120_ = unk;
 }
 #endif

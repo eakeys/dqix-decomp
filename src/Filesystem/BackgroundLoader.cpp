@@ -3,13 +3,6 @@
 #include "Combat/Main/BattleList.h"
 #include "Filesystem/FileIO.h"
 
-#define BGFILELOADDATA_FLAG_0 (1 << 0)
-#define BGFILELOADDATA_FLAG_1 (1 << 1)
-#define BGFILELOADDATA_FLAG_2 (1 << 2)
-#define BGFILELOADDATA_FLAG_3 (1 << 3)
-#define BGFILELOADDATA_FLAG_4 (1 << 4)
-#define BGFILELOADDATA_FLAG_5 (1 << 5)
-
 #pragma dont_inline on
 
 extern "C"

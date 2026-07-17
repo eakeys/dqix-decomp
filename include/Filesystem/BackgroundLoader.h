@@ -42,10 +42,13 @@ struct BackgroundLoader
         TaskStatus_Invalid = -1,
         TaskStatus_Unallocated = 0,
         TaskStatus_InFlight = 1,
-        TaskStatus_Complete = 2, // probably means done
+        TaskStatus_Complete = 2,
         TaskStatus_DecompressionFailed = 3,
         TaskStatus_LoadFileFailed = 4,
-        TaskStatus_Unknown5 = 5,
+        // if a fence task is in the queue, no later tasks will be processed
+        // until all prior tasks have been removed / freed. Not sure why this
+        // is a status and not a task type, but oh well
+        TaskStatus_Fence = 5,
     };
 
     enum TaskType
@@ -132,7 +135,7 @@ struct BackgroundLoader
     // usa: func_0202fd44
     int QueueLoadOverlay(unsigned int id);
     // usa: func_0202fd54
-    void QueueTaskStatus5();
+    void AddFence();
 
     // usa: func_0202fdd0
     // -1 = failed, 0 = underway/queued maybe?, 1 = successfully completed
@@ -166,6 +169,7 @@ struct BackgroundLoader
     // returns true if a task of the specified id was found
     bool GetTaskFilename(int taskID, char* outBuffer);
 
+protected:
     // usa: func_02030400
     void* AllocateInScratchSpace(Task::ScratchSpaceAllocation* output, unsigned int allocSize);
     // usa: func_02030584

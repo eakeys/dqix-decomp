@@ -303,7 +303,7 @@ int BackgroundLoader::QueueLoadOverlay(unsigned int id)
     return QueueOverlayTask(id, true);
 }
 
-void BackgroundLoader::QueueTaskStatus5()
+void BackgroundLoader::AddFence()
 {
     func_020d970c();
     if (numPendingTasks_ > 0)
@@ -315,7 +315,7 @@ void BackgroundLoader::QueueTaskStatus5()
             BackgroundLoader::Task* task = &queuedTasks_[numPendingTasks_];
             task->ZeroInitialize();
             task->taskID_ = -1;
-            task->status_ = BackgroundLoader::TaskStatus_Unknown5;
+            task->status_ = BackgroundLoader::TaskStatus_Fence;
             numPendingTasks_++;
             flags_78c_0_ = false;
         }
@@ -490,7 +490,7 @@ void BackgroundLoader::MaybeFreeAllocations()
             pTask->fileLengthOrOverlayID_ = 0;
             break;
         }
-        case BackgroundLoader::TaskStatus_Unknown5:
+        case BackgroundLoader::TaskStatus_Fence:
             continue; 
         }
         pTask->status_ = BackgroundLoader::TaskStatus_Unallocated;
@@ -533,7 +533,7 @@ void BackgroundLoader::RemoveTask(int taskID)
             BackgroundLoader::Task* qTask = &queuedTasks_[0];
             for (int j = 0; j < numPendingTasks_; j++, qTask++)
             {
-                if (qTask->status_ != BackgroundLoader::TaskStatus_Unknown5)
+                if (qTask->status_ != BackgroundLoader::TaskStatus_Fence)
                     break;
                 numToRemoveFromFront++;
             }
@@ -583,7 +583,6 @@ bool BackgroundLoader::GetTaskFilename(int taskID, char* outBuffer)
     return success;
 }
 
-#if 1
 void* BackgroundLoader::AllocateInScratchSpace(BackgroundLoader::Task::ScratchSpaceAllocation* output, unsigned int filesize)
 {
     BackgroundLoader::Task::ScratchSpaceAllocation* orderedBlocks[24];
@@ -712,4 +711,3 @@ void BackgroundLoader::RefreshCounters()
     if (unk > unknown_120_)
         unknown_120_ = unk;
 }
-#endif

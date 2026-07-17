@@ -102,7 +102,7 @@ int Ov33BackgroundLoader::Process()
         {
             for (int j = 0; j < numPendingTasks_; j++)
             {
-                if (queuedTasks_[j].status_ == TaskStatus_Unknown5)
+                if (queuedTasks_[j].status_ == TaskStatus_Fence)
                 {
                     flags_78c_0_ = false;
                     goto end;
@@ -130,7 +130,7 @@ int Ov33BackgroundLoader::Process()
             Task* qTask = &queuedTasks_[0];
             for (int j = 0; j < numPendingTasks_; j++, qTask++)
             {
-                if (qTask->status_ == TaskStatus_Unknown5)
+                if (qTask->status_ == TaskStatus_Fence)
                 {
                     flags_78c_0_ = false;
                     goto end;

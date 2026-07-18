@@ -31,6 +31,7 @@ src/Grotto/Main/TileFeatures.cpp:
 
 src/Filesystem/BackgroundLoader.cpp:
     complete
+    .bss start:0x02104044 end:0x0210484c
     .text start:0x0202f270 end:0x0203016c
 
 src/Memory/SafeAllocator.cpp:

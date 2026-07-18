@@ -7460,8 +7460,6 @@ data_02102100 kind:bss addr:0x02102100
 data_02102920 kind:bss addr:0x02102920
 data_02103140 kind:bss addr:0x02103140
 data_02104040 kind:bss addr:0x02104040
-data_02104044 kind:bss addr:0x02104044
-data_0210404c kind:bss addr:0x0210404c
 safeAllocatorLiveCount kind:bss addr:0x0210484c
 data_02104850 kind:bss addr:0x02104850
 data_02104858 kind:bss addr:0x02104858
@@ -7579,8 +7577,6 @@ data_02109a84 kind:bss addr:0x02109a84
 data_02109c84 kind:bss addr:0x02109c84
 data_02109c98 kind:bss addr:0x02109c98
 data_02109ca0 kind:bss addr:0x02109ca0
-_ZN13AllocatorTree19initializedTopLevelE kind:bss addr:0x02109cb4
-_ZN13AllocatorTree8topLevelE kind:bss addr:0x02109cb8
 data_02109cc4 kind:bss addr:0x02109cc4
 data_02109cc8 kind:bss addr:0x02109cc8
 data_02109cd0 kind:bss addr:0x02109cd0

@@ -17,6 +17,13 @@
 #define data_020ef90f data_020ef7ff
 #endif
 
+struct Struct_02104304
+{
+    unsigned short taskCounter_;
+    BackgroundLoader* globalInstace_;
+    char contextStackSpace_[0x800];
+} static s_loaderInstanceData;
+
 extern "C"
 {
     // zero memory
@@ -70,31 +77,31 @@ bool BackgroundLoader::Task::GetFullFilename(char *outBuffer)
 
 BackgroundLoader* BackgroundLoader::GetInstance()
 {
-    return data_02104304.pFileLoadData;
+    return s_loaderInstanceData.globalInstace_;
 }
 
 void BackgroundLoader::FreeAllocationsGlobal()
 {
-    if (data_02104304.pFileLoadData)
-        data_02104304.pFileLoadData->MaybeFreeAllocations();
+    if (s_loaderInstanceData.globalInstace_)
+        s_loaderInstanceData.globalInstace_->MaybeFreeAllocations();
 }
 
 void BackgroundLoader::AddLockGlobal()
 {
-    if (data_02104304.pFileLoadData)
-        data_02104304.pFileLoadData->AddLock();
+    if (s_loaderInstanceData.globalInstace_)
+        s_loaderInstanceData.globalInstace_->AddLock();
 }
 
 void BackgroundLoader::RemoveLockGlobal()
 {
-    if (data_02104304.pFileLoadData)
-        data_02104304.pFileLoadData->RemoveLock();
+    if (s_loaderInstanceData.globalInstace_)
+        s_loaderInstanceData.globalInstace_->RemoveLock();
 }
 
 void BackgroundLoader::InitializeOrReset()
 {
     reader_.ZeroInitialize();
-    data_02104304.pFileLoadData = this;
+    s_loaderInstanceData.globalInstace_ = this;
 
     scratchSpace_ = 0;
     scratchSpaceSize_ = 0;
@@ -125,8 +132,8 @@ void BackgroundLoader::Populate(void* fileLoadSpace, unsigned int spaceCapacity,
     flags_78c_0_ = true;
     flags_78c_2_ = true;
 
-    func_020d97a8(&context_, &data_02104304.stackSpace,
-        sizeof(data_02104304.stackSpace), relativePrio,
+    func_020d97a8(&context_, s_loaderInstanceData.contextStackSpace_,
+        sizeof(s_loaderInstanceData.contextStackSpace_), relativePrio,
         &BackgroundLoaderThreadFunction, (int)this);
     func_020d9828(&context_);
 }
@@ -201,7 +208,7 @@ int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* 
         else
         {   
             BackgroundLoader::Task* entry = &queuedTasks_[numPendingTasks_];
-            entry->taskID_ = data_02104304.counter;
+            entry->taskID_ = s_loaderInstanceData.taskCounter_;
             entry->status_ = BackgroundLoader::TaskStatus_Unallocated;
             entry->externalAllocator_ = alloc;
             entry->pFileData = NULL;
@@ -257,9 +264,9 @@ int BackgroundLoader::QueueFileTask(const char* filename, int type, const char* 
         BreakOutOfLoopSuccess:
             if (success)
             {
-                newID = data_02104304.counter;
+                newID = s_loaderInstanceData.taskCounter_;
                 numPendingTasks_++;
-                data_02104304.counter = (newID + 1) & 0x3ff;
+                s_loaderInstanceData.taskCounter_ = (newID + 1) & 0x3ff;
                 flags_78c_0_ = false;
             }
         }
@@ -277,14 +284,14 @@ int BackgroundLoader::QueueOverlayTask(unsigned int id, bool load)
     else
     {
         BackgroundLoader::Task* entry = &queuedTasks_[numPendingTasks_];
-        entry->taskID_ = data_02104304.counter;
+        entry->taskID_ = s_loaderInstanceData.taskCounter_;
         entry->status_ = BackgroundLoader::TaskStatus_Unallocated;
         entry->fileLengthOrOverlayID_ = id;
         entry->type_ = (load ? BackgroundLoader::TaskType_LoadOverlay : BackgroundLoader::TaskType_UnloadOverlay);
 
-        newID = data_02104304.counter;
+        newID = s_loaderInstanceData.taskCounter_;
         numPendingTasks_++;
-        data_02104304.counter = (newID + 1) & 0x3ff;
+        s_loaderInstanceData.taskCounter_ = (newID + 1) & 0x3ff;
         flags_78c_0_ = false;
     }
     UnlockResourceMutex();

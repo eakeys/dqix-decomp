@@ -1,33 +1,88 @@
 #include "World/Zone3D.h"
 #include "Combat/Main/BattleList.h"
 #include "Filesystem/BackgroundLoader.h"
+#include "Filesystem/NarcHandle.h"
+#include "Filesystem/FileAccessor.h"
+#include "Filesystem/LowNitroHandle.h"
+#include "Filesystem/FileIO.h"
+#include "std_library_functions.h"
 #include "Grotto/Overlay_17/Struct44C8.h"
 
 extern "C"
 {
     void* func_02011584(BattleStruct*);
+    void func_02013454(void*);
     void* func_0200fdcc(BattleStruct*);
     void* func_0200fddc(BattleStruct*);
 
     void* func_02053c6c(void*);
-
+    void func_0205e104(const char*, SafeAllocator*, const void*, unsigned int);
     void func_0207a5b8(void*);
+    void func_0207a614(void*, const char*);
     void func_0207b9cc(void*);
+
+    // Texture functions
     void* func_0207df50(void*);
+    void func_0207df90(void*);
+    void func_0207dfac(void*);
+    void func_0207e264(void*);
+    void func_0207e428(void*, const void*, unsigned int);
+    void func_0207e434(void*);
+    void func_0207e44c(void*, int);
+    void* func_0207ecc4(void*);
+    void func_0207eccc(void*, void*);
+
     void* func_0208a9b4();
     void func_02094d00(void*);
     Zone3D_StructPtr_8* func_02099950(void*, unsigned short id);
+
+    int func_020b2e3c(void*);
+    int func_020b2f30(void*);
+
+    void func_020c9be0(); // abort() or similar
     void func_020de848(void*);
 
     void func_02013490(void*);
     void func_02013750(Zone3D*, bool);
+    // handle bmbl file
+    void func_02014390(Zone3D*, const void*, unsigned int);
+    // handle nsbtx file
+    void func_0201445c(Zone3D*, const void*, unsigned int, const char*);
+    // handle bpos file
+    void func_020143d8(Zone3D*, const void*, unsigned int);
+    void func_02014a24(Zone3D*, void*);
+    void func_02014b04(Zone3D*);
     void func_0201e248(void*);
+    void func_0201e2b4(void*, SafeAllocator*, const void*, unsigned int);
+    Zone3D::BData::BStruct* func_0201e2d8(Zone3D::BData*, int);
+    void func_0201f040(void*, SafeAllocator*, const void*, unsigned int);
 
     // checks if zone id corresponds to a main floor of a grotto
     bool func_0201b5b0(int id);
+    // checks if zone id corresponds to boss floor of a grotto
+    bool func_0201b5d8(int id);
 }
 
-extern char data_020ef0f0[];
+extern char data_020ef0f0[]; // "data/map/maplist9.bin"
+extern char data_020ef106[]; // "%s/Z0%dM01.ambl"
+extern char data_020ef116[]; // "data/map"
+extern char data_020ef11f[]; // "%s/Z0%dM99.ambl"
+extern char data_020ef12f[]; // "%s/%s.ambl"
+extern char data_020ef13a[]; // "ARC"
+extern char data_020ef13e[]; // ".nsbtx"
+extern char data_020ef145[]; // ".bmbl"
+extern char data_020ef14b[]; // ".dat"
+extern char data_020ef150[]; // ".bpos"
+extern char data_020ef156[]; // "%s/Z0%dM01.amdj"
+extern char data_020ef166[]; // "%s/Z0%dM99.amdj"
+extern char data_020ef176[]; // "%s/%sb.amdj"
+extern char data_020ef182[]; // "%s/%sa.amdj"
+extern char data_020ef18e[]; // "%s/%s.amdj"
+extern char data_020ef199[]; // ".bmdj"
+extern char data_020ef19f[]; // "Z0%dM0100"
+extern char data_020ef1a9[]; // "Z0%dM0101"
+extern char data_020ef1b3[]; // "Z0%dM0102"
+extern char data_020ef1bd[]; // "Z0%dM0103"
 
 void Zone3D::SwitchZone(unsigned short newID)
 {
@@ -50,8 +105,8 @@ void Zone3D::SwitchZone(unsigned short newID)
     unknown_838_ = 0;
     unknown_83c_ = 0;
     unknown_424_ = 1;
-    unknown_41c_ = 0;
-    unknown_418_ = 0;
+    firstBMDJStruct_41c_ = 0;
+    firstTextureStruct_418_ = NULL;
     unknown_476_ = 0;
     unknown_477_ = 0;
     unknown_82c_ = 0;
@@ -61,8 +116,8 @@ void Zone3D::SwitchZone(unsigned short newID)
 
     mapListLoadHandle_ = -1;
     unknown_434_ = -1;
-    unknown_438_ = -1;
-    unknown_43c_ = -1;
+    mapAMBLLoadHandle_ = -1;
+    mapAMDJLoadHandle_ = -1;
     unknown_440_ = -1;
 
     unknown_478_ = 0;
@@ -70,10 +125,10 @@ void Zone3D::SwitchZone(unsigned short newID)
     unknown_834_ = 0;
     unknown_2820_ = 0;
 
-    func_0201e248(&unknown_struct_6c_[0]);
+    func_0201e248(&unknownBData_);
 
-    unknown_c_ = 0;
-    unknown_16_ = 0;
+    unknown_c_[0] = 0;
+    unknown_16_[0] = 0;
     unknown_26_ = 0;
     unknown_36_ = 0x7fff;
     unknown_38_ = 0;
@@ -139,4 +194,337 @@ void Zone3D::SwitchZone(unsigned short newID)
     }
 
     mapListLoadHandle_ = loader->QueueLoadFile(data_020ef0f0, NULL);
+}
+
+// implicitly defined Vector3i::operator=(const Vector3i&)
+
+void Zone3D::LoadMapAMBL()
+{
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+
+    char filenameBuffer[20];
+
+    if (func_0201b5b0(currentZoneID_))
+    {
+        int environ = grotto_.GetActiveGrottoEnviron();
+        if (environ == 0)
+            environ = 1;
+        if (environ > 5)
+            environ = 5;
+        sprintf(filenameBuffer, data_020ef106, data_020ef116, environ);
+    }
+    else if (func_0201b5d8(currentZoneID_))
+    {
+        int environ = grotto_.GetActiveGrottoEnviron();
+        sprintf(filenameBuffer, data_020ef11f, data_020ef116, environ);
+    }
+    else
+    {
+        sprintf(filenameBuffer, data_020ef12f, data_020ef116, pUnknownStruct_8_->mapShortName_);
+    }
+    mapAMBLLoadHandle_ = loader->QueueLoadFile(filenameBuffer, NULL);
+}
+
+bool Zone3D::UnpackMapAMBL()
+{
+    if (mapAMBLLoadHandle_ < 0)
+        return true;
+
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+    if (loader->GetTaskStatus(mapAMBLLoadHandle_) == 0)
+        return false;
+
+    // If we get here, the loading finished but was not successful
+    if (loader->GetDetailedTaskStatus(mapAMBLLoadHandle_) != BackgroundLoader::TaskStatus_Complete)
+    {
+        loader->RemoveTask(mapAMBLLoadHandle_);
+        mapAMBLLoadHandle_ = -1;
+        return true;
+    }
+    
+    void* amblData;
+    unsigned int amblFilesize;
+    
+    loader->GetLoadedFileByID(mapAMBLLoadHandle_, &amblData, &amblFilesize);
+
+    for (int pass = 0; pass < 2; pass++)
+    {
+        NarcHandle narc;
+        if (narc.Initialize(data_020ef13a, (const unsigned char*)amblData))
+        {
+            NitroVM vm;
+            unsigned int fileID = 0;
+            NitroVM_Initialize(&vm);
+            while (PrepareReadFileInNARCByID(&vm, &narc, fileID))
+            {
+                char innerFilePath[80];
+                NitroVM_WriteOutFilePath(&vm, innerFilePath, 80);
+                
+                const char* extension = strrchr(innerFilePath, '.');
+                if (extension == NULL)
+                {
+                    NitroVM_FinishRead(&vm);
+                    fileID++;
+                    continue;
+                }
+                unsigned int innerFilesize = vm.regbase_abc.c.u32 - vm.regbase_abc.b.u32;
+                NitroVM_FinishRead(&vm);
+                const void* innerFilePtr = narc.GetFileByIndex(fileID);
+                if (pass == 0)
+                {
+                    // nsbtx file (we can have multiple of these)
+                    if (strcmp(data_020ef13e, extension) == 0)
+                        ProcessNSBTXFile(innerFilePtr, innerFilesize, innerFilePath);
+                }
+                else if (pass == 1)
+                {
+                    // bmbl file
+                    if (strcmp(data_020ef145, extension) == 0)
+                        ProcessBMBLFile(innerFilePtr, innerFilesize);
+                    // dat file
+                    else if (strcmp(data_020ef14b, extension) == 0)
+                    {
+                        SafeAllocator* alloc = pAllocator_68_;
+                        unsigned int decompressedSize;
+                        const void* decompressed = DecompressLZ77FileIntoScratchSpace(*alloc, innerFilePtr, decompressedSize);
+                        func_0205e104(unknown_c_, alloc, decompressed, decompressedSize);
+                    }
+                    // bpos file. From testing these seem to be a grotto thing
+                    else if (strcmp(data_020ef150, extension) == 0)
+                        ProcessBPOSFile(innerFilePtr, innerFilesize);
+                }
+                fileID++;
+            }
+            narc.Destroy();
+        }
+        if (pass == 0)
+        {
+            unsigned int allocSize = pAllocator_4c_->GetMaxPossibleAllocation();
+            void* memory = pAllocator_4c_->Allocate(allocSize);
+            if (memory == NULL)
+                func_020c9be0();
+            internalAllocator_.ResetAllocatorPointer();
+            internalAllocator_.CreateTypeA(memory, allocSize);
+            pAllocator_68_ = &internalAllocator_;
+            internalAllocator_.Reset();
+        }
+    }
+    loader->RemoveTask(mapAMBLLoadHandle_);
+    mapAMBLLoadHandle_ = -1;
+    func_02014b04(this);
+    return true;
+}
+
+bool Zone3D::ProcessBMBLFile(const void* filedata, unsigned int /*filesize*/)
+{
+    SafeAllocator* allocator = pAllocator_68_;
+    unsigned int decompressedLength;
+    void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
+    Zone3D_StructPtr_8* ptr8 = pUnknownStruct_8_;
+
+    func_0201e248(&unknownBData_);
+    func_0201e2b4(&unknownBData_, allocator, decompressed, decompressedLength);
+    pUnknownStruct_8_ = ptr8; // why?
+    return true;
+}
+
+bool Zone3D::ProcessBPOSFile(const void* filedata, unsigned int /*filesize*/)
+{
+    SafeAllocator* allocator = pAllocator_68_;
+    unsigned int decompressedLength;
+    void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
+    Zone3D_StructPtr_8* ptr8 = pUnknownStruct_8_;
+
+    func_0201e2b4(&unknownBData_, allocator, decompressed, decompressedLength);
+    pUnknownStruct_8_ = ptr8; // why?
+    return true;
+}
+
+bool Zone3D::ProcessNSBTXFile(const void* filedata, unsigned int filesize, const char* filename)
+{
+    SafeAllocator* allocator = pAllocator_68_;
+    void* graphicsPtr = unknown_ptr_50_;
+
+    Zone3D_TextureStruct* texStruct = (Zone3D_TextureStruct*)allocator->Allocate(sizeof(Zone3D_TextureStruct));
+    if (texStruct != NULL)
+    {
+        func_0207e264(texStruct);
+        texStruct->filename_ = NULL;
+        texStruct->pNext_ = NULL;
+        char* newFilenameBuffer = (char*)allocator->Allocate(strlen(filename) + 1);
+        texStruct->filename_ = newFilenameBuffer;
+        if (newFilenameBuffer != NULL)
+        {
+            strcpy(newFilenameBuffer, filename);
+            texStruct->pNext_ = firstTextureStruct_418_;
+            firstTextureStruct_418_ = texStruct;
+            unsigned int decompressedLength;
+            void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
+            if (decompressed != NULL)
+            {
+                func_0207df90(graphicsPtr);
+                func_0207e428(texStruct, decompressed, decompressedLength);
+                func_0207e434(texStruct);
+                func_0207e44c(texStruct, 2);
+                func_0207dfac(graphicsPtr);
+                void* pVar5 = func_0207ecc4(texStruct);
+                if (pVar5 != 0)
+                {
+                    unknown_838_ += func_020b2e3c(pVar5);
+                    unknown_83c_ += func_020b2f30(pVar5);
+                }
+                bool success = false;
+                if (pVar5 != 0)
+                {
+                    unsigned int pVar5Size = *(unsigned int*)((int)pVar5 + 0x14);
+                    void* copyOfpVar5 = allocator->Allocate(pVar5Size);
+                    if (copyOfpVar5 != NULL)
+                    {
+                        memcpy(copyOfpVar5, pVar5, pVar5Size);
+                        func_0207eccc(texStruct, copyOfpVar5);
+                        success = true;
+                    }
+                }
+                if (!success)
+                    func_0207e264(texStruct);
+            }
+        }
+    }
+    return true;
+}
+
+void Zone3D::LoadMapAMDJ()
+{
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+    char filenameBuffer[20];
+    if (func_0201b5b0(currentZoneID_))
+    {
+        int environ = grotto_.GetActiveGrottoEnviron();
+        if (environ == 0)
+            environ = 1;
+        if (environ > 5)
+            environ = 5;
+        sprintf(filenameBuffer, data_020ef156, data_020ef116, environ);
+    }
+    else if (func_0201b5d8(currentZoneID_))
+    {
+        int environ = grotto_.GetActiveGrottoEnviron();
+        sprintf(filenameBuffer, data_020ef166, data_020ef116, environ);
+    }
+    else
+    {
+        if (currentZoneID_ == 10000 || currentZoneID_ == 10100)
+        {
+            if (unknown_42c_ == 0)
+            {
+                sprintf(filenameBuffer, data_020ef176, data_020ef116, pUnknownStruct_8_->mapShortName_);
+                unknown_42c_++;
+            }
+            else if (unknown_42c_ == 1)
+            {
+                sprintf(filenameBuffer, data_020ef182, data_020ef116, pUnknownStruct_8_->mapShortName_);
+                unknown_42c_++;
+            }
+        }
+        else
+        {
+            sprintf(filenameBuffer, data_020ef18e, data_020ef116, pUnknownStruct_8_->mapShortName_);
+        }
+    }
+    mapAMDJLoadHandle_ = loader->QueueLoadFile(filenameBuffer, NULL);
+}
+
+bool Zone3D::UnpackMapAMDJ()
+{
+    if (mapAMDJLoadHandle_ < 0)
+        return true;
+
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+    if (loader->GetTaskStatus(mapAMDJLoadHandle_) == 0)
+        return false;
+
+    // If we get here, loading finished but was not successful
+    if (loader->GetDetailedTaskStatus(mapAMDJLoadHandle_) != BackgroundLoader::TaskStatus_Complete)
+    {
+        loader->RemoveTask(mapAMDJLoadHandle_);
+        mapAMDJLoadHandle_ = -1;
+        return true;
+    }
+
+    void* amdjData;
+    unsigned int amdjFilesize;
+    loader->GetLoadedFileByID(mapAMDJLoadHandle_, &amdjData, &amdjFilesize);
+    NarcHandle narc;
+    if (narc.Initialize(data_020ef13a, (unsigned char*)amdjData))
+    {
+        NitroVM vm;
+        unsigned int fileID = 0;
+        NitroVM_Initialize(&vm);
+        while (PrepareReadFileInNARCByID(&vm, &narc, fileID))
+        {
+            char innerFilePath[80];
+            NitroVM_WriteOutFilePath(&vm, innerFilePath, 80);
+            
+            const char* extension = strrchr(innerFilePath, '.');
+            if (extension == NULL)
+            {
+                NitroVM_FinishRead(&vm);
+                fileID++;
+                continue;
+            }
+            unsigned int innerFilesize = vm.regbase_abc.c.u32 - vm.regbase_abc.b.u32;
+            NitroVM_FinishRead(&vm);
+            const void* innerFilePtr = narc.GetFileByIndex(fileID);
+            if (strcmp(data_020ef199, extension) == 0)
+            {
+                int numIterations = unknownBData_.arraySize_;
+                for (int i = 0; i < numIterations; i++)
+                {
+                    BData::BStruct* bstr = func_0201e2d8(&unknownBData_, i);
+                    if (strstr(innerFilePath, bstr->buffer_10_))
+                        ProcessBMDJFile(innerFilePtr, innerFilesize, bstr);
+                }
+            }
+            fileID++;
+        }
+        for (Zone3D_BMDJStruct* item = firstBMDJStruct_41c_; item != NULL; item = item->pNext_)
+        {
+            func_02014a24(this, item);
+            if (unknown_42c_ == 2) 
+                break;
+        }
+        narc.Destroy();
+    }
+    loader->RemoveTask(mapAMDJLoadHandle_);
+    mapAMDJLoadHandle_ = -1;
+    if (unknown_42c_ == 1)
+    {
+        LoadMapAMDJ();
+        return false;
+    }
+
+    if (unknown_16_[0] != '\0')
+        func_0207a614(&unknown_struct_f4_[0], unknown_16_);
+    return true;
+}
+
+bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, BData::BStruct* misc)
+{
+    SafeAllocator* allocator = pAllocator_68_;
+    Zone3D_BMDJStruct* newStruct = (Zone3D_BMDJStruct*)allocator->Allocate(sizeof(Zone3D_BMDJStruct));
+    if (newStruct == NULL)
+        return false;
+
+    func_02013454(newStruct);
+    newStruct->unknown_0_ = misc->unknown_0_;
+    newStruct->vec_48_ = misc->vec_4_;
+    unsigned int decompressedLength;
+    void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
+    if (decompressed == NULL)
+        return false;
+
+    func_0201f040(&newStruct->unk_4, allocator, decompressed, decompressedLength);
+    newStruct->pNext_ = firstBMDJStruct_41c_;
+    firstBMDJStruct_41c_ = newStruct;
+    return true;
 }

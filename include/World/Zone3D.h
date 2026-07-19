@@ -3,21 +3,41 @@
 #include "Grotto/Main/ActiveGrottoClass.h"
 #include "Memory/SafeAllocator.h"
 
-struct Zone3D_StructPtr_8
-{
-    unsigned short unknown_0_;
-    unsigned short unknown_2_ : 15;
-    int unk_4;
-    int unk_8;
-    unsigned char unknown_c_low_ : 4;
-    unsigned char unknown_c_high_ : 1;
-};
-
+// definitely needs to be moved
 struct Vector3i
 {
     int x;
     int y;
     int z;
+};
+
+struct Zone3D_StructPtr_8
+{
+    unsigned short unknown_0_;
+    unsigned short unknown_2_ : 15;
+    char unk_4;
+     // e.g. "F02" or "B01M13", corresponding to file data/map/%s.ambl and similar
+    char mapShortName_[7];
+    unsigned char unknown_c_low_ : 4;
+    unsigned char unknown_c_high_ : 1;
+};
+
+// To be moved once we figure out what it is.
+// sizeof == 0xb4
+struct Zone3D_TextureStruct
+{
+    char unk_0[0xac];
+    const char* filename_;
+    Zone3D_TextureStruct* pNext_;
+};
+
+// sizeof == 0x58
+struct Zone3D_BMDJStruct
+{
+    int unknown_0_;
+    char unk_4[0x44];
+    Vector3i vec_48_;
+    Zone3D_BMDJStruct* pNext_;
 };
 
 // sizeof == 0x2824, as seen in the dynamic allocation of one
@@ -34,10 +54,8 @@ public:
     short unknown_4_;
     char unk_6[2];
     Zone3D_StructPtr_8* pUnknownStruct_8_;
-    char unknown_c_;
-    char unk_d[0x16 - 0xd];
-    char unknown_16_;
-    char unk_17[0x26 - 0x17];
+    char unknown_c_[10]; // holds e.g. "Z02M0100" while in a grotto
+    char unknown_16_[0x10];
     char unknown_26_;
     char unk_27[0x36 - 0x27];
     short unknown_36_;
@@ -48,23 +66,37 @@ public:
     int unknown_44_;
     int unknown_48_;
     SafeAllocator* pAllocator_4c_;
-    void* unknown_ptr_50_;
-    char unk_54[0x14];
+    void* unknown_ptr_50_; // referenced in the nsbtx processor, so something graphical
+    SafeAllocator internalAllocator_;
     SafeAllocator* pAllocator_68_;
-    char unknown_struct_6c_[0x88];
+
+    struct BData
+    {
+        struct BStruct // might be the same as Zone3D_BMDJStruct but not sure
+        {
+            int unknown_0_;
+            Vector3i vec_4_;
+            char buffer_10_[0x48];
+        };
+
+        BStruct* entries_;
+        int arraySize_;
+        int arrayCapacity_;
+        char unk_8[0x7c];
+    } unknownBData_;
     char unknown_struct_f4_[0x18]; //
     char unknown_struct_10c_[0x30c]; // passed to func_0207b9cc
-    int unknown_418_;
-    int unknown_41c_;
+    Zone3D_TextureStruct* firstTextureStruct_418_;
+    Zone3D_BMDJStruct* firstBMDJStruct_41c_;
     void* grottoTileMapData_420_; // pointer to array of stride 0x48
     int unknown_424_;
     char unk_428[4];
-    char unknown_42c_;
+    unsigned char unknown_42c_;
     char unk_42d[3];
     int mapListLoadHandle_; // for loading data/map/maplist9.bin
     int unknown_434_;
-    int unknown_438_;
-    int unknown_43c_;
+    int mapAMBLLoadHandle_; // loads things like data/map/Z02M01.ambl
+    int mapAMDJLoadHandle_;
     int unknown_440_;
 
     char unk_444[0x474 - 0x444];
@@ -82,6 +114,8 @@ public:
     char unk_830[4];
     char unknown_834_;
     char unk_835[3];
+
+    // these might be sth like number of vertices / indices for draw commands
     int unknown_838_;
     int unknown_83c_;
 
@@ -109,5 +143,27 @@ public:
     char unknown_2820_;
     char unk_2821[3];
 public:
+    // usa: func_0201383c
     void SwitchZone(unsigned short newID);
+
+    // usa: func_0201403c
+    // The ambl is a NARC containing nsbtx, bmbl, dat and bpos files.
+    void LoadMapAMBL();
+    // usa: func_02014108
+    bool UnpackMapAMBL();
+    // usa: func_02014390
+    bool ProcessBMBLFile(const void* filedata, unsigned int filesize);
+    // usa: func_020143d8
+    bool ProcessBPOSFile(const void* filedata, unsigned int filesize);
+    
+    // usa: func_0201445c
+    bool ProcessNSBTXFile(const void* filedata, unsigned int filesize, const char* filename);
+
+    // usa: func_020145a8
+    // The amdj is a narc containing nsbmd, nsbma (?), col2 and bmdj files.
+    void LoadMapAMDJ();
+    // usa: func_020146fc
+    bool UnpackMapAMDJ();
+    // usa: func_02014900
+    bool ProcessBMDJFile(const void* filedata, unsigned int filesize, BData::BStruct* misc);
 };

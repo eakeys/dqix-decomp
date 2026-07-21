@@ -1,5 +1,5 @@
 #include "System/VRAM.h"
-#include <asmhacks.h>
+#include "System/Graphics.h"
 
 #pragma optimize_for_size off
 
@@ -10,25 +10,6 @@ extern "C"
 {
     void func_020c9a88(unsigned short banks, unsigned short owner);
 }
-
-#define VRAMCNT_A (*(volatile unsigned char*)0x04000240)
-#define VRAMCNT_B (*(volatile unsigned char*)0x04000241)
-#define VRAMCNT_C (*(volatile unsigned char*)0x04000242)
-#define VRAMCNT_D (*(volatile unsigned char*)0x04000243)
-#define VRAMCNT_E (*(volatile unsigned char*)0x04000244)
-#define VRAMCNT_F (*(volatile unsigned char*)0x04000245)
-#define VRAMCNT_G (*(volatile unsigned char*)0x04000246)
-#define VRAMCNT_H (*(volatile unsigned char*)0x04000248)
-#define VRAMCNT_I (*(volatile unsigned char*)0x04000249)
-
-#define DISPCNT (*(volatile unsigned int*)0x04000000)
-#define DISPCNTSUB (*(volatile unsigned int*)0x04001000)
-#define DISP3DCNT (*(volatile unsigned short*)0x04000060)
-
-#define DISPCNT_ENABLE_BG_EXTENDED_PALETTE (1 << 30)
-#define DISPCNT_ENABLE_OBJ_EXTENDED_PALETTE (1 << 31)
-
-#define DISP3DCNT_USE_CLEAR_TEXTURES (1 << 14)
 
 void InitializeVRAM()
 {

@@ -1,0 +1,46 @@
+#pragma once
+
+#define VRAMCNT_A (*(volatile unsigned char*)0x04000240)
+#define VRAMCNT_B (*(volatile unsigned char*)0x04000241)
+#define VRAMCNT_C (*(volatile unsigned char*)0x04000242)
+#define VRAMCNT_D (*(volatile unsigned char*)0x04000243)
+#define VRAMCNT_E (*(volatile unsigned char*)0x04000244)
+#define VRAMCNT_F (*(volatile unsigned char*)0x04000245)
+#define VRAMCNT_G (*(volatile unsigned char*)0x04000246)
+#define VRAMCNT_H (*(volatile unsigned char*)0x04000248)
+#define VRAMCNT_I (*(volatile unsigned char*)0x04000249)
+
+#define DISPCNT (*(volatile unsigned int*)0x04000000)
+#define DISPCNTSUB (*(volatile unsigned int*)0x04001000)
+#define DISP3DCNT (*(volatile unsigned short*)0x04000060)
+
+
+#define BG0CNT (*(volatile unsigned short*)(0x04000008))
+#define BG1CNT (*(volatile unsigned short*)(0x0400000a))
+#define BG2CNT (*(volatile unsigned short*)(0x0400000c))
+#define BG3CNT (*(volatile unsigned short*)(0x0400000e))
+
+#define BG0CNTSUB (*(volatile unsigned short*)(0x04001008))
+#define BG1CNTSUB (*(volatile unsigned short*)(0x0400100a))
+#define BG2CNTSUB (*(volatile unsigned short*)(0x0400100c))
+#define BG3CNTSUB (*(volatile unsigned short*)(0x0400100e))
+
+#define DISPCNT_MASK_BG_MODE 7
+// right shift by 24 for numerical value
+#define DISPCNT_MASK_CHARACTER_BASE_64K 0x07000000
+// right shift by 27 for numerical value
+#define DISPCNT_MASK_SCREEN_BASE_64K 0x38000000
+#define DISPCNT_ENABLE_BG_EXTENDED_PALETTE 0x40000000
+#define DISPCNT_ENABLE_OBJ_EXTENDED_PALETTE 0x80000000
+
+#define DISP3DCNT_USE_CLEAR_TEXTURES 0x4000
+
+#define BGCNT_MASK_PRIORITY 3
+// right shift by 2 for numerical value
+#define BGCNT_MASK_CHARACTER_BASE_16K 0x3c
+#define BGCNT_MASK_MOSAIC 0x40
+#define BGCNT_MASK_PALETTE_256 0x80
+// right shift by 8 for numerical value
+#define BGCNT_MASK_SCREEN_BASE_2K 0x1f00
+#define BGCNT_MASK_BG01_EXTENDED_PALETTE 0x2000
+#define BGCNT_MASK_SCREEN_SIZE 0xc000

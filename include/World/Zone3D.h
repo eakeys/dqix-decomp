@@ -2,14 +2,7 @@
 
 #include "Grotto/Main/ActiveGrottoClass.h"
 #include "Memory/SafeAllocator.h"
-
-// definitely needs to be moved
-struct Vector3i
-{
-    int x;
-    int y;
-    int z;
-};
+#include "Graphics/Vector.h"
 
 struct Zone3D_StructPtr_8
 {

@@ -121,6 +121,18 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020afe6c end:0x020afec4
 
+src/Graphics/NSBXX/TEX.cpp:
+    complete
+    .text start:0x020b2e3c end:0x020b66f4
+
+src/Graphics/NSBXX/NSBXX.cpp:
+    complete
+    .text start:0x020b66f4 end:0x020b9778
+
+src/System/VRAM.cpp:
+    complete
+    .text start:0x020c3a4c end:0x020c4c74
+
 //src/System/InterruptHandler.cpp:
 //    complete
 //    .text start:0x020c6954 end:0x020c6c90

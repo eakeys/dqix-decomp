@@ -25,6 +25,13 @@
 #define BG2CNTSUB (*(volatile unsigned short*)(0x0400100c))
 #define BG3CNTSUB (*(volatile unsigned short*)(0x0400100e))
 
+#define BLEND_TARGET_BG0 1
+#define BLEND_TARGET_BG1 2
+#define BLEND_TARGET_BG2 4
+#define BLEND_TARGET_BG3 8
+#define BLEND_TARGET_OBJ 0x10
+#define BLEND_TARGET_BACKDROP 0x20
+
 #define DISPCNT_MASK_BG_MODE 7
 // right shift by 24 for numerical value
 #define DISPCNT_MASK_CHARACTER_BASE_64K 0x07000000

@@ -137,6 +137,10 @@ src/System/BGBases.cpp:
     complete
     .text start:0x020c4c74 end:0x020c50e4
 
+src/System/ColorEffects.cpp:
+    complete
+    .text start:0x020c50e4 end:0x020c516c
+
 //src/System/InterruptHandler.cpp:
 //    complete
 //    .text start:0x020c6954 end:0x020c6c90

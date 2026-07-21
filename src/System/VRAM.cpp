@@ -380,26 +380,39 @@ void MapVRAMBanksToClearTextures(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-// not quite a match!
+// This match is a war crime but switch(...) just wasn't cooperating here
 void MapVRAMBanksToArm7WorkRAM(unsigned short banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.arm7WorkRAMBanks_);
     data_02111224.arm7WorkRAMBanks_ = banks;
-    switch (banks)
+    int ibanks = banks;
+    if (ibanks <= 8)
     {
-    case VRAM_BANK_C | VRAM_BANK_D:
-        VRAMCNT_D = 0x8a;
-        VRAMCNT_C = 0x82;
-        break;
-    case VRAM_BANK_C:
-        VRAMCNT_C = 0x82;
-        break;
-    case VRAM_BANK_D:
-        VRAMCNT_D = 0x82;
-        break;
-    case 1: // if we change this 1 to the correct 0, everything falls apart
-        break;
+        if (ibanks >= 8)
+            goto workram_case_D;
+        // I do love that this is entirely equivalent to ibanks != 4
+        if (ibanks > 4 || ibanks < 0 || ibanks == 0 || ibanks != 4)
+            goto workram_switch_end;
+        goto workram_case_C;
     }
+    else
+    {
+        if (ibanks != 12)
+            goto workram_switch_end;
+        // falls through to case C+D
+    }
+
+workram_case_C_D:
+    VRAMCNT_D = 0x8a;
+    VRAMCNT_C = 0x82;
+    goto workram_switch_end;
+workram_case_C:
+    VRAMCNT_C = 0x82;
+    goto workram_switch_end;
+workram_case_D:
+    VRAMCNT_D = 0x82;
+    goto workram_switch_end;
+workram_switch_end:
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
@@ -409,25 +422,37 @@ void MapVRAMBanksToLCDC(unsigned short banks)
     InternalMapVRAMBanksToLCDC(banks);
 }
 
-// not quite a match!
+// more war crimes here
 void MapVRAMBanksToSubBG(unsigned short banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.subBGBanks_);
     data_02111224.subBGBanks_ = banks;
     // this one uses MST 4 for bank C, but MST 1 for H and I (no offsets)
-    switch (banks)
+    int ibanks = banks;
+    if (ibanks <= 0x80)
     {
-    case VRAM_BANK_C:
-        VRAMCNT_C = 0x84;
-        break;
-    case VRAM_BANK_H | VRAM_BANK_I:
-        VRAMCNT_I = 0x81;
-    case VRAM_BANK_H:
-        VRAMCNT_H = 0x81;
-        break;
-    case 1: // again should be zero
-        break;
+        if (ibanks >= 0x80)
+            goto subBG_case_H;
+
+        if (ibanks > 4 || ibanks < 0 || ibanks == 0 || ibanks != 4)
+            goto subBG_switch_end;
+        // goes to case C
     }
+    else
+    {
+        if (banks != 0x180)
+            goto subBG_switch_end;
+        goto subBG_case_H_I;
+    }
+subBG_case_C:
+    VRAMCNT_C = 0x84;
+    goto subBG_switch_end;
+subBG_case_H_I:
+    VRAMCNT_I = 0x81;
+subBG_case_H:
+    VRAMCNT_H = 0x81;
+    goto subBG_switch_end;
+subBG_switch_end:
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 

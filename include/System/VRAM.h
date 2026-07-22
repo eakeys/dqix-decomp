@@ -32,21 +32,21 @@ struct VRAMBankUsages
 extern "C"
 {
     void InitializeVRAM();
-    void InternalMapVRAMBanksToLCDC(unsigned short banks);
+    void InternalMapVRAMBanksToLCDC(int banks);
     // accepts either a subset of {A, B, C, D} or a subset of {E, F, G}
-    void MapVRAMBanksToMainBG(unsigned short banks);
+    void MapVRAMBanksToMainBG(int banks);
     // accepts either a subset of {A, B} or a subset of {E, F, G}
-    void MapVRAMBanksToMainObj(unsigned short banks);
+    void MapVRAMBanksToMainObj(int banks);
     // accepts either E or a subset of {F, G}.
     // only 32k of E can be used.
-    void MapVRAMBanksToMainBGExtendedPalette(unsigned short banks);
+    void MapVRAMBanksToMainBGExtendedPalette(int banks);
     // accepts either F or G.
     // only 8k can be used.
-    void MapVRAMBanksToMainObjExtendedPalette(unsigned short banks);
+    void MapVRAMBanksToMainObjExtendedPalette(int banks);
     // accepts a subset of {A, B, C, D}
-    void MapVRAMBanksToTextureImage(unsigned short banks);
+    void MapVRAMBanksToTextureImage(int banks);
     // accepts a subset of {E, F, G} except for {E, G}
-    void MapVRAMBanksToTexturePalette(unsigned short banks);
+    void MapVRAMBanksToTexturePalette(int banks);
     // acceptable options are A, B, A+B, C, D, C+D.
     // GBATEK seems very cryptic here, but as far as I can tell this lets
     // you clear the 'color buffer' and 'depth buffer' (to the extent that
@@ -56,19 +56,19 @@ extern "C"
     // provided they are mapped to 2 and 3. From looking at melonDS source
     // code offset 2 is for color and 3 for depth. Maybe the idea is that if
     // offset 2 isn't mapped then it defaults to black/transparent?
-    void MapVRAMBanksToClearTextures(unsigned short banks);
+    void MapVRAMBanksToClearTextures(int banks);
     // accepts a subset of {C, D}
-    void MapVRAMBanksToArm7WorkRAM(unsigned short banks);
+    void MapVRAMBanksToArm7WorkRAM(int banks);
     // accepts any subset
-    void MapVRAMBanksToLCDC(unsigned short banks);
+    void MapVRAMBanksToLCDC(int banks);
     // accepts {C}, {H} or {H, I}
-    void MapVRAMBanksToSubBG(unsigned short banks);
+    void MapVRAMBanksToSubBG(int banks);
     // accepts {D} or {I}
-    void MapVRAMBanksToSubObj(unsigned short banks);
+    void MapVRAMBanksToSubObj(int banks);
     // accepts {H}
-    void MapVRAMBanksToSubBGExtendedPalette(unsigned short banks);
+    void MapVRAMBanksToSubBGExtendedPalette(int banks);
     // accepts {I}
-    void MapVRAMBanksToSubObjExtendedPalette(unsigned short banks);
+    void MapVRAMBanksToSubObjExtendedPalette(int banks);
 
     // Reads the bank mask at the specified address, resets those
     // banks to LCDC mode, sets the mask to 0 and returns the prior
@@ -127,7 +127,7 @@ extern "C"
     unsigned short GetSubBGExtendedPaletteVRAMBanks();
     unsigned short GetSubObjExtendedPaletteVRAMBanks();
 
-    unsigned int GetTotalComponentVRAMSize(unsigned short banks);
+    unsigned int GetTotalComponentVRAMSize(int banks);
 
     unsigned int GetMainBGAssignedVRAMSize();
     unsigned int GetTextureImageAssignedVRAMSize();

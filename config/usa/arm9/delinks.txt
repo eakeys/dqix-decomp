@@ -141,6 +141,10 @@ src/System/ColorEffects.cpp:
     complete
     .text start:0x020c50e4 end:0x020c516c
 
+src/System/LoadToVRAM.cpp:
+    complete
+    .text start:0x020c5820 end:0x020c6914
+
 //src/System/InterruptHandler.cpp:
 //    complete
 //    .text start:0x020c6954 end:0x020c6c90

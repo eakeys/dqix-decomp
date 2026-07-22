@@ -35,7 +35,7 @@ void InitializeVRAM()
     *(short*)(vramAddr + 8) = 0; // banks H, I
 }
 
-void InternalMapVRAMBanksToLCDC(unsigned short banks)
+void InternalMapVRAMBanksToLCDC(int banks)
 {
     // 0x80 = enabled, MST = 0 (LCDC), offset = 0 (not relevant)
     if (banks & VRAM_BANK_A)
@@ -58,7 +58,7 @@ void InternalMapVRAMBanksToLCDC(unsigned short banks)
         VRAMCNT_I = 0x80;
 }
 
-extern "C" void MapVRAMBanksToMainBG(unsigned short banks)
+extern "C" void MapVRAMBanksToMainBG(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.mainBGBanks_);
     data_02111224.mainBGBanks_ = banks;
@@ -141,7 +141,7 @@ extern "C" void MapVRAMBanksToMainBG(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-extern "C" void MapVRAMBanksToMainObj(unsigned short banks)
+extern "C" void MapVRAMBanksToMainObj(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.mainOBJBanks_);
     data_02111224.mainOBJBanks_ = banks;
@@ -185,7 +185,7 @@ extern "C" void MapVRAMBanksToMainObj(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToMainBGExtendedPalette(unsigned short banks)
+void MapVRAMBanksToMainBGExtendedPalette(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.mainBGExtPaletteBanks_);
     data_02111224.mainBGExtPaletteBanks_ = banks;
@@ -214,7 +214,7 @@ void MapVRAMBanksToMainBGExtendedPalette(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToMainObjExtendedPalette(unsigned short banks)
+void MapVRAMBanksToMainObjExtendedPalette(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.mainObjExtPaletteBanks_);
     data_02111224.mainObjExtPaletteBanks_ = banks;
@@ -236,7 +236,7 @@ void MapVRAMBanksToMainObjExtendedPalette(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToTextureImage(unsigned short banks)
+void MapVRAMBanksToTextureImage(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.textureImageBanks_);
     data_02111224.textureImageBanks_ = banks;
@@ -299,7 +299,7 @@ void MapVRAMBanksToTextureImage(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToTexturePalette(unsigned short banks)
+void MapVRAMBanksToTexturePalette(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.texturePaletteBanks_);
     data_02111224.texturePaletteBanks_ = banks;
@@ -328,7 +328,7 @@ void MapVRAMBanksToTexturePalette(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToClearTextures(unsigned short banks)
+void MapVRAMBanksToClearTextures(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.clearTextureBanks_);
     data_02111224.clearTextureBanks_ = banks;
@@ -362,23 +362,22 @@ void MapVRAMBanksToClearTextures(unsigned short banks)
 }
 
 // This match is a war crime but switch(...) just wasn't cooperating here
-void MapVRAMBanksToArm7WorkRAM(unsigned short banks)
+void MapVRAMBanksToArm7WorkRAM(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.arm7WorkRAMBanks_);
     data_02111224.arm7WorkRAMBanks_ = banks;
-    int ibanks = banks;
-    if (ibanks <= 8)
+    if (banks <= 8)
     {
-        if (ibanks >= 8)
+        if (banks >= 8)
             goto workram_case_D;
-        // I do love that this is entirely equivalent to ibanks != 4
-        if (ibanks > 4 || ibanks < 0 || ibanks == 0 || ibanks != 4)
+        // I do love that this is entirely equivalent to banks != 4
+        if (banks > 4 || banks < 0 || banks == 0 || banks != 4)
             goto workram_switch_end;
         goto workram_case_C;
     }
     else
     {
-        if (ibanks != 12)
+        if (banks != 12)
             goto workram_switch_end;
         // falls through to case C+D
     }
@@ -397,25 +396,24 @@ workram_switch_end:
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToLCDC(unsigned short banks)
+void MapVRAMBanksToLCDC(int banks)
 {
     data_02111224.lcdcMappedBanks_ |= banks;
     InternalMapVRAMBanksToLCDC(banks);
 }
 
 // more war crimes here
-void MapVRAMBanksToSubBG(unsigned short banks)
+void MapVRAMBanksToSubBG(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.subBGBanks_);
     data_02111224.subBGBanks_ = banks;
     // this one uses MST 4 for bank C, but MST 1 for H and I (no offsets)
-    int ibanks = banks;
-    if (ibanks <= 0x80)
+    if (banks <= 0x80)
     {
-        if (ibanks >= 0x80)
+        if (banks >= 0x80)
             goto subBG_case_H;
 
-        if (ibanks > 4 || ibanks < 0 || ibanks == 0 || ibanks != 4)
+        if (banks > 4 || banks < 0 || banks == 0 || banks != 4)
             goto subBG_switch_end;
         // goes to case C
     }
@@ -437,7 +435,7 @@ subBG_switch_end:
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToSubObj(unsigned short banks)
+void MapVRAMBanksToSubObj(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.subOBJBanks_);
     data_02111224.subOBJBanks_ = banks;
@@ -456,7 +454,7 @@ void MapVRAMBanksToSubObj(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToSubBGExtendedPalette(unsigned short banks)
+void MapVRAMBanksToSubBGExtendedPalette(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.subBGExtPaletteBanks_);
     data_02111224.subBGExtPaletteBanks_ = banks;
@@ -473,7 +471,7 @@ void MapVRAMBanksToSubBGExtendedPalette(unsigned short banks)
     InternalMapVRAMBanksToLCDC(data_02111224.lcdcMappedBanks_);
 }
 
-void MapVRAMBanksToSubObjExtendedPalette(unsigned short banks)
+void MapVRAMBanksToSubObjExtendedPalette(int banks)
 {
     data_02111224.lcdcMappedBanks_ = ~banks & (data_02111224.lcdcMappedBanks_ | data_02111224.subObjExtPaletteBanks_);
     data_02111224.subObjExtPaletteBanks_ = banks;
@@ -492,7 +490,7 @@ void MapVRAMBanksToSubObjExtendedPalette(unsigned short banks)
 
 unsigned short ResetAssignedVRAMBanksByUsage(unsigned short* usage)
 {
-    unsigned short banks = *usage;
+    int banks = *usage;
     *usage = 0;
     data_02111224.lcdcMappedBanks_ |= banks;
     InternalMapVRAMBanksToLCDC(banks);
@@ -659,7 +657,7 @@ unsigned short GetSubObjVRAMBanks() { return data_02111224.subOBJBanks_; }
 unsigned short GetSubBGExtendedPaletteVRAMBanks() { return data_02111224.subBGExtPaletteBanks_; }
 unsigned short GetSubObjExtendedPaletteVRAMBanks() { return data_02111224.subObjExtPaletteBanks_; }
 
-unsigned int GetTotalComponentVRAMSize(unsigned short banks)
+unsigned int GetTotalComponentVRAMSize(int banks)
 {
     unsigned int total = 0;
     if (banks & VRAM_BANK_A)

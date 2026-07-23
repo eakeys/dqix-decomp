@@ -25,6 +25,19 @@
 #define BG2CNTSUB (*(volatile unsigned short*)(0x0400100c))
 #define BG3CNTSUB (*(volatile unsigned short*)(0x0400100e))
 
+#define GXFIFO_MATRIX_PUSH (*(volatile unsigned int*)0x04000444)
+#define GXFIFO_MATRIX_POP (*(volatile unsigned int*)0x04000448)
+
+#define GXFIFO_MATRIX_SCALE (*(volatile unsigned int*)0x0400046c)
+
+#define GXFIFO_POLYGON_ATTRIBUTES (*(volatile unsigned int*)0x040004a4)
+
+#define GXFIFO_POLYGON_BEGIN (*(volatile unsigned int*)0x04000500)
+#define GXFIFO_POLYGON_END (*(volatile unsigned int*)0x04000504)
+
+#define GXFIFO_TEST_BOX (*(volatile unsigned int*)0x040005c0)
+
+
 #define BLEND_TARGET_BG0 1
 #define BLEND_TARGET_BG1 2
 #define BLEND_TARGET_BG2 4

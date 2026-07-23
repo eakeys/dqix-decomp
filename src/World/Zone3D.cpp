@@ -5,8 +5,8 @@
 #include "Filesystem/FileAccessor.h"
 #include "Filesystem/LowNitroHandle.h"
 #include "Filesystem/FileIO.h"
-#include "std_library_functions.h"
 #include "Grotto/Overlay_17/Struct44C8.h"
+#include "Graphics/NSBXX/NSBXX.h"
 
 extern "C"
 {
@@ -25,19 +25,12 @@ extern "C"
     void* func_0207df50(void*);
     void func_0207df90(void*);
     void func_0207dfac(void*);
-    void func_0207e264(void*);
-    void func_0207e428(void*, const void*, unsigned int);
-    void func_0207e434(void*);
-    void func_0207e44c(void*, int);
     void* func_0207ecc4(void*);
     void func_0207eccc(void*, void*);
 
     void* func_0208a9b4();
     void func_02094d00(void*);
     Zone3D_StructPtr_8* func_02099950(void*, unsigned short id);
-
-    int func_020b2e3c(void*);
-    int func_020b2f30(void*);
 
     void func_020c9be0(); // abort() or similar
     void func_020de848(void*);
@@ -102,8 +95,8 @@ void Zone3D::SwitchZone(unsigned short newID)
     previousZoneID_ = currentZoneID_;
     currentZoneID_ = newID;
 
-    unknown_838_ = 0;
-    unknown_83c_ = 0;
+    textureImageMemory_ = 0;
+    texturePaletteMemory_ = 0;
     unknown_424_ = 1;
     firstBMDJStruct_41c_ = 0;
     firstTextureStruct_418_ = NULL;
@@ -345,10 +338,10 @@ bool Zone3D::ProcessNSBTXFile(const void* filedata, unsigned int filesize, const
     SafeAllocator* allocator = pAllocator_68_;
     void* graphicsPtr = unknown_ptr_50_;
 
-    Zone3D_TextureStruct* texStruct = (Zone3D_TextureStruct*)allocator->Allocate(sizeof(Zone3D_TextureStruct));
+    Model3DListNode* texStruct = (Model3DListNode*)allocator->Allocate(sizeof(Model3DListNode));
     if (texStruct != NULL)
     {
-        func_0207e264(texStruct);
+        texStruct->model_.Clear();
         texStruct->filename_ = NULL;
         texStruct->pNext_ = NULL;
         char* newFilenameBuffer = (char*)allocator->Allocate(strlen(filename) + 1);
@@ -363,15 +356,15 @@ bool Zone3D::ProcessNSBTXFile(const void* filedata, unsigned int filesize, const
             if (decompressed != NULL)
             {
                 func_0207df90(graphicsPtr);
-                func_0207e428(texStruct, decompressed, decompressedLength);
-                func_0207e434(texStruct);
-                func_0207e44c(texStruct, 2);
+                texStruct->model_.SetRawFile(decompressed, decompressedLength);
+                texStruct->model_.ClearRawFileCache();;
+                texStruct->model_.ProcessRawFile(2);
                 func_0207dfac(graphicsPtr);
-                void* pVar5 = func_0207ecc4(texStruct);
-                if (pVar5 != 0)
+                NSBXXTex* pVar5 = (NSBXXTex*)func_0207ecc4(texStruct);
+                if (pVar5 != NULL)
                 {
-                    unknown_838_ += func_020b2e3c(pVar5);
-                    unknown_83c_ += func_020b2f30(pVar5);
+                    textureImageMemory_ += NSBXX_Tex_GetBlock1Length(pVar5);
+                    texturePaletteMemory_ += NSBXX_Tex_GetBlock4Length(pVar5);
                 }
                 bool success = false;
                 if (pVar5 != 0)
@@ -386,7 +379,7 @@ bool Zone3D::ProcessNSBTXFile(const void* filedata, unsigned int filesize, const
                     }
                 }
                 if (!success)
-                    func_0207e264(texStruct);
+                    texStruct->model_.Clear();
             }
         }
     }

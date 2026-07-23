@@ -62,6 +62,10 @@ src/Filesystem/FileIO.cpp:
     complete
     .text start:0x02075098 end:0x0207568c
 
+src/Graphics/Model3D.cpp:
+    complete
+    .text start:0x0207e264 end:0x0207ea38
+
 src/Grotto/Main/ActiveGrottoClass.cpp:
     complete
     .text start:0x0208fe68 end:0x02090294
@@ -121,13 +125,17 @@ src/Memory/AllocatorUnion.cpp:
     complete
     .text start:0x020afe6c end:0x020afec4
 
-//src/Graphics/NSBXX/TEX.cpp:
-//    complete
-//    .text start:0x020b2e3c end:0x020b66f4
+src/Graphics/NSBXX/TEX.cpp:
+    complete
+    .text start:0x020b2e3c end:0x020b2f9c
 
 //src/Graphics/NSBXX/NSBXX.cpp:
 //    complete
 //    .text start:0x020b66f4 end:0x020b9778
+
+//src/Graphics/VRAMAllocations.cpp:
+//    complete
+//    .text start:0x020baa30 end:0x020c0044
 
 src/System/VRAM.cpp:
     complete

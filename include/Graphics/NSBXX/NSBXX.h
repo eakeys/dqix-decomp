@@ -6,13 +6,13 @@
 // https://github.com/scurest/nsbmd_docs/blob/master/nsbmd_docs.txt
 // I'm using NSBXX as a generic name for any of these file types
 
-#define SIGNATURE_NSBMD 
+#define SIGNATURE_NSBMD 0x30444d42 // "BMD0"
 #define SIGNATURE_NSBTX 0x30585442 // "BTX0"
-#define SIGNATURE_NSBCA
-#define SIGNATURE_NSBTP
-#define SIGNATURE_NSBTA
-#define SIGNATURE_NSBMA
-#define SIGNATURE_NSBVA
+#define SIGNATURE_NSBCA 0x30414342 // "BCA0"
+#define SIGNATURE_NSBTP 0x30505442 // "BTP0"
+#define SIGNATURE_NSBTA 0x30415442 // "BTA0"
+#define SIGNATURE_NSBMA 0x30414d42 // "BMA0"
+#define SIGNATURE_NSBVA 0x30415642 // "BVA0"
 
 struct NSBXXContainer
 {
@@ -76,24 +76,74 @@ struct NSBXXPatternAnimation
     };
 };
 
+struct NSBXXMdl
+{
+    uint32_t signature_;
+    uint32_t unknown_4;
+    NSBXXNameList nameList_;
+};
+
+struct ModelBoundingBox
+{
+    // all quantities are 16-bit fixed points.
+    // scurest nsbmd docs say last 3 are xMax etc but that's not how
+    // they're used in functions here
+    int16_t xMin_;
+    int16_t yMin_;
+    int16_t zMin_;
+    int16_t xSize_;
+    int16_t ySize_;
+    int16_t zSize_;
+};
+
+struct NSBXXInternalModel
+{
+    uint32_t filesize_;
+    uint32_t renderCommandsOffset_;
+    uint32_t materialsOffset_;
+    uint32_t meshesOffset_;
+    uint32_t inverseBindsOffset_;
+    uint8_t unk_14[3];
+    uint8_t numBoneMatrices_;
+    uint8_t numMaterials_;
+    uint8_t numMeshes_;
+    uint8_t unk_1a[2];
+    int32_t upScale_; // 32-bit fixed point
+    int32_t downScale_; // 32-bit fixed point
+    uint16_t numVertices_;
+    uint16_t numPolygons_;
+    uint16_t numTriangles_;
+    uint16_t numQuads_;
+    ModelBoundingBox bounds_;
+    int32_t maybeScale_;
+};
+
 struct NSBXXTex
 {
     uint32_t signature;
     uint32_t maybeTotalSize_4_;
-    uint32_t unk_8;
-    uint16_t block1LengthShr3_;
+    // this is zero in the file but gets overwritten.
+    // it actually contains a few things: low 16 bits are the offset
+    // divided by eight. Then the next 15 bits encode the size divided by
+    // sixteen, and the top bit is some bool.
+    uint32_t block1VRAMLoadOffset_;
+    uint16_t block1NumEightBytes_; // need to << 3 to get block size
     uint16_t textureListOffset_;
-    uint32_t unk_10;
+    uint16_t maybeBlock1Flags_10_; // bit 0: loaded to vram
+    char padding_12[2];
     uint32_t block1Offset_;
-    uint32_t unk_18_not_in_documentation; // apicula docs have everything after this 4 bytes earlier
-    uint16_t block2LengthShr3_;
+    // see the block 1 analogue for a description
+    uint32_t block2Or3VRAMLoadOffset_;
+    uint16_t block2NumEightBytes_; // block 3 has as many 4-byte values, so << 3 and << 2 respectively
     uint16_t unk_1e;
-    uint32_t unk_20;
+    uint16_t maybeBlock23Flags_20_; // bit 0: loaded to vram
+    char padding_22[2];
     uint32_t block2Offset_;
     uint32_t block3Offset_;
-    uint32_t unk_2c;
-    uint16_t block4LengthShr3_;
-    uint16_t unk_32;
+    // see the block 1 analogue for a description
+    uint32_t block4VRAMLoadOffset_;
+    uint16_t block4NumEightBytes_;
+    uint16_t maybeBlock4Flags_32_; // bit 0: loaded to vram
     uint32_t paletteListOffset_; 
     uint32_t block4Offset_;
 };
@@ -104,9 +154,16 @@ extern "C"
 int NSBXX_Tex_GetBlock1Length(NSBXXTex* tex);
 // usa: func_020b2e50
 int NSBXX_Tex_GetBlock2Length(NSBXXTex* tex);
-
+// usa: func_020b2e64
+void NSBXX_Tex_WriteImageVRAMOffsets(NSBXXTex* tex, int block1, int block2_3);
+// usa: func_020b28e78
+void NSBXX_Tex_LoadImageToVRAM(NSBXXTex* tex, bool needsMapping);
 // usa: func_020b2f30
 int NSBXX_Tex_GetBlock4Length(NSBXXTex* tex);
+// usa: func_020b2f44
+void NSBXX_Tex_WritePaletteVRAMOffset(NSBXXTex* tex, int offset);
+// usa: func_020b2f4c
+void NSBXX_Tex_LoadPaletteToVRAM(NSBXXTex* tex, bool needsMapping);
 
 // usa: func_020b7694
 // Returns a pointer to the first file within the file provided.

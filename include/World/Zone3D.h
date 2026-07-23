@@ -3,6 +3,7 @@
 #include "Grotto/Main/ActiveGrottoClass.h"
 #include "Memory/SafeAllocator.h"
 #include "Graphics/Vector.h"
+#include "Graphics/Model3D.h"
 
 struct Zone3D_StructPtr_8
 {
@@ -13,15 +14,6 @@ struct Zone3D_StructPtr_8
     char mapShortName_[7];
     unsigned char unknown_c_low_ : 4;
     unsigned char unknown_c_high_ : 1;
-};
-
-// To be moved once we figure out what it is.
-// sizeof == 0xb4
-struct Zone3D_TextureStruct
-{
-    char unk_0[0xac];
-    const char* filename_;
-    Zone3D_TextureStruct* pNext_;
 };
 
 // sizeof == 0x58
@@ -41,6 +33,13 @@ struct Zone3D_BMDJStruct
 class Zone3D
 {
 public:
+    struct Model3DListNode
+    {
+        Model3D model_;
+        const char* filename_;
+        Model3DListNode* pNext_;
+    };
+
     unsigned short currentZoneID_;
     unsigned short previousZoneID_;
 
@@ -79,7 +78,7 @@ public:
     } unknownBData_;
     char unknown_struct_f4_[0x18]; //
     char unknown_struct_10c_[0x30c]; // passed to func_0207b9cc
-    Zone3D_TextureStruct* firstTextureStruct_418_;
+    Model3DListNode* firstTextureStruct_418_;
     Zone3D_BMDJStruct* firstBMDJStruct_41c_;
     void* grottoTileMapData_420_; // pointer to array of stride 0x48
     int unknown_424_;
@@ -100,7 +99,9 @@ public:
     int unknown_478_;
     int unknown_47c_;
 
-    char unk_480[0x82c - 0x480];
+    char unk_480[0x498 - 0x480];
+    Model3D models_498_[2];
+    char unk_5f0[0x82c - 0x5f0];
 
     int unknown_82c_;
 
@@ -109,8 +110,8 @@ public:
     char unk_835[3];
 
     // these might be sth like number of vertices / indices for draw commands
-    int unknown_838_;
-    int unknown_83c_;
+    int textureImageMemory_;
+    int texturePaletteMemory_;
 
     char unk_840[0x23b8 - 0x840];
 

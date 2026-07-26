@@ -18,7 +18,7 @@ enum VRAMRegion
 
 enum VRAMSubregion
 {
-    VRAMSubregion_TeturePalette = 0,
+    VRAMSubregion_TexturePalette = 0,
     VRAMSubregion_TextureImage,
     VRAMSubregion_MainBGStandardPalette,
     VRAMSubregion_MainBG0Screen,
@@ -117,7 +117,10 @@ public:
     short stagedTaskCounter_;
     unsigned short banksInUse_[10];
     char unk_20[0x3c - 0x20]; // previous array might be of size 24 instead
-    unsigned int maybeLockMask_; // refcounting by <<1 | 1 and >>1
+    // refcounting by <<1 | 1 and >>1.
+    // While nonzero, texture image and texture palette copying tasks will
+    // not execute. (All other tasks will execute as normal)
+    unsigned int textureLockMask_; 
     unsigned char frameBufferIndex_; // might be bool
 
     // usa: func_01ff8810
@@ -161,5 +164,3 @@ public:
 // userdata. I think this is written so it can be passed as a callback
 // to e.g. an interrupt handler
 void SendStagedVRAMDataToVRAM(void* vramStagingManagerUserdata);
-
-extern VRAMStagingManager data_0214e5e4;

@@ -33,8 +33,8 @@ public:
     int unknown_9c_;
     unsigned short unknown_a0_;
     unsigned short unknown_a2_;
-    short unknown_a4_;
-    short unknown_a6_;
+    short imageStagingTaskID_;
+    short paletteStagingTaskID_;
     int unknown_flags_a8_0_ : 1;
     int unknown_flags_a8_1_ : 1;
     int unknown_flags_a8_2_ : 1;

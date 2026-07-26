@@ -96,7 +96,7 @@ void VRAMStagingManager::ZeroInitialize()
     maybeMaxHistoricalSize6MemoryUse_ = 0;
     stagedTaskCounter_ = 0;
     func_020d84f8(banksInUse_, 0x30);
-    maybeLockMask_ = 0;
+    textureLockMask_ = 0;
     frameBufferIndex_ = 0;
 }
 
@@ -279,8 +279,8 @@ int VRAMStagingManager::Stage(VRAMSubregion subregion, const void* data, unsigne
         int region = data_020ee6d0[subregion];
         if (IsSafeToModifySubregion(subregion))
         {
-            maybeLockMask_ <<= 1;
-            maybeLockMask_ |= 1;
+            textureLockMask_ <<= 1;
+            textureLockMask_ |= 1;
             switch (region)
             {
             case VRAMRegion_TexturePalette:
@@ -302,7 +302,7 @@ int VRAMStagingManager::Stage(VRAMSubregion subregion, const void* data, unsigne
                 MemoryUnmapTextureImage();
                 break;
             }
-            maybeLockMask_ >>= 1;
+            textureLockMask_ >>= 1;
             FreeStagingSpaceAllocation(data);
         }
         else
@@ -571,7 +571,7 @@ void VRAMStagingManager::SendReadyDataToVRAM()
         }
         else
             thisFunctionTaskCount -= loopRegionTaskSet->numTasks_;
-        if (maybeLockMask_ != 0 && (region == VRAMRegion_TexturePalette || region == VRAMRegion_TextureImage))
+        if (textureLockMask_ != 0 && (region == VRAMRegion_TexturePalette || region == VRAMRegion_TextureImage))
             continue;
         
         int maxAmountCopyableThisGroup;

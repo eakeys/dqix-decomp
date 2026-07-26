@@ -1,6 +1,7 @@
 #include "Graphics/Model3D.h"
 #include "Graphics/NSBXX/NSBXX.h"
 #include "Graphics/Vector.h"
+#include "Graphics/VRAMStaging.h"
 #include "System/Cache.h"
 #include "System/Graphics.h"
 #include "Filesystem/BackgroundLoader.h"
@@ -12,9 +13,6 @@ extern "C"
     // zero memory
     void func_0200f374(void*, unsigned);
 
-    void func_020dc07c();
-    void func_020dc098();
-
     void func_020b2b6c(void*);
     void func_020b426c(void*);
     void func_020b66f4(void*, int, int, int);
@@ -23,10 +21,6 @@ extern "C"
     int32_t func_020c2eb8(Vector3i*);
 
     int func_020c56b0(int*);
-
-    unsigned short func_020dc124(NSBXXTex*, bool);
-    unsigned short func_020dc184(NSBXXTex*, bool);
-    void func_020dc1e8(int);
 
     bool func_0207e97c(Model3D*);
 }
@@ -50,16 +44,16 @@ void Model3D::Clear()
     unknown_a2_ = 0x1f;
     unknown_flags_a8_1_ = false;
     unknown_flags_a8_2_ = false;
-    unknown_a4_ = 0xffff;
-    unknown_a6_ = 0xffff;
+    imageStagingTaskID_ = 0xffff;
+    paletteStagingTaskID_ = 0xffff;
     memset(this, 0, 0x54); // substruct
     memset(&xMax_, 0, 6 * sizeof(fix32_t)); 
 }
 
 void Model3D::Func0207e2e0()
 {
-    func_020dc1e8(unknown_a6_);
-    func_020dc1e8(unknown_a4_);
+    CancelVRAMStagingOperation(paletteStagingTaskID_);
+    CancelVRAMStagingOperation(imageStagingTaskID_);
     this->Clear();
 }
 
@@ -213,15 +207,15 @@ void Model3D::ProcessRawFile(int arg)
     {
         if (arg == 2)
         {
-            func_020dc07c();
+            LockStagedTextureVRAMCopying();
             NSBXX_Tex_LoadPaletteToVRAM(tex, true);
             NSBXX_Tex_LoadImageToVRAM(tex, true);
-            func_020dc098();
+            UnlockStagedTextureVRAMCopying();
         }
         else
         {
-            unknown_a6_ = func_020dc124(tex, arg == 1);
-            unknown_a4_ = func_020dc184(tex, arg == 1);
+            paletteStagingTaskID_ = StageTexFilePaletteData(tex, arg == 1);
+            imageStagingTaskID_ = StageTexFileImageData(tex, arg == 1);
         }
     }
 

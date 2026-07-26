@@ -14,6 +14,7 @@
 #define DISPCNTSUB (*(volatile unsigned int*)0x04001000)
 #define DISP3DCNT (*(volatile unsigned short*)0x04000060)
 
+#define VCOUNT (*(volatile unsigned short*)0x04000006)
 
 #define BG0CNT (*(volatile unsigned short*)(0x04000008))
 #define BG1CNT (*(volatile unsigned short*)(0x0400000a))

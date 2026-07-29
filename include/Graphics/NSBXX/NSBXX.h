@@ -1,6 +1,8 @@
 #pragma once
 
 #include "std_library_functions.h"
+#include <globaldefs.h>
+#include "../Vector.h"
 
 // Documentation on the various formats is available here:
 // https://github.com/scurest/nsbmd_docs/blob/master/nsbmd_docs.txt
@@ -33,14 +35,43 @@ struct NSBXXNameList
     // subheader?
     uint16_t subheaderSize_;
     uint16_t offsetToDataStart_;
-    uint32_t treeRoot_8_; // https://github.com/scurest/nsbmd_docs/issues/2
+
+    struct SearchTreeEntry // https://github.com/scurest/nsbmd_docs/issues/2
+    {
+        uint8_t bitIndex_;
+        uint8_t children_[2];
+        uint8_t resourceIndex_;
+    } treeRoot_8_;
     // Supposedly the structure continues as follows:
-    // uint32_t unknown_c[numEntries_];
+    // SearchTreeEntry otherEntries_[numEntries_];
     // <-- this + offsetToDataStart_ points to the following:
-    // uint16_t elementStride_; // sizeof(T)
+    // uint16_t elementStride_; // holds sizeof(T)
     // uint16_t dataSectionSize_; // includes elementStride and dataSectionSize, so is equal to numEntries * sizeof(T) + 4
     // T dataElements_[numEntries_];
     // Name names_[numEntries_]; // Name is an array of 16 chars
+
+    template<class T>
+    inline T* GetEntryByIndex(unsigned int n) const volatile
+    {
+        if (this != NULL && n < numEntries_)
+        {
+            intptr_t dataStart = (intptr_t)this + offsetToDataStart_;
+            uint16_t stride = *(uint16_t*)dataStart;
+            return (T*)(dataStart + 4 + stride * n);
+        }
+        return NULL;
+    }
+
+    inline const char* GetNameByIndexAndOffset(unsigned int n, unsigned int offsetInBuffer) const
+    {
+        if (this != NULL && n < numEntries_)
+        {
+            intptr_t dataStart = (intptr_t)this + offsetToDataStart_;
+            intptr_t nameStart = dataStart + *(uint16_t*)(dataStart + 2);
+            return (const char*)(nameStart + offsetInBuffer);
+        }
+        return NULL;
+    }
 };
 
 struct NSBXXInnerFileCommon {
@@ -116,6 +147,60 @@ struct NSBXXInternalModel
     uint16_t numQuads_;
     ModelBoundingBox bounds_;
     int32_t maybeScale_;
+    char unk_3c[4];
+    NSBXXNameList boneList_;
+
+    // using this seems to screw up register assignment, but it's here in case
+    // we can make it work later somehow
+    inline struct NSBXXModelMaterialData* GetMaterialData() const
+    {
+        if (this != NULL && materialsOffset_ != 0)
+            return (NSBXXModelMaterialData*)((intptr_t)this + materialsOffset_);
+        return NULL;
+    }
+};
+
+struct NSBXXModelMaterialData
+{
+    // offset to a NameList of MaterialPairing structs
+    uint16_t texturePairingsOffset_;
+    // offset to a NameList of MaterialPairing structs
+    uint16_t palettePairingsOffset_;
+    // entries are uint32_t's giving offsets to NSBXXMaterial structs
+    NSBXXNameList materialOffsetList_;
+};
+
+struct NSBXXMaterial
+{
+    uint16_t unk_0;
+    uint16_t size_; // in bytes
+    uint32_t paramDIF_AMB_;
+    uint32_t paramSPE_EMI_;
+    uint32_t paramPOLYGON_ATTR_;
+    uint32_t maybeParamSHININESS_;
+    uint32_t paramTEXIMAGE_PARAMS_;
+
+    uint32_t unk_18;
+    uint16_t texturePaletteVRAMOffset_;
+    uint16_t unk_1e;
+    uint16_t width_;
+    uint16_t height_;
+    fix32_t xScale_; // to be filled when linked to actual texture data
+    fix32_t yScale_; // to be filled when linked to actual texture data
+};
+
+// Texture image pairing or texture palette pairing.
+// No information about the image/palette is stored in this struct, instead
+// you use the name corresponding to this entry in the relevant NameList
+// pointed to by the offsets in NSBXXModelMaterialData.
+struct NSBXXMaterialPairing
+{
+    // offset to an array of uint8_t giving indices of Materials that use this
+    // image / palette. Offsets to these materials are stored in a NameList,
+    // and the uint8_t values are indices in that list.
+    uint16_t offsetToIndexArray_;
+    uint8_t arraySize_;
+    uint8_t flags_; // bit 0 = has TEX0 data bound/linked to it
 };
 
 struct NSBXXTex
@@ -144,8 +229,26 @@ struct NSBXXTex
     uint32_t block4VRAMLoadOffset_;
     uint16_t block4NumEightBytes_;
     uint16_t maybeBlock4Flags_32_; // bit 0: loaded to vram
-    uint32_t paletteListOffset_; 
+    uint16_t paletteListOffset_; 
+    uint16_t unk_36;
     uint32_t block4Offset_;
+
+    // The documentation would suggest this is at a dynamic offset specified
+    // by textureListOffset_, but some functions treat it as being in this fixed
+    // location.
+    NSBXXNameList textureList_;
+};
+
+struct NSBXXTexTexture
+{
+    uint32_t paramTEXIMAGE_PARAMS_;
+    uint32_t unk_4;
+};
+
+struct NSBXXTexPalette
+{
+    uint16_t offsetWithinBlock4_; // need to left-shift by 3
+    uint16_t unk_2;
 };
 
 extern "C"
@@ -164,6 +267,31 @@ int NSBXX_Tex_GetBlock4Length(NSBXXTex* tex);
 void NSBXX_Tex_WritePaletteVRAMOffset(NSBXXTex* tex, int offset);
 // usa: func_020b2f4c
 void NSBXX_Tex_LoadPaletteToVRAM(NSBXXTex* tex, bool needsMapping);
+
+// usa: func_020b3184
+bool NSBXX_AttachTextureImageToModel(NSBXXInternalModel* model, NSBXXTex* tex0);
+// usa: func_020b3284
+void NSBXX_DetachTextureImageFromModel(NSBXXInternalModel* model);
+// usa: func_020b33f0
+bool NSBXX_AttachTexturePaletteToModel(NSBXXInternalModel* model, NSBXXTex* tex0);
+// usa: func_020b34f8
+void NSBXX_DetachTexturePaletteFromModel(NSBXXInternalModel* model);
+// usa: func_020b357c
+int NSBXX_LinkTEX0ToMDL0(NSBXXMdl* mdl0, NSBXXTex* tex0);
+// usa: func_020b362c
+void NSBXX_UnlinkTEX0FromMDL0(NSBXXMdl* mdl0);
+
+// usa: func_020b736c
+// Gets the entry in a NameList given its string.
+// The string passed should be a 16-byte buffer padded with zeros, a regular
+// null-terminated string is not sufficient.
+void* NSBXXNameList_Search(NSBXXNameList* nameList, const char* name);
+
+// usa: func_020b752c
+// Gets the index of an entry in a NameList given its string.
+// The string passed should be a 16-byte buffer padded with zeros, a regular
+// null-terminated string is not sufficient.
+int NSBXXNameList_SearchIndex(NSBXXNameList* nameList, const char* name);
 
 // usa: func_020b7694
 // Returns a pointer to the first file within the file provided.

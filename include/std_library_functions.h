@@ -41,6 +41,8 @@ int sprintf(char* buffer, const char* format, ...);
 
 #ifdef __cplusplus
 }
+#endif
+
 
 #define offsetof(type, member) ((unsigned int)(&((type*)0)->member))
 
@@ -57,5 +59,3 @@ typedef unsigned int uintptr_t;
 typedef signed int intptr_t;
 
 typedef unsigned int size_t;
-
-#endif

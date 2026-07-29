@@ -16,7 +16,6 @@ extern "C"
     void func_020b2b6c(void*);
     void func_020b426c(void*);
     void func_020b66f4(void*, int, int, int);
-    void func_020b357c(void*, NSBXXTex*);
 
     int32_t func_020c2eb8(Vector3i*);
 
@@ -195,9 +194,9 @@ void Model3D::ProcessRawFile(int arg)
         }
         if (data->signature_ == SIGNATURE_NSBMD)
         {
-            void* maybeModel = NSBXX_GetFirstSubfile(data);
+            NSBXXMdl* mdl0 = (NSBXXMdl*)NSBXX_GetFirstSubfile(data);
             if (tex0 != NULL)
-                func_020b357c(maybeModel, tex0);
+                NSBXX_LinkTEX0ToMDL0(mdl0, tex0);
         }
         break;
     }
@@ -244,7 +243,7 @@ void Model3D::ProcessRawFile(int arg)
 found_a_model:
     modelData_54_ = model;
 
-    func_020b2b6c(this); // probably &this->unk_0
+    func_020b2b6c(&initialSegment_); // probably &this->unk_0
     texFileData_58_ = NSBXX_GetTEXFile((NSBXXContainer*)rawFileData_);
     if (((NSBXXContainer*)rawFileData_)->signature_ == SIGNATURE_NSBMD)
     {
@@ -291,18 +290,18 @@ bool Model3D::Draw(bool applyClipping)
 
     if (unknown_flags_a8_2_)
     {
-        unknown_0_ |= 1;
-        func_020b426c(this);
-        unknown_0_ &= ~1;
+        initialSegment_.flags_0_ |= 1;
+        func_020b426c(&initialSegment_);
+        initialSegment_.flags_0_ &= ~1;
         unknown_flags_a8_2_ = false;
     }
     else if (unknown_flags_a8_1_)
     {
-        unknown_0_ |= 1;
-        func_020b426c(this);
+        initialSegment_.flags_0_ |= 1;
+        func_020b426c(&initialSegment_);
     }
     else
-        func_020b426c(this);
+        func_020b426c(&initialSegment_);
     return true;
 }
 
@@ -363,4 +362,41 @@ int Model3D::TestVisible()
     while (func_020c56b0(&result) != 0) {}
     GXFIFO_MATRIX_POP = 1;
     return result;
+}
+
+int Model3D::GetBoneIndex(const char *boneName)
+{
+    if (modelData_54_ == NULL)
+        return -1;
+
+    char zeroPaddedName[16];
+    memset(zeroPaddedName, 0, sizeof(zeroPaddedName));
+    strcpy(zeroPaddedName, boneName);
+    return NSBXXNameList_SearchIndex(&modelData_54_->boneList_, zeroPaddedName);
+}
+
+void Model3D::ApplyTexturesFromModel(Model3D* otherModel)
+{
+    if (!unknown_flags_a8_0_ || otherModel == NULL)
+        return;
+    NSBXXMdl* mdl0 = GetMDL0();
+    NSBXXTex* tex0 = (NSBXXTex*)otherModel->texFileData_58_;
+    if (mdl0 == NULL || tex0 == NULL)
+        return;
+    NSBXX_LinkTEX0ToMDL0(mdl0, tex0);
+}
+
+NSBXXMdl* Model3D::GetMDL0()
+{
+    if (rawFileData_ == NULL)
+        return NULL;
+    return (NSBXXMdl*)NSBXX_GetFirstSubfile((NSBXXContainer*)rawFileData_);
+}
+
+void Model3D::RemoveTextures()
+{
+    NSBXXMdl* mdl0 = GetMDL0();
+    if (mdl0 == NULL)
+        return;
+    NSBXX_UnlinkTEX0FromMDL0(mdl0);
 }

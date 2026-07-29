@@ -8,12 +8,30 @@
 class Model3D
 {
 public:
-    // probably a substruct from 0 to 0x54
-    int unknown_0_;
-    char unk_4[0x50];
+    // I don't know what this struct is but it's used for the underlying draw functions etc
+    // sizeof = 0x54
+    struct Model3DStart
+    {
+        unsigned int flags_0_;
+        void* unknownPtr_4_;
+        void* dataPtr_8_;
+        char unk_c[4];
+        void* dataPtr_10_; // might have something to do with animations
+        char unk_14[4];
+        void* dataPtr_18_;
+        char unk_1c[4];
+        int unk_20;
+        char unknownCounter_24_;
+        char padding_25[3];
+        const void* functionPtr_28_;
+        char unk_2c[0x3c - 0x2c];
+        int bitfield_3c_[2]; // relates to dataPtr_8_
+        int bitfield_44_[2]; // relates to dataPtr_10_
+        int bitfield_4c_[2]; // relates to dataPtr_18_
+    } initialSegment_;
     NSBXXInternalModel* modelData_54_;
     void* texFileData_58_;
-    void* rawFileData_;
+    void* rawFileData_; // holds the (decompressed) NSBMD file
     unsigned int rawFileSize_;
     // should make these six numbers a struct
     fix32_t xMax_;
@@ -67,4 +85,11 @@ public:
     bool Draw(bool applyClipping);
     bool DrawShadow(bool applyClipping, int unknown2, int unknown3, int unknown4);
     int TestVisible();
+
+    int GetBoneIndex(const char* boneName);
+    // Takes the TEX0 file that otherModel is pointing to and applies it
+    // to this Model's MDL0
+    void ApplyTexturesFromModel(Model3D* otherModel);
+    NSBXXMdl* GetMDL0();
+    void RemoveTextures();
 };

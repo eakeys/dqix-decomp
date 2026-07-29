@@ -40,7 +40,7 @@ void Model3D::Clear()
     unknown_98_ = 0;
     unknown_90_ = 0;
     unknown_94_ = 0;
-    unknown_a2_ = 0x1f;
+    alpha_ = 0x1f;
     unknown_flags_a8_1_ = false;
     unknown_flags_a8_2_ = false;
     imageStagingTaskID_ = 0xffff;
@@ -400,3 +400,45 @@ void Model3D::RemoveTextures()
         return;
     NSBXX_UnlinkTEX0FromMDL0(mdl0);
 }
+
+void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
+{
+    if (alloc != NULL)
+    {
+        if (unknown_90_ == NULL && (args & 1))
+            unknown_90_ = (BoneMatrixRelatedData*)alloc->Allocate(initialSegment_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRelatedData));
+
+        if (unknown_94_ == NULL && (args & 2))
+            unknown_94_ = (MaterialRelatedData*)alloc->Allocate(initialSegment_.internalModel_->numMaterials_ * sizeof(MaterialRelatedData));
+    }
+
+    if (!(args & 4))
+    {
+        if (unknown_90_ != NULL)
+            initialSegment_.unknown_34_ = unknown_90_;
+        if (unknown_94_ != NULL)
+            initialSegment_.unknown_38_ = unknown_94_;
+
+        unknown_flags_a8_2_ = true;
+    }
+}
+
+void Model3D::StoreBoneMatrixAndMaterialArrayPointers()
+{
+    if (unknown_90_ != NULL)
+        initialSegment_.unknown_34_ = unknown_90_;
+    if (unknown_94_ != NULL)
+        initialSegment_.unknown_38_ = unknown_94_;
+    unknown_flags_a8_1_ = true;
+}
+
+void Model3D::SetAlpha(int alpha)
+{
+    if (modelData_54_ != NULL)
+    {
+        NSBXX_Model_SetAlpha(modelData_54_, alpha);
+        alpha_ = alpha;
+    }
+}
+
+int Model3D::GetAlpha() const { return alpha_; }

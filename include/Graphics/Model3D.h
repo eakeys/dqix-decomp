@@ -5,6 +5,16 @@
 #include "Memory/SafeAllocator.h"
 #include "NSBXX/NSBXX.h"
 
+struct BoneMatrixRelatedData
+{
+    char unk[0x58];
+};
+
+struct MaterialRelatedData
+{
+    char unk[0x38];
+};
+
 class Model3D
 {
 public:
@@ -13,18 +23,21 @@ public:
     struct Model3DStart
     {
         unsigned int flags_0_;
-        void* unknownPtr_4_;
-        void* dataPtr_8_;
+        NSBXXInternalModel* internalModel_;
+        void* dataPtr_8_; // some relation to M.AT objects
         char unk_c[4];
-        void* dataPtr_10_; // might have something to do with animations
+        void* dataPtr_10_; // something to do with J.AC animations
         char unk_14[4];
-        void* dataPtr_18_;
+        void* dataPtr_18_; // something to do with V.?? objects
         char unk_1c[4];
         int unk_20;
         char unknownCounter_24_;
         char padding_25[3];
         const void* functionPtr_28_;
-        char unk_2c[0x3c - 0x2c];
+        char unk_2c[4];
+        void* unk_30;
+        BoneMatrixRelatedData* unknown_34_; // can be a copy of unknown_90_
+        MaterialRelatedData* unknown_38_; // can be a copy of unknown_94_
         int bitfield_3c_[2]; // relates to dataPtr_8_
         int bitfield_44_[2]; // relates to dataPtr_10_
         int bitfield_4c_[2]; // relates to dataPtr_18_
@@ -45,17 +58,17 @@ public:
     fix32_t zMiddle_;
     fix32_t maybeApproxRadius_;
     fix32_t copyOfHeight_;
-    int unknown_90_;
-    int unknown_94_;
+    BoneMatrixRelatedData* unknown_90_;
+    MaterialRelatedData* unknown_94_;
     int unknown_98_;
     int unknown_9c_;
     unsigned short unknown_a0_;
-    unsigned short unknown_a2_;
+    short alpha_; // ranges between 0 and 31
     short imageStagingTaskID_;
     short paletteStagingTaskID_;
     int unknown_flags_a8_0_ : 1;
     int unknown_flags_a8_1_ : 1;
-    int unknown_flags_a8_2_ : 1;
+    int unknown_flags_a8_2_ : 1; // if 0x34, 0x38 match 0x90, 0x94 then this is set
 
     // the class has what seems to be a constructor (no arguments) and a
     // destructor at 0207e23c and 0207e250 (usa) respectively. But I'm
@@ -92,4 +105,13 @@ public:
     void ApplyTexturesFromModel(Model3D* otherModel);
     NSBXXMdl* GetMDL0();
     void RemoveTextures();
+
+    // flags & 1 : allocate bone matrix-related data
+    // flags & 2 : allocate material-related data
+    // flags & 4 : *don't* store pointers in the initial segment/underlying model object
+    void CreateBoneMatrixAndMaterialArrays(SafeAllocator* alloc, int flags);
+    void StoreBoneMatrixAndMaterialArrayPointers();
+
+    void SetAlpha(int alpha);
+    int GetAlpha() const;
 };

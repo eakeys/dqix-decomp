@@ -107,13 +107,6 @@ struct NSBXXPatternAnimation
     };
 };
 
-struct NSBXXMdl
-{
-    uint32_t signature_;
-    uint32_t unknown_4;
-    NSBXXNameList nameList_;
-};
-
 struct ModelBoundingBox
 {
     // all quantities are 16-bit fixed points.
@@ -125,6 +118,63 @@ struct ModelBoundingBox
     int16_t xSize_;
     int16_t ySize_;
     int16_t zSize_;
+};
+
+struct NSBXXMaterial
+{
+    uint16_t unk_0;
+    uint16_t size_; // in bytes
+    uint32_t paramDIF_AMB_;
+    uint32_t paramSPE_EMI_;
+    uint32_t paramPOLYGON_ATTR_;
+    uint32_t maskPOLYGON_ATTR_;
+    uint32_t paramTEXIMAGE_PARAMS_;
+
+    uint32_t unk_18;
+    uint16_t texturePaletteVRAMOffset_;
+    uint16_t unk_1e;
+    uint16_t width_;
+    uint16_t height_;
+    fix32_t xScale_; // to be filled when linked to actual texture data
+    fix32_t yScale_; // to be filled when linked to actual texture data
+};
+
+struct NSBXXModelMaterialData
+{
+    // offset to a NameList of MaterialPairing structs
+    uint16_t texturePairingsOffset_;
+    // offset to a NameList of MaterialPairing structs
+    uint16_t palettePairingsOffset_;
+    // entries are uint32_t's giving offsets to NSBXXMaterial structs
+    NSBXXNameList materialOffsetList_;
+
+    inline struct NSBXXMaterial* GetMaterialByIndex(unsigned int n) const
+    {
+        if (this != NULL)
+        {
+            uint32_t* materialOffset = materialOffsetList_.GetEntryByIndex<uint32_t>(n);
+            
+            if (materialOffset != NULL)
+            {
+                return (NSBXXMaterial*)((intptr_t)this + *materialOffset);
+            }
+        }
+        return NULL;
+    }
+};
+
+// Texture image pairing or texture palette pairing.
+// No information about the image/palette is stored in this struct, instead
+// you use the name corresponding to this entry in the relevant NameList
+// pointed to by the offsets in NSBXXModelMaterialData.
+struct NSBXXMaterialPairing
+{
+    // offset to an array of uint8_t giving indices of Materials that use this
+    // image / palette. Offsets to these materials are stored in a NameList,
+    // and the uint8_t values are indices in that list.
+    uint16_t offsetToIndexArray_;
+    uint8_t arraySize_;
+    uint8_t flags_; // bit 0 = has TEX0 data bound/linked to it
 };
 
 struct NSBXXInternalModel
@@ -152,55 +202,36 @@ struct NSBXXInternalModel
 
     // using this seems to screw up register assignment, but it's here in case
     // we can make it work later somehow
-    inline struct NSBXXModelMaterialData* GetMaterialData() const
+    inline NSBXXModelMaterialData* GetMaterialData() const
     {
         if (this != NULL && materialsOffset_ != 0)
             return (NSBXXModelMaterialData*)((intptr_t)this + materialsOffset_);
-        return NULL;
+        else
+            return NULL;
     }
 };
 
-struct NSBXXModelMaterialData
+struct NSBXXMdl
 {
-    // offset to a NameList of MaterialPairing structs
-    uint16_t texturePairingsOffset_;
-    // offset to a NameList of MaterialPairing structs
-    uint16_t palettePairingsOffset_;
-    // entries are uint32_t's giving offsets to NSBXXMaterial structs
-    NSBXXNameList materialOffsetList_;
-};
+    uint32_t signature_;
+    uint32_t unknown_4;
+    NSBXXNameList nameList_;
 
-struct NSBXXMaterial
-{
-    uint16_t unk_0;
-    uint16_t size_; // in bytes
-    uint32_t paramDIF_AMB_;
-    uint32_t paramSPE_EMI_;
-    uint32_t paramPOLYGON_ATTR_;
-    uint32_t maybeParamSHININESS_;
-    uint32_t paramTEXIMAGE_PARAMS_;
+    NSBXXInternalModel* GetInternalModelByIndex(unsigned int n) const
+    {
+        NSBXXInternalModel* internalModel;
+        if (this != NULL)
+        {
+            uint32_t* pModelOffset = nameList_.GetEntryByIndex<uint32_t>(n);
 
-    uint32_t unk_18;
-    uint16_t texturePaletteVRAMOffset_;
-    uint16_t unk_1e;
-    uint16_t width_;
-    uint16_t height_;
-    fix32_t xScale_; // to be filled when linked to actual texture data
-    fix32_t yScale_; // to be filled when linked to actual texture data
-};
-
-// Texture image pairing or texture palette pairing.
-// No information about the image/palette is stored in this struct, instead
-// you use the name corresponding to this entry in the relevant NameList
-// pointed to by the offsets in NSBXXModelMaterialData.
-struct NSBXXMaterialPairing
-{
-    // offset to an array of uint8_t giving indices of Materials that use this
-    // image / palette. Offsets to these materials are stored in a NameList,
-    // and the uint8_t values are indices in that list.
-    uint16_t offsetToIndexArray_;
-    uint8_t arraySize_;
-    uint8_t flags_; // bit 0 = has TEX0 data bound/linked to it
+            if (pModelOffset != NULL)
+            {
+                internalModel = (NSBXXInternalModel*)((intptr_t)this + *pModelOffset);
+                return internalModel;
+            }
+        }
+        return NULL;
+    }
 };
 
 struct NSBXXTex
@@ -280,6 +311,15 @@ void NSBXX_DetachTexturePaletteFromModel(NSBXXInternalModel* model);
 int NSBXX_LinkTEX0ToMDL0(NSBXXMdl* mdl0, NSBXXTex* tex0);
 // usa: func_020b362c
 void NSBXX_UnlinkTEX0FromMDL0(NSBXXMdl* mdl0);
+
+// usa: func_020b7184
+// The alpha value can be between 0-31.
+// (This function should become static later)
+void NSBXX_Model_SetMaterialAlpha(NSBXXInternalModel* model, unsigned int materialIndex, int alpha);
+
+// usa: func_020b732c
+// The alpha value can be between 0-31.
+void NSBXX_Model_SetAlpha(NSBXXInternalModel* model, int alpha);
 
 // usa: func_020b736c
 // Gets the entry in a NameList given its string.

@@ -3,45 +3,14 @@
 #include "std_library_functions.h"
 #include "Vector.h"
 #include "Memory/SafeAllocator.h"
-#include "NSBXX/NSBXX.h"
-
-struct BoneMatrixRelatedData
-{
-    char unk[0x58];
-};
-
-struct MaterialRelatedData
-{
-    char unk[0x38];
-};
+#include "NSBXX/RenderCommands.h"
 
 class Model3D
 {
 public:
     // I don't know what this struct is but it's used for the underlying draw functions etc
     // sizeof = 0x54
-    struct Model3DStart
-    {
-        unsigned int flags_0_;
-        NSBXXInternalModel* internalModel_;
-        void* dataPtr_8_; // some relation to M.AT objects
-        char unk_c[4];
-        void* dataPtr_10_; // something to do with J.AC animations
-        char unk_14[4];
-        void* dataPtr_18_; // something to do with V.?? objects
-        char unk_1c[4];
-        int unk_20;
-        char unknownCounter_24_;
-        char padding_25[3];
-        const void* functionPtr_28_;
-        char unk_2c[4];
-        void* unk_30;
-        BoneMatrixRelatedData* unknown_34_; // can be a copy of unknown_90_
-        MaterialRelatedData* unknown_38_; // can be a copy of unknown_94_
-        int bitfield_3c_[2]; // relates to dataPtr_8_
-        int bitfield_44_[2]; // relates to dataPtr_10_
-        int bitfield_4c_[2]; // relates to dataPtr_18_
-    } initialSegment_;
+    ModelRenderData renderData_;
     NSBXXInternalModel* modelData_54_;
     void* texFileData_58_;
     void* rawFileData_; // holds the (decompressed) NSBMD file
@@ -58,8 +27,8 @@ public:
     fix32_t zMiddle_;
     fix32_t maybeApproxRadius_;
     fix32_t copyOfHeight_;
-    BoneMatrixRelatedData* unknown_90_;
-    MaterialRelatedData* unknown_94_;
+    BoneMatrixRenderData* unknown_90_;
+    MaterialRenderData* unknown_94_;
     int unknown_98_;
     int unknown_9c_;
     unsigned short unknown_a0_;
@@ -96,7 +65,10 @@ public:
     void ProcessRawFile(int arg);
 
     bool Draw(bool applyClipping);
-    bool DrawShadow(bool applyClipping, int unknown2, int unknown3, int unknown4);
+    // In practice this is used for shadows
+    // bind is a bool. If false, no material is bound (presumably the last bound
+    // material ends up being used instead)?
+    bool DrawMeshWithMaterial(bool applyClipping, unsigned int materialIdx, unsigned int meshIdx, int bind);
     int TestVisible();
 
     int GetBoneIndex(const char* boneName);

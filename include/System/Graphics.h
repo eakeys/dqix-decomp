@@ -26,8 +26,13 @@
 #define BG2CNTSUB (*(volatile unsigned short*)(0x0400100c))
 #define BG3CNTSUB (*(volatile unsigned short*)(0x0400100e))
 
+#define GXFIFO (*(volatile unsigned int*)0x04000400)
+#define GXFIFO_MATRIX_MODE (*(volatile unsigned int*)0x04000440)
 #define GXFIFO_MATRIX_PUSH (*(volatile unsigned int*)0x04000444)
 #define GXFIFO_MATRIX_POP (*(volatile unsigned int*)0x04000448)
+#define GXFIFO_MATRIX_STORE (*(volatile unsigned int*)0x0400044c)
+#define GXFIFO_MATRIX_GET (*(volatile unsigned int*)0x04000450)
+#define GXFIFO_MATRIX_IDENTITY (*(volatile unsigned int*)0x04000454)
 
 #define GXFIFO_MATRIX_SCALE (*(volatile unsigned int*)0x0400046c)
 

@@ -1,5 +1,6 @@
 #include "Graphics/Model3D.h"
 #include "Graphics/NSBXX/NSBXX.h"
+#include "Graphics/NSBXX/RenderCommands.h"
 #include "Graphics/Vector.h"
 #include "Graphics/VRAMStaging.h"
 #include "System/Cache.h"
@@ -14,8 +15,6 @@ extern "C"
     void func_0200f374(void*, unsigned);
 
     void func_020b2b6c(void*);
-    void func_020b426c(void*);
-    void func_020b66f4(void*, int, int, int);
 
     int32_t func_020c2eb8(Vector3i*);
 
@@ -243,7 +242,7 @@ void Model3D::ProcessRawFile(int arg)
 found_a_model:
     modelData_54_ = model;
 
-    func_020b2b6c(&initialSegment_); // probably &this->unk_0
+    func_020b2b6c(&renderData_); // probably &this->unk_0
     texFileData_58_ = NSBXX_GetTEXFile((NSBXXContainer*)rawFileData_);
     if (((NSBXXContainer*)rawFileData_)->signature_ == SIGNATURE_NSBMD)
     {
@@ -290,22 +289,22 @@ bool Model3D::Draw(bool applyClipping)
 
     if (unknown_flags_a8_2_)
     {
-        initialSegment_.flags_0_ |= 1;
-        func_020b426c(&initialSegment_);
-        initialSegment_.flags_0_ &= ~1;
+        renderData_.flags_0_ |= 1;
+        RenderModelFromRenderData(&renderData_);
+        renderData_.flags_0_ &= ~1;
         unknown_flags_a8_2_ = false;
     }
     else if (unknown_flags_a8_1_)
     {
-        initialSegment_.flags_0_ |= 1;
-        func_020b426c(&initialSegment_);
+        renderData_.flags_0_ |= 1;
+        RenderModelFromRenderData(&renderData_);
     }
     else
-        func_020b426c(&initialSegment_);
+        RenderModelFromRenderData(&renderData_);
     return true;
 }
 
-bool Model3D::DrawShadow(bool applyClipping, int unknown2, int unknown3, int unknown4)
+bool Model3D::DrawMeshWithMaterial(bool applyClipping, unsigned int material, unsigned int mesh, int bind)
 {
     if (!unknown_flags_a8_0_)
         return false;
@@ -313,7 +312,7 @@ bool Model3D::DrawShadow(bool applyClipping, int unknown2, int unknown3, int unk
     if (applyClipping && !TestVisible())
         return false;
 
-    func_020b66f4(modelData_54_, unknown2, unknown3, unknown4);
+    RenderMeshWithMaterial(modelData_54_, material, mesh, bind);
     return true;
 }
 
@@ -406,18 +405,18 @@ void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
     if (alloc != NULL)
     {
         if (unknown_90_ == NULL && (args & 1))
-            unknown_90_ = (BoneMatrixRelatedData*)alloc->Allocate(initialSegment_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRelatedData));
+            unknown_90_ = (BoneMatrixRenderData*)alloc->Allocate(renderData_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRenderData));
 
         if (unknown_94_ == NULL && (args & 2))
-            unknown_94_ = (MaterialRelatedData*)alloc->Allocate(initialSegment_.internalModel_->numMaterials_ * sizeof(MaterialRelatedData));
+            unknown_94_ = (MaterialRenderData*)alloc->Allocate(renderData_.internalModel_->numMaterials_ * sizeof(MaterialRenderData));
     }
 
     if (!(args & 4))
     {
         if (unknown_90_ != NULL)
-            initialSegment_.unknown_34_ = unknown_90_;
+            renderData_.boneMatrixRenderDataArray_ = unknown_90_;
         if (unknown_94_ != NULL)
-            initialSegment_.unknown_38_ = unknown_94_;
+            renderData_.materialRenderDataArray_ = unknown_94_;
 
         unknown_flags_a8_2_ = true;
     }
@@ -426,9 +425,9 @@ void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
 void Model3D::StoreBoneMatrixAndMaterialArrayPointers()
 {
     if (unknown_90_ != NULL)
-        initialSegment_.unknown_34_ = unknown_90_;
+        renderData_.boneMatrixRenderDataArray_ = unknown_90_;
     if (unknown_94_ != NULL)
-        initialSegment_.unknown_38_ = unknown_94_;
+        renderData_.materialRenderDataArray_ = unknown_94_;
     unknown_flags_a8_1_ = true;
 }
 

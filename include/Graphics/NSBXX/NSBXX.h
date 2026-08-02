@@ -50,6 +50,9 @@ struct NSBXXNameList
     // T dataElements_[numEntries_];
     // Name names_[numEntries_]; // Name is an array of 16 chars
 
+    // to do: clean up all of this mess, I don't want to change any existing
+    // function until I know it won't affect any existing use
+
     template<class T>
     inline T* GetEntryByIndex(unsigned int n) const volatile
     {
@@ -58,6 +61,39 @@ struct NSBXXNameList
             intptr_t dataStart = (intptr_t)this + offsetToDataStart_;
             uint16_t stride = *(uint16_t*)dataStart;
             return (T*)(dataStart + 4 + stride * n);
+        }
+        return NULL;
+    }
+
+    template<class T>
+    inline T* GetEntryByIndex_notVolatile(unsigned int n) const
+    {
+        if (this != NULL && n < numEntries_)
+        {
+            intptr_t dataStart = (intptr_t)this + offsetToDataStart_;
+            uint16_t stride = *(uint16_t*)dataStart;
+            return (T*)(dataStart + 4 + stride * n);
+        }
+        return NULL;
+    }
+
+    template<class T>
+    inline T* GetEntryFromu32Offset(unsigned int n) const
+    {
+        uint32_t* pOffset = GetEntryByIndex_notVolatile<uint32_t>(n);
+        if (pOffset != NULL)
+            return (T*)((intptr_t)this + *pOffset);
+        return NULL;
+    }
+
+    template<class T>
+    inline T* GetEntryFromu32Offset_v2(unsigned int n) const
+    {
+        if (this != NULL)
+        {
+            uint32_t* pOffset = GetEntryByIndex_notVolatile<uint32_t>(n);
+            if (pOffset != NULL)
+                return (T*)((intptr_t)this + *pOffset);
         }
         return NULL;
     }
@@ -78,6 +114,60 @@ struct NSBXXInnerFileCommon {
     uint32_t signature;
     uint32_t fileSize;
     NSBXXNameList nameList;
+};
+
+struct NSBXXBoneMatrix
+{
+    // bit 0: set if *no* translation data
+    // bit 1: set if *no* matrix-based rotation
+    // bit 2: set if *no* scaling
+    // bit 3: set if there *is* a pivot matrix
+    // If there is a pivot matrix, then we also use:
+    // bits 4-7: form
+    // bit 8: negate 1
+    // bit 9: negate c 
+    // bit 10: negate d
+    uint16_t flags_;
+
+    fix16_t m_11;
+
+    struct Translation // present if flag bit 1 is zero. might be a Vector3i
+    {
+        fix32_t x;
+        fix32_t y;
+        fix32_t z;
+    };
+
+    // present if flag bit 3 is set.
+    // The data (form, negate_1, negate_c, negate_d, a, b)
+    // encode a PivotMatrix as follows: form is between 0 and 8
+    // and encodes the position in a 3x3 matrix (column major, so e.g.
+    // 3 means middle entry of top row) of an entry that is +1 or -1.
+    // Which one it is depends on negate_1 (set: -1, clear: +1). The other
+    // entries in its row and column are zero. The other four entries are
+    // a, b, c and d in memory order, where a and b are specified here, and
+    // c is either +b or -b (depending on negate_c) and d is either +a or -a
+    // (depending on negate_d). Note the nsbmd docs have c paired with a and
+    // d paired with b, but (at least in this codebase, and probably more
+    // broadly considering the shape of rotation matrices) this is a typo.
+    // Pictures of these matrices are available in the nsbmd docs.
+    struct PivotMatrixData
+    {
+        fix16_t a;
+        fix16_t b;
+    };
+
+    struct RotationMatrixData // present if flag 3 is clear and flag 1 is clear
+    {
+        fix16_t entries[8];
+    };
+
+    struct Scaling // present if flag bit 2 is zero. Might be a Vector3i
+    {
+        fix32_t x;
+        fix32_t y;
+        fix32_t z;
+    };
 };
 
 struct NSBXXPatternAnimation
@@ -132,11 +222,47 @@ struct NSBXXMaterial
 
     uint32_t unk_18;
     uint16_t texturePaletteVRAMOffset_;
-    uint16_t unk_1e;
+    // bit 0: has any of type 1,2,3 extension data
+    // bits 1-3: does *not* have type 1, 2, 3 extension data
+    // bit 4: ???
+    // bit 5: if set, the alpha gets overwritten to 0, what?
+    // bits 6,7,8: which parts of paramDIF_AMB_ to use
+    // bits 9,10,11: which parts of paramSPE_EMI_ to use 
+    // bit 12: ???
+    // bit 13: has bit-13 extension data (comes after 1,2,3 if present)
+    uint16_t flags_;
     uint16_t width_;
     uint16_t height_;
     fix32_t xScale_; // to be filled when linked to actual texture data
     fix32_t yScale_; // to be filled when linked to actual texture data
+
+    // Usually the size is 0x2c, but it can be larger and this seems
+    // to be related to the bits at 0x1e. If bit 0 is set, then some of the
+    // next three substructs are included, sequentially, depending whether
+    // bits 1, 2 and 3 are *clear* respectively (i.e. if bit 1 is clear,
+    // then substruct #1 is present)
+    struct ExtensionData_Bit1
+    {
+        uint32_t unknown_0_;
+        uint32_t unknown_4_;
+    };
+
+    struct ExtensionData_Bit2
+    {
+        int16_t unknown_0_;
+        int16_t unknown_2_;
+    };
+
+    struct ExtensionData_Bit3
+    {
+        uint32_t unknown_0_;
+        uint32_t unknown_4_;
+    };
+    
+    struct ExtensionData_Bit13
+    {
+        fix32_t matrix_[16];
+    };
 };
 
 struct NSBXXModelMaterialData
@@ -177,20 +303,42 @@ struct NSBXXMaterialPairing
     uint8_t flags_; // bit 0 = has TEX0 data bound/linked to it
 };
 
+struct NSBXXMesh
+{
+    uint16_t unk_0;
+    uint16_t size_;
+    uint32_t unk_4;
+    uint32_t gpuCommandsOffset_;
+    uint32_t gpuCommandsLength_; // length in bytes
+
+    inline const uint32_t* GetGPUCommands() const
+    {
+        return (uint32_t*)((intptr_t)this + gpuCommandsOffset_);
+    }
+};
+
+struct NSBXXInvBindMatrix
+{
+    fix32_t mat3x4[12];
+    fix32_t mat3x3[9];
+};
+
 struct NSBXXInternalModel
 {
     uint32_t filesize_;
     uint32_t renderCommandsOffset_;
     uint32_t materialsOffset_;
-    uint32_t meshesOffset_;
+    uint32_t meshesOffset_; // offset to a NameList of NSBXXMesh
     uint32_t inverseBindsOffset_;
-    uint8_t unk_14[3];
+    uint8_t unk_14;
+    uint8_t boneMatrixCallbackType_;
+    uint8_t materialCallbackType_;
     uint8_t numBoneMatrices_;
     uint8_t numMaterials_;
     uint8_t numMeshes_;
     uint8_t unk_1a[2];
-    int32_t upScale_; // 32-bit fixed point
-    int32_t downScale_; // 32-bit fixed point
+    fix32_t upScale_; // 32-bit fixed point
+    fix32_t downScale_; // 32-bit fixed point
     uint16_t numVertices_;
     uint16_t numPolygons_;
     uint16_t numTriangles_;
@@ -208,6 +356,28 @@ struct NSBXXInternalModel
             return (NSBXXModelMaterialData*)((intptr_t)this + materialsOffset_);
         else
             return NULL;
+    }
+
+    inline NSBXXNameList* GetMeshList() const
+    {
+        if (this != NULL && meshesOffset_ != 0)
+            return (NSBXXNameList*)((intptr_t)this + meshesOffset_);
+        return NULL;
+    }
+
+    inline NSBXXMesh* GetMesh(unsigned int n) const
+    {
+        NSBXXNameList* meshList;
+        if (this != NULL && meshesOffset_ != 0)
+            meshList = (NSBXXNameList*)((intptr_t)this + meshesOffset_);
+        else
+            meshList = NULL;
+
+        if (meshList != NULL)
+        {
+            return meshList->GetEntryFromu32Offset<NSBXXMesh>(n);
+        }
+        return NULL;
     }
 };
 
@@ -311,6 +481,9 @@ void NSBXX_DetachTexturePaletteFromModel(NSBXXInternalModel* model);
 int NSBXX_LinkTEX0ToMDL0(NSBXXMdl* mdl0, NSBXXTex* tex0);
 // usa: func_020b362c
 void NSBXX_UnlinkTEX0FromMDL0(NSBXXMdl* mdl0);
+
+// usa: func_020b66f4
+void NSBXX_Model_DrawShadow(NSBXXInternalModel* model, unsigned int arg_2, unsigned int arg_3, unsigned int arg_4);
 
 // usa: func_020b7184
 // The alpha value can be between 0-31.

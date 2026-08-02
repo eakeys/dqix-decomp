@@ -170,10 +170,10 @@ extern "C" bool NSBXX_AttachTextureImageToModel(NSBXXInternalModel* model, NSBXX
         int nameOffsetInBuffer = 0;
         do
         {
-            const char* paletteName = imagePairingsList->GetNameByIndexAndOffset(pairCounter, nameOffsetInBuffer);
+            const char* textureName = imagePairingsList->GetNameByIndexAndOffset(pairCounter, nameOffsetInBuffer);
             NSBXXTexTexture* texture;
             if (tex0 != NULL)
-                texture = (NSBXXTexTexture*)NSBXXNameList_Search(&tex0->textureList_, paletteName);
+                texture = (NSBXXTexTexture*)NSBXXNameList_Search(&tex0->textureList_, textureName);
             else
                 texture = NULL;
 

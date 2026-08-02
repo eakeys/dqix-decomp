@@ -1,0 +1,942 @@
+#include "Graphics/NSBXX/RenderCommands_Common.h"
+
+void ExecuteRenderCommands(RenderCommandHandler* handler)
+{
+    do
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        uint8_t opcode = handler->instructionPointer_[0];
+        data_020f1e08[opcode & 0x1f](handler, opcode & 0xe0);
+    } while (!(handler->flags_ & (1 << RCH_FLAG_5)));
+}
+
+void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* modelData)
+{
+    func_020ca458(0, handler, sizeof(RenderCommandHandler));
+    handler->unknown_c4_ = 1;
+    handler->flags_ = 1;
+
+    uint8_t* commands = modelData->renderCommandList_;
+    if (commands == NULL)
+        commands = (uint8_t*)modelData->internalModel_ + modelData->internalModel_->renderCommandsOffset_;
+    *(uint8_t* volatile*)&handler->instructionPointer_ = commands;
+    handler->modelData_ = modelData;
+
+    if (modelData->internalModel_ != NULL)
+        handler->boneList_ = &modelData->internalModel_->boneList_;
+    else
+        handler->boneList_ = NULL;
+
+    handler->materialData_ = modelData->internalModel_->GetMaterialData();
+    handler->meshList_ = modelData->internalModel_->GetMeshList();
+    handler->callback_e8_ = data_020f1cec[modelData->internalModel_->boneMatrixCallbackType_];
+    handler->callback_ec_ = data_020f1ce0[modelData->internalModel_->boneMatrixCallbackType_];
+    handler->callback_f0_ = data_020f1cf8[modelData->internalModel_->materialCallbackType_];
+
+    handler->upScale_ = modelData->internalModel_->upScale_;
+    handler->downScale_ = modelData->internalModel_->downScale_;
+
+    if (modelData->renderCommandHook_ != NULL && modelData->renderCommandHookCommandID_ < 32)
+    {
+        handler->hooks_[modelData->renderCommandHookCommandID_] =
+            (void(*)(RenderCommandHandler*))modelData->renderCommandHook_;
+        handler->hookStages_[modelData->renderCommandHookCommandID_] = modelData->renderCommandHookStage_;
+    }
+
+    if (modelData->flags_0_ & 1)
+        handler->flags_ |= (1 << RCH_FLAG_7);
+    if (modelData->flags_0_ & 2)
+        handler->flags_ |= (1 << RCH_FLAG_8);
+    if (modelData->flags_0_ & 4)
+        handler->flags_ |= (1 << RCH_FLAG_9);
+    if (modelData->flags_0_ & 8)
+        handler->flags_ |= (1 << RCH_FLAG_10);
+
+    if (modelData->functionPtr_28_ != NULL)
+    {
+        void (*proc)(RenderCommandHandler*) = (void(*)(RenderCommandHandler*))modelData->functionPtr_28_;
+        proc(handler);
+    }
+
+    ExecuteRenderCommands(handler);
+    modelData->flags_0_ &= ~1;
+}
+
+void PopulateBitfieldFromAnimData(unsigned int* bitfield, ModelRenderData::MaybeAnimationData* anim)
+{
+    if (anim == NULL)
+        return;
+
+    do
+    {
+        int counter = 0;
+        if (counter < anim->numEntries_)
+        {
+            do
+            {
+                if (anim->entries[counter] & 0x100)
+                {
+                    bitfield[counter >> 5] |= 1 << (counter & 0x1f);
+                }
+                counter++;
+            } while (counter < anim->numEntries_);
+        }
+        anim = anim->pNext;
+    } while (anim != NULL);
+}
+
+void RenderModelFromRenderData(ModelRenderData* renderData)
+{
+    RenderCommandHandler handler;
+    
+    if ((renderData->flags_0_ & 0x10) == 0x10)
+    {
+        func_020ca3ec(0, renderData->bitfield_3c_, sizeof(renderData->bitfield_3c_));
+        func_020ca3ec(0, renderData->bitfield_44_, sizeof(renderData->bitfield_44_));
+        func_020ca3ec(0, renderData->bitfield_4c_, sizeof(renderData->bitfield_4c_));
+        if (renderData->dataPtr_8_ != NULL)
+            PopulateBitfieldFromAnimData(renderData->bitfield_3c_, renderData->dataPtr_8_);
+        if (renderData->dataPtr_10_ != NULL)
+            PopulateBitfieldFromAnimData(renderData->bitfield_44_, renderData->dataPtr_10_);
+        if (renderData->dataPtr_18_ != NULL)
+            PopulateBitfieldFromAnimData(renderData->bitfield_4c_, renderData->dataPtr_18_);
+
+        renderData->flags_0_ &= ~0x10;
+    }
+
+    if (data_0210a274 != NULL)
+    {
+        SetUpRenderCommandHandler(data_0210a274, renderData);
+    }
+    else
+    {
+        data_0210a274 = &handler;
+        SetUpRenderCommandHandler(&handler, renderData);
+        data_0210a274 = NULL;
+    }
+}
+
+// nsbmd docs call this 'nop' though the callback still occurs
+void RenderCommand_0(RenderCommandHandler* handler, int modifier)
+{
+    if (handler->hooks_[0] != NULL)
+        handler->hooks_[0](handler);
+    handler->instructionPointer_++;
+}
+
+// signal end of render commands
+void RenderCommand_1(RenderCommandHandler* handler, int modifier)
+{
+    if (handler->hooks_[1] != NULL)
+        handler->hooks_[1](handler);
+    handler->flags_ |= (1 << RCH_FLAG_5);
+}
+
+void RenderCommand_2(RenderCommandHandler* handler, int modifier)
+{
+    if (!(handler->flags_ & (1 << RCH_FLAG_9)))
+    {
+        unsigned int arg1 = handler->instructionPointer_[1];
+        handler->command2Arg1_ = arg1;
+        handler->flags_ |= (1 << RCH_FLAG_2);
+        handler->pCommand2Word_ = &handler->scratchCommand2Word_;
+
+        int callbackStage = (handler->hooks_[2] != NULL) ? handler->hookStages_[2] : 0;
+
+        unsigned int flagbit6;
+        if (callbackStage == 1)
+        {
+            handler->flags_ &= ~(1 << RCH_FLAG_6);
+            handler->hooks_[2](handler);
+            callbackStage = (handler->hooks_[2] != NULL) ? handler->hookStages_[2] : 0;
+            flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);   
+        }
+        else
+            flagbit6 = 0;
+
+        if (flagbit6 == 0)
+        {
+            ModelRenderData* modelData = handler->modelData_;
+            if (modelData->dataPtr_18_ == NULL ||
+                !(modelData->bitfield_4c_[arg1 >> 5] & (1 << (arg1 & 0x1f))) ||
+                modelData->functionPtr_1c_(handler->pCommand2Word_, modelData->dataPtr_18_, arg1) == 0)
+            {
+                *handler->pCommand2Word_ = handler->instructionPointer_[2] & 1;
+            }
+        }
+
+        if (callbackStage == 2)
+        {
+            handler->flags_ &= ~(1 << RCH_FLAG_6);
+            handler->hooks_[2](handler);
+            callbackStage = (handler->hooks_[2] != NULL) ? handler->hookStages_[2] : 0;
+            flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+        }
+        else
+            flagbit6 = 0;
+
+        if (flagbit6 == 0)
+        {
+            if (*handler->pCommand2Word_ != 0)
+                handler->flags_ |= (1 << RCH_FLAG_0);
+            else
+                handler->flags_ &= ~(1 << RCH_FLAG_0);
+        }
+
+        if (callbackStage == 3)
+        {
+            handler->flags_ &= ~(1 << RCH_FLAG_6);
+            handler->hooks_[2](handler);
+        }
+    }
+    handler->instructionPointer_ += 3;
+}
+
+void RenderCommand_3(RenderCommandHandler* handler, int modifier)
+{
+    if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
+    {
+        int callbackStage = (handler->hooks_[3] != NULL) ? handler->hookStages_[3] : 0;
+
+        unsigned int flagbit6;
+        if (callbackStage == 1)
+        {
+            handler->flags_ &= ~(1 << RCH_FLAG_6);
+            handler->hooks_[3](handler);
+            callbackStage = (handler->hooks_[3] != NULL) ? handler->hookStages_[3] : 0;
+            flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+        }
+        else
+            flagbit6 = 0;
+
+        if (flagbit6 == 0)
+        {
+            uint32_t stackPos = handler->instructionPointer_[1];
+            if (!(handler->flags_ & (1 << RCH_FLAG_8)))
+            {
+                SubmitCommandToGeometryFifo(GXFifoCommand_GetMatrix, &stackPos, 1);
+            }
+        }
+
+        if (callbackStage == 3)
+        {
+            handler->flags_ &= ~(1 << RCH_FLAG_6);
+            handler->hooks_[3](handler);
+        }
+    }
+    handler->instructionPointer_ += 2;
+}
+
+void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial* material, unsigned int idx)
+{
+    handler->boundMaterial_ = idx;
+    handler->flags_ |= (1 << RCH_FLAG_3);
+    handler->pMaterialRenderData_ = &handler->scratchMaterialRenderData_;
+
+    int callbackStage = (handler->hooks_[4] != NULL) ? handler->hookStages_[4] : 0;
+
+    unsigned int flagbit6;
+    if (callbackStage == 1)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[4](handler);
+        callbackStage = (handler->hooks_[4] != NULL) ? handler->hookStages_[4] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (flagbit6 == 0)
+    {
+        MaterialRenderData* targetData;
+        MaterialRenderData* modelMaterialArray = handler->modelData_->materialRenderDataArray_;
+        if (modelMaterialArray != NULL && !(handler->flags_ & (1 << RCH_FLAG_7)))
+        {
+            targetData = &modelMaterialArray[idx];
+        }
+        else if ((modifier == 0x20 || modifier == 0x40) && (handler->material_bitfield_[idx >> 5] & (1 << (idx & 0x1f))))
+        {
+            if (modelMaterialArray != NULL)
+                targetData = &modelMaterialArray[idx];
+            else
+                targetData = &data_0210a278[idx];
+        }
+        else
+        {
+            if (modelMaterialArray != NULL)
+            {
+                handler->material_bitfield_[idx >> 5] |= (1 << (idx & 0x1f));
+                targetData = &handler->modelData_->materialRenderDataArray_[idx];
+            }
+            else
+            {
+                if (!(modifier != 0x40))
+                {
+                    handler->material_bitfield_[idx >> 5] |= (1 << (idx & 0x1f));
+                    targetData = &data_0210a278[idx];
+                }
+                else
+                    targetData = &handler->scratchMaterialRenderData_;
+            }
+
+            targetData->flags_ = 0;
+            NSBXXMaterial* lookupMaterial = handler->materialData_->GetMaterialByIndex(idx);
+            if (lookupMaterial->flags_ & 0x20)
+            {
+                targetData->flags_ |= 0x20;
+            }
+            int difambMask = data_020e9240[(material->flags_ >> 6) & 7];
+            targetData->paramDIF_AMB_ = (data_0210a010.unknown_94_ & ~difambMask) |
+                (material->paramDIF_AMB_ & difambMask);
+
+            int speemiMask = data_020e9240[(material->flags_ >> 9) & 7];
+            targetData->paramSPE_EMI_ = (data_0210a010.unknown_98_ & ~speemiMask) |
+                (material->paramSPE_EMI_ & speemiMask);
+
+            targetData->paramPOLYGON_ATTR_ = (data_0210a010.unknown_9c_ & ~material->maskPOLYGON_ATTR_) |
+                (material->paramPOLYGON_ATTR_ & material->maskPOLYGON_ATTR_);
+            targetData->paramTEXIMAGE_PARAMS_ = material->paramTEXIMAGE_PARAMS_;
+            targetData->texturePaletteBase_ = material->texturePaletteVRAMOffset_;
+
+            if (material->flags_ & 1)
+            {
+                intptr_t extensionDataAddress = (intptr_t)(material + 1);
+                if (!(material->flags_ & 2))
+                {
+                    NSBXXMaterial::ExtensionData_Bit1* extensionData = 
+                        (NSBXXMaterial::ExtensionData_Bit1*)extensionDataAddress;
+                    targetData->unknown_18_ = extensionData->unknown_0_;
+                    targetData->unknown_1c_ = extensionData->unknown_4_;
+                    extensionDataAddress += sizeof(*extensionData);
+                }
+                else
+                    targetData->flags_ |= 1;
+
+                if (!(material->flags_ & 4))
+                {
+                    NSBXXMaterial::ExtensionData_Bit2* extensionData =
+                        (NSBXXMaterial::ExtensionData_Bit2*)extensionDataAddress;
+                    targetData->unknown_20_ = extensionData->unknown_0_;
+                    targetData->unknown_22_ = extensionData->unknown_2_;
+                    extensionDataAddress += sizeof(*extensionData);
+                }
+                else
+                    targetData->flags_ |= 2;
+                
+                if (!(material->flags_ & 8))
+                {
+                    NSBXXMaterial::ExtensionData_Bit3* extensionData = 
+                        (NSBXXMaterial::ExtensionData_Bit3*)extensionDataAddress;
+                    targetData->unknown_24_ = extensionData->unknown_0_;
+                    targetData->unknown_28_ = extensionData->unknown_4_;
+                }
+                else 
+                    targetData->flags_ |= 4;
+
+                targetData->flags_ |= 8;
+            }
+
+            ModelRenderData* modelData = handler->modelData_;
+            if (modelData->dataPtr_8_ != NULL && (modelData->bitfield_3c_[idx >> 5] & (1 << (idx & 0x1f))))
+            {
+                modelData->functionPtr_c_(targetData, modelData->dataPtr_8_, idx);
+            }
+
+            if (targetData->flags_ & 0x18)
+            {
+                targetData->materialWidth_ = material->width_;
+                targetData->materialHeight_ = material->height_;
+                targetData->materialxScale_ = material->xScale_;
+                targetData->materialyScale_ = material->yScale_;
+            }
+        }      
+        handler->pMaterialRenderData_ = targetData;
+    }
+
+    if (callbackStage == 2)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[4](handler);
+        callbackStage = (handler->hooks_[4] != NULL) ? handler->hookStages_[4] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (flagbit6 == 0)
+    {
+        MaterialRenderData* targetData = handler->pMaterialRenderData_;
+        if ((targetData->paramPOLYGON_ATTR_ & 0x1f0000) != 0) // alpha != 0
+        {
+            if (targetData->flags_ & 0x20)
+                targetData->paramPOLYGON_ATTR_ &= ~0x1f0000;
+            handler->flags_ &= ~(1 << RCH_FLAG_1);
+            if (!(handler->flags_ & (1 << RCH_FLAG_8)))
+            {
+                uint32_t commands[7];
+                commands[0] = COMBINE_GXFIFO_COMMANDS3(
+                    GXFifoCommand_DiffuseAmbientReflect,
+                    GXFifoCommand_SpecularReflectEmit,
+                    GXFifoCommand_SetPolygonAttr);
+                commands[1] = targetData->paramDIF_AMB_;
+                commands[2] = targetData->paramSPE_EMI_;
+                commands[3] = targetData->paramPOLYGON_ATTR_;
+                commands[4] = COMBINE_GXFIFO_COMMANDS2(
+                    GXFifoCommand_SetTexImageParams,
+                    GXFifoCommand_SetTexturePaletteBase);
+                commands[5] = targetData->paramTEXIMAGE_PARAMS_;
+                commands[6] = targetData->texturePaletteBase_;
+                SubmitCommandToGeometryFifo(commands[0], &commands[1], 6);
+
+                if (targetData->flags_ & 0x18)
+                    handler->callback_f0_(targetData);
+            }
+        }
+        else
+            handler->flags_ |= (1 << RCH_FLAG_1);
+    }
+
+    if (callbackStage == 3)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[4](handler);
+    }
+}
+
+// bind material
+void RenderCommand_4(RenderCommandHandler* handler, int modifier)
+{
+    if (!(handler->flags_ & (1 << RCH_FLAG_9)))
+    {
+        int materialIdx = handler->instructionPointer_[1];
+        if ((handler->flags_ & (1 << RCH_FLAG_0)) || !(handler->flags_ & (1 << RCH_FLAG_3)) || materialIdx != handler->boundMaterial_)
+        {
+            NSBXXMaterial* material = handler->materialData_->GetMaterialByIndex(materialIdx);
+            // MaterialBindProc
+            data_020f1d18[material->unk_0](handler, modifier, material, materialIdx);
+        }
+    }
+    handler->instructionPointer_ += 2;
+}
+
+void MeshDrawProc(RenderCommandHandler* handler, int modifier, NSBXXMesh* mesh, unsigned int meshIdx)
+{
+    int callbackStage = (handler->hooks_[5] != NULL) ? handler->hookStages_[5] : 0;
+    unsigned int flagbit6;
+    if (callbackStage == 1)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[5](handler);
+        callbackStage = (handler->hooks_[5] != NULL) ? handler->hookStages_[5] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (flagbit6 == 0 && !(handler->flags_ & (1 << RCH_FLAG_8)))
+        SendRawDataToGeometryFifo(mesh->GetGPUCommands(), mesh->gpuCommandsLength_);
+
+    if (callbackStage == 2)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[5](handler);
+        callbackStage = (handler->hooks_[5] != NULL) ? handler->hookStages_[5] : 0;
+    }
+
+    if (callbackStage == 3)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[5](handler);
+    }
+}
+
+// draw mesh
+void RenderCommand_5(RenderCommandHandler* handler, int modifier)
+{
+    if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)) && !(handler->flags_ & (1 << RCH_FLAG_1)))
+    {
+        int meshIdx = handler->instructionPointer_[1];
+        NSBXXNameList* meshList = handler->meshList_;
+        NSBXXMesh* mesh = meshList->GetEntryFromu32Offset_v2<NSBXXMesh>(meshIdx);
+        data_020f1d28[mesh->unk_0](handler, modifier, mesh, meshIdx);
+    }
+    handler->instructionPointer_ += 2;
+}
+
+// multiply by bone matrix
+void RenderCommand_6(RenderCommandHandler* handler, int modifier)
+{
+    int boneIdx = handler->instructionPointer_[1];
+    int numBytesConsumed = 4; // by default it's opcode + 3 args
+    handler->currentBoneMatrix_ = boneIdx;
+    handler->flags_ |= (1 << RCH_FLAG_4);
+    if (handler->flags_ & (1 << RCH_FLAG_10))
+    {
+        if (modifier == 0x40 || modifier == 0x60)
+            numBytesConsumed++;
+        if (modifier == 0x20 || modifier == 0x60)
+        {
+            numBytesConsumed++;
+            if (!(handler->flags_ & (1 << RCH_FLAG_8)))
+            {
+                uint32_t retrievalPosition = handler->instructionPointer_[4];
+                SubmitCommandToGeometryFifo(GXFifoCommand_GetMatrix, &retrievalPosition, 1);
+            }
+        }
+        handler->instructionPointer_ += numBytesConsumed;
+        return;
+    }
+
+    // if the 0x40 bit is set...
+    if (modifier == 0x40 || modifier == 0x60)
+    {
+        // the presence of the 0x20 bit means we have to look one further
+        uint8_t* instructionPtr = handler->instructionPointer_;
+        uint32_t retrievalPosition;
+        if (modifier == 0x40) 
+            retrievalPosition = instructionPtr[4];
+        else 
+            retrievalPosition = instructionPtr[5];
+        numBytesConsumed++;
+        if (!(handler->flags_ & (1 << RCH_FLAG_8)))
+            SubmitCommandToGeometryFifo(GXFifoCommand_GetMatrix, &retrievalPosition, 1);
+    }
+
+    handler->pBoneMatrixRenderData_ = &handler->scratchBoneMatrixRenderData_;
+    int callbackStage = (handler->hooks_[6] != NULL) ? handler->hookStages_[6] : 0;
+
+    unsigned int flagbit6;
+    if (callbackStage == 1)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[6](handler);
+        callbackStage = (handler->hooks_[6] != NULL) ? handler->hookStages_[6] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (flagbit6 == 0)
+    {
+        BoneMatrixRenderData* targetData;
+        BoneMatrixRenderData* modelBoneArray = handler->modelData_->boneMatrixRenderDataArray_;
+
+        bool bit7clear;
+        if (modelBoneArray != NULL)
+        {
+            targetData = &modelBoneArray[boneIdx];
+            bit7clear = !(handler->flags_ & (1 << RCH_FLAG_7));
+        }
+        else
+        {
+            targetData = &handler->scratchBoneMatrixRenderData_;
+            bit7clear = false;
+        }
+
+        if (!bit7clear)
+        {
+            targetData->flags_ = 0;
+            if (handler->modelData_->dataPtr_10_ == NULL ||
+                handler->modelData_->functionPtr_14_(targetData, handler->modelData_->dataPtr_10_, boneIdx) == 0)
+            {
+                NSBXXBoneMatrix* boneMatrix = handler->boneList_->GetEntryFromu32Offset_v2<NSBXXBoneMatrix>(boneIdx);
+                intptr_t boneMatrixExtraPtr = (intptr_t)(boneMatrix + 1);
+                if ((boneMatrix->flags_ & 1)) // has translation component
+                    targetData->flags_ |= 4;
+                else
+                {
+                    NSBXXBoneMatrix::Translation* translation = 
+                        (NSBXXBoneMatrix::Translation*)boneMatrixExtraPtr;
+                    targetData->translateX_ = translation->x;
+                    targetData->translateY_ = translation->y;
+                    targetData->translateZ_ = translation->z;
+                    boneMatrixExtraPtr += sizeof(*translation);
+                }
+                    
+
+                if (boneMatrix->flags_ & 2) // does not have any kind of rotation
+                {
+                    targetData->flags_ |= 2;
+                }
+                else if (boneMatrix->flags_ & 8) // use pivot matrix
+                {
+                    int form = (boneMatrix->flags_ & 0xf0) >> 4;
+                    NSBXXBoneMatrix::PivotMatrixData* pivot = 
+                        (NSBXXBoneMatrix::PivotMatrixData*)boneMatrixExtraPtr;
+                    fix32_t entryA = pivot->a;
+                    fix32_t entryB = pivot->b;
+                    func_020ca7d0(&targetData->rotationMatrix_[0]);
+                    
+                    fix32_t unit;
+                    if (boneMatrix->flags_ & 0x100)
+                        unit = 0xfffff000; // -1.0
+                    else
+                        unit = 0x1000; // +1.0
+
+                    targetData->rotationMatrix_[form] = unit;
+
+                    uint8_t indexA = data_020e9260[form].a;
+                    uint8_t indexB = data_020e9260[form].b;
+
+                    targetData->rotationMatrix_[indexA] = entryA;
+                    targetData->rotationMatrix_[indexB] = entryB;
+
+                    fix32_t entryC = (boneMatrix->flags_ & 0x200) ? -entryB : entryB;
+                    uint8_t indexC = data_020e9260[form].c;
+                    targetData->rotationMatrix_[indexC] = entryC;
+
+                    fix32_t entryD = (boneMatrix->flags_ & 0x400) ? -entryA : entryA;
+                    uint8_t indexD = data_020e9260[form].d;
+                    targetData->rotationMatrix_[indexD] = entryD;
+                    boneMatrixExtraPtr += sizeof(*pivot);
+                }
+                else // use specified matrix
+                {
+                    // casting from fix16_t to fix32_t, this is okay because
+                    // both have 12 bits after the point
+                    targetData->rotationMatrix_[0] = boneMatrix->m_11;
+                    NSBXXBoneMatrix::RotationMatrixData* rotation = 
+                        (NSBXXBoneMatrix::RotationMatrixData*)boneMatrixExtraPtr;
+                    targetData->rotationMatrix_[1] = rotation->entries[0];
+                    targetData->rotationMatrix_[2] = rotation->entries[1];
+                    targetData->rotationMatrix_[3] = rotation->entries[2];
+                    targetData->rotationMatrix_[4] = rotation->entries[3];
+                    targetData->rotationMatrix_[5] = rotation->entries[4];
+                    targetData->rotationMatrix_[6] = rotation->entries[5];
+                    targetData->rotationMatrix_[7] = rotation->entries[6];
+                    targetData->rotationMatrix_[8] = rotation->entries[7];
+                    boneMatrixExtraPtr += sizeof(*rotation);
+                }
+
+                handler->callback_e8_(targetData, (NSBXXBoneMatrix::Scaling*)boneMatrixExtraPtr, handler->instructionPointer_, boneMatrix->flags_);
+            }
+        }
+        handler->pBoneMatrixRenderData_ = targetData;
+    }
+
+    if (callbackStage == 2)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[6](handler);
+        callbackStage = (handler->hooks_[6] != NULL) ? handler->hookStages_[6] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+    
+    if (flagbit6 == 0 && !(handler->flags_ & (1 << RCH_FLAG_8)))
+    {
+        handler->callback_ec_(handler->pBoneMatrixRenderData_);
+    }
+
+    handler->pBoneMatrixRenderData_ = NULL;
+    if (callbackStage == 3)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[6](handler);
+        callbackStage = (handler->hooks_[6] != NULL) ? handler->hookStages_[6] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (modifier == 0x20 || modifier == 0x60)
+    {
+        numBytesConsumed++;
+        if (flagbit6 == 0 && !(handler->flags_ & (1 << RCH_FLAG_8)))
+        {
+            uint32_t storagePosition = handler->instructionPointer_[4];
+            SubmitCommandToGeometryFifo(GXFifoCommand_StoreMatrix, &storagePosition, 1);
+        }
+    }
+
+    handler->instructionPointer_ += numBytesConsumed;
+}
+
+// seems to be used for free billboarding, i.e. making stuff turn in any
+// direction to face the camera. Noticeable with evac animation
+void RenderCommand_7(RenderCommandHandler* handler, int modifier)
+{
+    int numBytesConsumed = 2;
+    Vector3fix* pTranslation = &data_020f1d78.translation;
+    Vector3fix* pScaling = &data_020f1d78.scaling;
+    if (handler->flags_ & (1 << RCH_FLAG_9))
+    {
+        if (modifier == 0x40 || modifier == 0x60)
+            numBytesConsumed++;
+        if (modifier == 0x20 || modifier == 0x60)
+            numBytesConsumed++;
+        handler->instructionPointer_ += numBytesConsumed;
+        return;
+    }
+
+    if (modifier == 0x40 || modifier == 0x60)
+    {
+        numBytesConsumed++;
+        if (!(handler->flags_ & (1 << RCH_FLAG_8)))
+        {
+            uint8_t* instructionPtr = handler->instructionPointer_;
+            uint32_t retrievalPosition;
+            if (modifier == 0x40)
+                retrievalPosition = instructionPtr[2];
+            else
+                retrievalPosition = instructionPtr[3];
+            SubmitCommandToGeometryFifo(GXFifoCommand_GetMatrix, &retrievalPosition, 1);
+        }
+    }
+
+    int callbackStage = (handler->hooks_[7] != NULL) ? handler->hookStages_[7] : 0;
+    unsigned int flagbit6;
+    if (callbackStage == 1)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[7](handler);
+        callbackStage = (handler->hooks_[7] != NULL) ? handler->hookStages_[7] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (!(handler->flags_ & (1 << RCH_FLAG_8)) && flagbit6 == 0)
+    {
+        SendQueuedDataToGeometryFifo();
+        GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_SetMatrixMode, GXFifoCommand_PushMatrix, GXFifoCommand_LoadMatIdentity);
+        GXFIFO = 0; // matrix mode 0: projection
+        GXFIFO = 0; // why is this here?
+        fix32_t clipMatrix[16];
+        // get the world * view matrix (we set projection matrix to identity, so
+        // it doesn't contribute here)
+        while (func_020c54fc(clipMatrix) != 0) {}
+        if (data_0210a010.flags_fc_ & 1)
+        {
+            fix32_t* mat4x3 = func_020b39ec();
+            fix32_t expanded[16];
+            func_020c1868(mat4x3, expanded);
+            func_020c223c(clipMatrix, expanded, clipMatrix);
+        }
+        else if (data_0210a010.flags_fc_ & 2)
+        {
+            fix32_t expanded[16];
+            func_020c1868(data_0210a010.mat4x3_4c_, expanded);
+            func_020c223c(clipMatrix, expanded, clipMatrix);
+        }
+
+        // store 4th row of matrix
+        pTranslation->x = clipMatrix[12];
+        pTranslation->y = clipMatrix[13];
+        pTranslation->z = clipMatrix[14];
+
+        // store lengths of first 3 rows
+        pScaling->x = func_020c2eb8(&clipMatrix[0]);
+        pScaling->y = func_020c2eb8(&clipMatrix[4]);
+        pScaling->z = func_020c2eb8(&clipMatrix[8]);
+
+        // note: if clipMatrix has a representation as (scaling) * (rotation) * (translation)
+        // then the above is extracting the scaling and translation components
+
+        if (data_0210a010.flags_fc_ & 1)
+        {
+            GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
+            func_020ca430(&data_020f1d78.popMatrixParameter, &GXFIFO, 8); // pass pop / matrix mode commands
+            // load the matrix returned by func_020b3a24(), inverse of func_020b39ec()
+            func_020ca430(func_020b3a24(), &GXFIFO, 4*3 * sizeof(fix32_t));
+            // the matrix to multiply by is a translation matrix, so we're composing
+            // translation with a scaling. (Why translate first though?)
+            GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
+            func_020ca430(&data_020f1d78.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
+        }
+        else if (data_0210a010.flags_fc_ & 2)
+        {
+            GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
+            func_020ca430(&data_020f1d78.popMatrixParameter, &GXFIFO, 8);
+            // load the matrix returned by func_020b3950(), inverse of data_0210a010.mat4x3_4c_
+            func_020ca430(func_020b3950(), &GXFIFO, 4*3 * sizeof(fix32_t));
+            // the matrix to multiply by is a translation matrix, so we're composing
+            // translation with a scaling. (Why translate first though?)
+            GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
+            func_020ca430(&data_020f1d78.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
+        }
+        else
+        {
+            // send all the commands at once: pop the matrix, set matrix mode to 2,
+            // then load a translation + scaling matrix
+            func_020ca430(&data_020f1d78, &GXFIFO, sizeof(data_020f1d78));
+        }
+
+    }
+
+    int newFlagbit6;
+    if (callbackStage == 3)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[7](handler);
+        newFlagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        newFlagbit6 = 0;
+
+    if (modifier == 0x20 || modifier == 0x60)
+    {
+        numBytesConsumed++;
+        if (newFlagbit6 == 0 && !(handler->flags_ & (1 << RCH_FLAG_8)))
+        {
+            uint32_t storePosition = handler->instructionPointer_[2];
+            SubmitCommandToGeometryFifo(GXFifoCommand_StoreMatrix, &storePosition, 1);
+        }
+    }
+    handler->instructionPointer_ += numBytesConsumed;
+}
+
+// seems to be used for axis-aligned billboarding - noticeable on trees in
+// Angel Falls & lights in cave grottos
+void RenderCommand_8(RenderCommandHandler* handler, int modifier)
+{
+    int numBytesConsumed = 2;
+    Vector3fix* pTranslation = &data_020f1dc0.translation;
+    Vector3fix* pScaling = &data_020f1dc0.scaling;
+    fix32_t* pRotation = &data_020f1dc0.matrixLinearPart[0];
+    if (handler->flags_ & (1 << RCH_FLAG_9))
+    {
+        if (modifier == 0x40 || modifier == 0x60)
+            numBytesConsumed++;
+        if (modifier == 0x20 || modifier == 0x60)
+            numBytesConsumed++;
+        handler->instructionPointer_ += numBytesConsumed;
+        return;
+    }
+
+    if (modifier == 0x40 || modifier == 0x60)
+    {
+        numBytesConsumed++;
+        if (!(handler->flags_ & (1 << RCH_FLAG_8)))
+        {
+            uint8_t* instructionPtr = handler->instructionPointer_;
+            uint32_t retrievalPosition;
+            if (modifier == 0x40)
+                retrievalPosition = instructionPtr[2];
+            else
+                retrievalPosition = instructionPtr[3];
+            SubmitCommandToGeometryFifo(GXFifoCommand_GetMatrix, &retrievalPosition, 1);
+        }
+    }
+
+    int callbackStage = (handler->hooks_[8] != NULL) ? handler->hookStages_[8] : 0;
+    unsigned int flagbit6;
+    if (callbackStage == 1)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[8](handler);
+        callbackStage = (handler->hooks_[8] != NULL) ? handler->hookStages_[8] : 0;
+        flagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        flagbit6 = 0;
+
+    if (!(handler->flags_ & (1 << RCH_FLAG_8)) && flagbit6 == 0)
+    {
+        SendQueuedDataToGeometryFifo();
+        GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_SetMatrixMode, GXFifoCommand_PushMatrix, GXFifoCommand_LoadMatIdentity);
+        GXFIFO = 0; // matrix mode 0: projection
+        GXFIFO = 0; // why is this here?
+        fix32_t clipMatrix[16];
+        while (func_020c54fc(clipMatrix) != 0) {}
+        if (data_0210a010.flags_fc_ & 1)
+        {
+            fix32_t* mat4x3 = func_020b39ec();
+            fix32_t expanded[16];
+            func_020c1868(mat4x3, expanded);
+            func_020c223c(clipMatrix, expanded, clipMatrix);
+        }
+        else if (data_0210a010.flags_fc_ & 2)
+        {
+            fix32_t expanded[16];
+            func_020c1868(data_0210a010.mat4x3_4c_, expanded);
+            func_020c223c(clipMatrix, expanded, clipMatrix);
+        }
+
+        // store 4th row of matrix
+        pTranslation->x = clipMatrix[12];
+        pTranslation->y = clipMatrix[13];
+        pTranslation->z = clipMatrix[14];
+
+        // store lengths of first 3 rows
+        pScaling->x = func_020c2eb8(&clipMatrix[0]);
+        pScaling->y = func_020c2eb8(&clipMatrix[4]);
+        pScaling->z = func_020c2eb8(&clipMatrix[8]);
+
+        if (clipMatrix[5] != 0 || clipMatrix[6] != 0)
+        {
+            // normalize 2nd row and store
+            func_020c2f18(&clipMatrix[4], &pRotation[3]);
+            // generate 3rd row via m_32 = -m_23, m_33 = m_22
+            pRotation[7] = -pRotation[5];
+            pRotation[8] = pRotation[4];
+        }
+        else
+        {
+            // normalize 3rd row and store
+            func_020c2f18(&clipMatrix[8], &pRotation[6]);
+            // generate 2nd row
+            pRotation[5] = -pRotation[7];
+            pRotation[4] = pRotation[8];
+        }
+        
+        // note: if clipMatrix has a representation as (scaling) * (rotation) * (translation)
+        // then the above extracts the components, and reduces the rotation part to
+        // only be a rotation in the x-axis
+
+        if (data_0210a010.flags_fc_ & 1)
+        {
+            GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
+            func_020ca430(&data_020f1dc0.popMatrixParameter, &GXFIFO, 8); // pass pop / matrix mode commands
+            // load the matrix returned by func_020b3a24(). This is the inverse
+            // of the matrix from func_020b39ec()
+            func_020ca430(func_020b3a24(), &GXFIFO, 3 * 4 * sizeof(fix32_t));
+            // the 4x3 matrix is a rotate-then-translate matrix. Recall that matrix multiplication
+            // commands put the parameter on the inside, so we are actually ending 
+            // up with (scale) -> (rotate then translate) -> (apply matrix from above)
+            GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
+            func_020ca430(&data_020f1dc0.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
+        }
+        else if (data_0210a010.flags_fc_ & 2)
+        {
+            GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
+            func_020ca430(&data_020f1dc0.popMatrixParameter, &GXFIFO, 8);
+            // load the matrix returned by func_020b3950(), which is the inverse
+            // of the matrix at 0210a05c
+            func_020ca430(func_020b3950(), &GXFIFO, 4*3 * sizeof(fix32_t));
+            // the 4x3 matrix is a rotate-then-translate matrix. Recall that matrix multiplication
+            // commands put the parameter on the inside, so we are actually ending 
+            // up with (scale) -> (rotate then translate) -> (apply matrix from above)
+            GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
+            func_020ca430(&data_020f1dc0.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
+        }
+        else
+        {
+            // send all the commands at once: pop the matrix, set matrix mode to 2,
+            // then pre-apply a translation, then pre-apply a scaling
+            func_020ca430(&data_020f1dc0, &GXFIFO, sizeof(data_020f1dc0));
+        }
+    }
+
+    int newFlagbit6;
+    if (callbackStage == 3)
+    {
+        handler->flags_ &= ~(1 << RCH_FLAG_6);
+        handler->hooks_[8](handler);
+        newFlagbit6 = handler->flags_ & (1 << RCH_FLAG_6);
+    }
+    else
+        newFlagbit6 = 0;
+
+    if (modifier == 0x20 || modifier == 0x60)
+    {
+        numBytesConsumed++;
+        if (newFlagbit6 == 0 && !(handler->flags_ & (1 << RCH_FLAG_8)))
+        {
+            uint32_t storePosition = handler->instructionPointer_[2];
+            SubmitCommandToGeometryFifo(GXFifoCommand_StoreMatrix, &storePosition, 1);
+        }
+    }
+    handler->instructionPointer_ += numBytesConsumed;
+}

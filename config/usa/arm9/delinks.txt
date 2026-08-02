@@ -129,6 +129,22 @@ src/Graphics/NSBXX/TEX.cpp:
     complete
     .text start:0x020b2e3c end:0x020b36c0
 
+src/Graphics/NSBXX/RenderCommands.cpp:
+    complete
+    .text start:0x020b4020 end:0x020b5758
+
+//src/Graphics/NSBXX/RenderCommand_9.cpp:
+//    complete
+//    .text start:0x020b5758 end:0x020b5eb4
+
+src/Graphics/NSBXX/RenderCommands_10_13.cpp:
+    complete
+    .text start:0x020b5eb4 end:0x020b6998
+
+src/Graphics/GeometryFifo.cpp:
+    complete
+    .text start:0x020b6998 end:0x020b6bb0
+
 src/Graphics/NSBXX/NSBXX.cpp:
     complete
     .text start:0x020b6f64 end:0x020b736c

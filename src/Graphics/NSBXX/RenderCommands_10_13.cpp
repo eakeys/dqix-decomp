@@ -362,16 +362,16 @@ void RenderMeshWithMaterial(NSBXXInternalModel* model, unsigned int materialIdx,
             else
             {
                 NSBXXMaterial::ExtensionData_Bit1* ext = (NSBXXMaterial::ExtensionData_Bit1*)extraDataAddr;
-                targetData.unknown_18_ = ext->unknown_0_;
-                targetData.unknown_1c_ = ext->unknown_4_;
+                targetData.extensionScaleX_ = ext->scaleX_;
+                targetData.extensionScaleY_ = ext->scaleY_;
                 extraDataAddr += sizeof(*ext);
             }
 
             if (!(material->flags_ & 4))
             {
                 NSBXXMaterial::ExtensionData_Bit2* ext = (NSBXXMaterial::ExtensionData_Bit2*)extraDataAddr;
-                targetData.unknown_20_ = ext->unknown_0_;
-                targetData.unknown_22_ = ext->unknown_2_;
+                targetData.rotationSine_ = ext->sine_;
+                targetData.rotationCosine_ = ext->cosine_;
                 extraDataAddr += sizeof(*ext);
             }
             else
@@ -380,8 +380,8 @@ void RenderMeshWithMaterial(NSBXXInternalModel* model, unsigned int materialIdx,
             if (!(material->flags_ & 8))
             {
                 NSBXXMaterial::ExtensionData_Bit3* ext = (NSBXXMaterial::ExtensionData_Bit3*)extraDataAddr;
-                targetData.unknown_24_ = ext->unknown_0_;
-                targetData.unknown_28_ = ext->unknown_4_;
+                targetData.translateX_ = ext->translateX_;
+                targetData.translateY_ = ext->translateY_;
             }
             else
                 targetData.flags_ |= 4;

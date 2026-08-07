@@ -7,28 +7,45 @@ struct RenderCommandHandler;
 
 struct BoneMatrixRenderData
 {
+    union Scale
+    {
+        struct {
+            fix32_t x; fix32_t y; fix32_t z;
+        };
+        fix32_t array[3];
+    };
+    // bit 0: set if no scaling
+    // bit 1: set if no rotation
+    // bit 2: set if no translation
     unsigned int flags_;
-    char unk_4[0x28 - 0x4];
+    Scale scale_v0_;
+    Scale scale_v1_;
+    Scale scale_v2_;
     fix32_t rotationMatrix_[9]; // probably a struct
-    fix32_t translateX_;
-    fix32_t translateY_;
-    fix32_t translateZ_;
+    Vector3fix translate_;
 };
 
 struct MaterialRenderData
 {
+    // bit 0: material does not have type 1 (scaling) extension data
+    // bit 1: material does not have type 2 (rotation) extension data
+    // bit 2: material does not have type 3 (translation) extension data
+    // bit 3: material *has* any of type 1-3 extension data
+    // bit 4: ???, ORed with bit 3 in some places, notably to call
+    //        callback_f0 in the handler
+    // bit 5: if set, alpha = 0 when drawing
     unsigned int flags_;
     unsigned int paramDIF_AMB_;
     unsigned int paramSPE_EMI_;
     unsigned int paramPOLYGON_ATTR_;
     unsigned int paramTEXIMAGE_PARAMS_;
     unsigned int texturePaletteBase_;
-    unsigned int unknown_18_;
-    unsigned int unknown_1c_;
-    unsigned short unknown_20_;
-    unsigned short unknown_22_;
-    unsigned int unknown_24_;
-    unsigned int unknown_28_;
+    fix32_t extensionScaleX_;
+    fix32_t extensionScaleY_;
+    fix16_t rotationSine_;
+    fix16_t rotationCosine_;
+    fix32_t translateX_;
+    fix32_t translateY_;
     unsigned short materialWidth_;
     unsigned short materialHeight_;
     fix32_t materialxScale_;

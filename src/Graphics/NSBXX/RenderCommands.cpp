@@ -13,7 +13,7 @@ void ExecuteRenderCommands(RenderCommandHandler* handler)
 void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* modelData)
 {
     func_020ca458(0, handler, sizeof(RenderCommandHandler));
-    handler->unknown_c4_ = 1;
+    handler->bonematrix_bitfield_[0] = 1;
     handler->flags_ = 1;
 
     uint8_t* commands = modelData->renderCommandList_;
@@ -29,8 +29,8 @@ void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* m
 
     handler->materialData_ = modelData->internalModel_->GetMaterialData();
     handler->meshList_ = modelData->internalModel_->GetMeshList();
-    handler->callback_e8_ = data_020f1cec[modelData->internalModel_->boneMatrixCallbackType_];
-    handler->callback_ec_ = data_020f1ce0[modelData->internalModel_->boneMatrixCallbackType_];
+    handler->boneMatrixRenderDataPopulateProc_ = data_020f1cec[modelData->internalModel_->boneScalingMode_];
+    handler->boneMatrixRenderDataSubmitProc_ = data_020f1ce0[modelData->internalModel_->boneScalingMode_];
     handler->callback_f0_ = data_020f1cf8[modelData->internalModel_->materialCallbackType_];
 
     handler->upScale_ = modelData->internalModel_->upScale_;
@@ -305,8 +305,8 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
                 {
                     NSBXXMaterial::ExtensionData_Bit1* extensionData = 
                         (NSBXXMaterial::ExtensionData_Bit1*)extensionDataAddress;
-                    targetData->unknown_18_ = extensionData->unknown_0_;
-                    targetData->unknown_1c_ = extensionData->unknown_4_;
+                    targetData->extensionScaleX_ = extensionData->scaleX_;
+                    targetData->extensionScaleY_ = extensionData->scaleY_;
                     extensionDataAddress += sizeof(*extensionData);
                 }
                 else
@@ -316,8 +316,8 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
                 {
                     NSBXXMaterial::ExtensionData_Bit2* extensionData =
                         (NSBXXMaterial::ExtensionData_Bit2*)extensionDataAddress;
-                    targetData->unknown_20_ = extensionData->unknown_0_;
-                    targetData->unknown_22_ = extensionData->unknown_2_;
+                    targetData->rotationSine_ = extensionData->sine_;
+                    targetData->rotationCosine_ = extensionData->cosine_;
                     extensionDataAddress += sizeof(*extensionData);
                 }
                 else
@@ -327,8 +327,8 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
                 {
                     NSBXXMaterial::ExtensionData_Bit3* extensionData = 
                         (NSBXXMaterial::ExtensionData_Bit3*)extensionDataAddress;
-                    targetData->unknown_24_ = extensionData->unknown_0_;
-                    targetData->unknown_28_ = extensionData->unknown_4_;
+                    targetData->translateX_ = extensionData->translateX_;
+                    targetData->translateY_ = extensionData->translateY_;
                 }
                 else 
                     targetData->flags_ |= 4;
@@ -413,7 +413,7 @@ void RenderCommand_4(RenderCommandHandler* handler, int modifier)
         {
             NSBXXMaterial* material = handler->materialData_->GetMaterialByIndex(materialIdx);
             // MaterialBindProc
-            data_020f1d18[material->unk_0](handler, modifier, material, materialIdx);
+            data_020f1d08.materialBindFunctions[material->unk_0](handler, modifier, material, materialIdx);
         }
     }
     handler->instructionPointer_ += 2;
@@ -458,7 +458,7 @@ void RenderCommand_5(RenderCommandHandler* handler, int modifier)
         int meshIdx = handler->instructionPointer_[1];
         NSBXXNameList* meshList = handler->meshList_;
         NSBXXMesh* mesh = meshList->GetEntryFromu32Offset_v2<NSBXXMesh>(meshIdx);
-        data_020f1d28[mesh->unk_0](handler, modifier, mesh, meshIdx);
+        data_020f1d08.meshDrawFunctions[mesh->unk_0](handler, modifier, mesh, meshIdx);
     }
     handler->instructionPointer_ += 2;
 }
@@ -541,15 +541,15 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
             {
                 NSBXXBoneMatrix* boneMatrix = handler->boneList_->GetEntryFromu32Offset_v2<NSBXXBoneMatrix>(boneIdx);
                 intptr_t boneMatrixExtraPtr = (intptr_t)(boneMatrix + 1);
-                if ((boneMatrix->flags_ & 1)) // has translation component
+                if ((boneMatrix->flags_ & 1)) // has no translation component
                     targetData->flags_ |= 4;
                 else
                 {
                     NSBXXBoneMatrix::Translation* translation = 
                         (NSBXXBoneMatrix::Translation*)boneMatrixExtraPtr;
-                    targetData->translateX_ = translation->x;
-                    targetData->translateY_ = translation->y;
-                    targetData->translateZ_ = translation->z;
+                    targetData->translate_.x = translation->x;
+                    targetData->translate_.y = translation->y;
+                    targetData->translate_.z = translation->z;
                     boneMatrixExtraPtr += sizeof(*translation);
                 }
                     
@@ -608,7 +608,7 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
                     boneMatrixExtraPtr += sizeof(*rotation);
                 }
 
-                handler->callback_e8_(targetData, (NSBXXBoneMatrix::Scaling*)boneMatrixExtraPtr, handler->instructionPointer_, boneMatrix->flags_);
+                handler->boneMatrixRenderDataPopulateProc_(targetData, (NSBXXBoneMatrix::Scaling*)boneMatrixExtraPtr, handler->instructionPointer_, boneMatrix->flags_);
             }
         }
         handler->pBoneMatrixRenderData_ = targetData;
@@ -626,7 +626,7 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
     
     if (flagbit6 == 0 && !(handler->flags_ & (1 << RCH_FLAG_8)))
     {
-        handler->callback_ec_(handler->pBoneMatrixRenderData_);
+        handler->boneMatrixRenderDataSubmitProc_(handler->pBoneMatrixRenderData_);
     }
 
     handler->pBoneMatrixRenderData_ = NULL;

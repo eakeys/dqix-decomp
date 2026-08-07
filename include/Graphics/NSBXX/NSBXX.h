@@ -162,11 +162,15 @@ struct NSBXXBoneMatrix
         fix16_t entries[8];
     };
 
-    struct Scaling // present if flag bit 2 is zero. Might be a Vector3i
+    struct Scaling // present if flag bit 2 is zero
     {
         fix32_t x;
         fix32_t y;
         fix32_t z;
+
+        fix32_t x_v2;
+        fix32_t y_v2;
+        fix32_t z_v2;
     };
 };
 
@@ -241,22 +245,27 @@ struct NSBXXMaterial
     // next three substructs are included, sequentially, depending whether
     // bits 1, 2 and 3 are *clear* respectively (i.e. if bit 1 is clear,
     // then substruct #1 is present)
+
+    // Represents a scaling centred at (0, height) i.e. bottom left
     struct ExtensionData_Bit1
     {
-        uint32_t unknown_0_;
-        uint32_t unknown_4_;
+        fix32_t scaleX_;
+        fix32_t scaleY_;
     };
 
+    // Represents a rotation around the centre of the texture.
+    // Instead of specifying the angle we specify its sine & cosine
     struct ExtensionData_Bit2
     {
-        int16_t unknown_0_;
-        int16_t unknown_2_;
+        fix16_t sine_;
+        fix16_t cosine_;
     };
 
+    // Represents a translation by (width * x, height * y) texels
     struct ExtensionData_Bit3
     {
-        uint32_t unknown_0_;
-        uint32_t unknown_4_;
+        uint32_t translateX_;
+        uint32_t translateY_;
     };
     
     struct ExtensionData_Bit13
@@ -331,7 +340,14 @@ struct NSBXXInternalModel
     uint32_t meshesOffset_; // offset to a NameList of NSBXXMesh
     uint32_t inverseBindsOffset_;
     uint8_t unk_14;
-    uint8_t boneMatrixCallbackType_;
+    // 0, 1 or 2, determines the behavior of applying scaling
+    // to bones. 0 = simplest, only have one scaling operation followed
+    // by rotation and translation.
+    // In modes 1 and 2, each bone also provides a scale factor to be
+    // used by its children.
+    // Might have something to do with 'segment scale compensate'
+    // behaviour? https://download.autodesk.com/us/maya/2011help/nodes/joint.html
+    uint8_t boneScalingMode_;
     uint8_t materialCallbackType_;
     uint8_t numBoneMatrices_;
     uint8_t numMaterials_;

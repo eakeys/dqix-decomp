@@ -157,9 +157,13 @@ src/Graphics/NSBXX/PatternAnimation.cpp:
     complete
     .text start:0x020b7694 end:0x020b7840
 
+src/Graphics/NSBXX/RenderCommandProcs.cpp:
+    complete
+    .text start:0x020b99b0 end:0x020bb424
+
 //src/Graphics/VRAMAllocations.cpp:
 //    complete
-//    .text start:0x020baa30 end:0x020c0044
+//    .text start:0x020bb588 end:0x020c0044
 
 src/System/VRAM.cpp:
     complete

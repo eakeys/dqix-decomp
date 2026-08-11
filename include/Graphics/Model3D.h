@@ -8,8 +8,6 @@
 class Model3D
 {
 public:
-    // I don't know what this struct is but it's used for the underlying draw functions etc
-    // sizeof = 0x54
     ModelRenderData renderData_;
     NSBXXInternalModel* modelData_54_;
     void* texFileData_58_;
@@ -27,8 +25,8 @@ public:
     fix32_t zMiddle_;
     fix32_t maybeApproxRadius_;
     fix32_t copyOfHeight_;
-    BoneMatrixRenderData* unknown_90_;
-    MaterialRenderData* unknown_94_;
+    BoneMatrixRenderData* pBoneMatrixRenderData_;
+    MaterialRenderData* pMaterialRenderData_;
     int unknown_98_;
     int unknown_9c_;
     unsigned short unknown_a0_;

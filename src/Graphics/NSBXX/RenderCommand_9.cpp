@@ -32,10 +32,10 @@ extern "C" void RenderCommand_9(RenderCommandHandler* handler, int modifier)
             offset = instructionPtr[1] * sizeof(Struct_0210b678);
             ptr_r7 = (Struct_0210b678*)((intptr_t)data_0210b678 + offset);
             unsigned int inverseBindIndex = instructionPtr[1];
-            unsigned int inBitfield = handler->invbind_bitfield_[inverseBindIndex >> 5] & (1 << (inverseBindIndex & 0x1f));
+            unsigned int inBitfield = handler->invBindBitfield_[inverseBindIndex >> 5] & (1 << (inverseBindIndex & 0x1f));
             if (!inBitfield)
             {
-                handler->invbind_bitfield_[inverseBindIndex >> 5] |= (1 << (inverseBindIndex & 0x1f));
+                handler->invBindBitfield_[inverseBindIndex >> 5] |= (1 << (inverseBindIndex & 0x1f));
                 // retrieve the local-to-world matrix from the stack
                 GXFIFO_MATRIX_GET = instructionPtr[0];
                 GXFIFO_MATRIX_MODE = 1; // position

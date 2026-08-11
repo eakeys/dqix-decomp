@@ -129,6 +129,10 @@ src/Graphics/NSBXX/TEX.cpp:
     complete
     .text start:0x020b2e3c end:0x020b36c0
 
+src/Graphics/NSBXX/Animation.cpp:
+    complete
+    .text start:0x020b3ad0 end:0x020b4020
+
 src/Graphics/NSBXX/RenderCommands.cpp:
     complete
     .text start:0x020b4020 end:0x020b5758
@@ -156,6 +160,26 @@ src/Graphics/NSBXX/NSBXX.cpp:
 src/Graphics/NSBXX/PatternAnimation.cpp:
     complete
     .text start:0x020b7694 end:0x020b7840
+
+//src/Graphics/NSBXX/JAC.cpp:
+//    complete
+//    .text start:0x020b7840 end:0x020b8e60
+
+src/Graphics/NSBXX/MAM.cpp:
+    complete
+    .text start:0x020b8e60 end:0x020b9278
+
+src/Graphics/NSBXX/MAT.cpp:
+    complete
+    .text start:0x020b9278 end:0x020b969c
+
+src/Graphics/NSBXX/MPT.cpp:
+    complete
+    .text start:0x020b969c end:0x020b992c
+
+src/Graphics/NSBXX/VAV.cpp:
+    complete
+    .text start:0x020b992c end:0x020b99b0
 
 src/Graphics/NSBXX/RenderCommandProcs.cpp:
     complete

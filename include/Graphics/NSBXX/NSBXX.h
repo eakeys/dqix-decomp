@@ -174,9 +174,147 @@ struct NSBXXBoneMatrix
     };
 };
 
-struct NSBXXPatternAnimation
+struct NSBXXAnimationSignature
 {
-    uint8_t unk_0[4];
+    // holds e.g. "J\0AC" or "M\0PT" but in practice is read
+    // using a uint8_t and a uint16_t
+    uint8_t signatureInitial_;
+    uint8_t signatureNull_;
+    uint16_t signatureEnd_;
+};
+
+struct NSBXXAnimationJAC
+{
+    NSBXXAnimationSignature signature_; // "J\0AC"
+    uint16_t numFrames_;
+    uint16_t numTracks_;
+    uint32_t unk_8;
+    uint32_t pivotDataOffset_;
+    uint32_t basisMatricesOffset_;
+
+    uint16_t trackOffsets_[1];
+
+    struct Track
+    {
+        // bit 0: no channels at all
+        // bits 1,2: no translation channels
+        // bit 3: x-translation is constant
+        // bit 4: y-translation is constant
+        // bit 5: z-translation is constant
+        // bits 6,7: no rotation channel
+        // bit 8: rotation is constant
+        // bits 9,10: no scale channels
+        // bit 11: x-scale is constant
+        // bit 12: y-scale is constant
+        // bit 13: z-scale is constant
+        // bits 14-23: ???, unused?
+        // bits 24-31: index of bone matrix to target
+        uint32_t flagsAndTargetBoneMatrix_;
+
+        // channel data goes here...
+
+        struct ChannelNonConst
+        {
+            // bits 0-15: start frame
+            // bits 16-27: end frame
+            // bits 28-29: 'width', determines type of data
+            // bits 30-31: log(rate)
+            uint32_t metadata_;
+            uint32_t samplesOffset_;
+        };
+    };
+
+    struct ScaleSample16
+    {
+        fix16_t primary_;
+        fix16_t secondary_;
+    };
+
+    struct ScaleSample32
+    {
+        fix32_t primary_;
+        fix32_t secondary_;
+    };
+
+    struct PivotMatrix
+    {
+        // bits 0-3: form (values 0 to 8)
+        // bit 4: unit is -1
+        // bit 5: c = -b instead of c = b
+        // bit 6: d = -a instead of d = a
+        int16_t flags;
+        fix16_t a;
+        fix16_t b;
+    };
+
+    struct BasisMatrix
+    {
+        int16_t data[5];
+    };
+
+    inline PivotMatrix* GetPivotMatrices() const
+    {
+        return (PivotMatrix*)((intptr_t)this + this->pivotDataOffset_);
+    }
+
+    inline BasisMatrix* GetBasisMatrices() const
+    {
+        return (BasisMatrix*)((intptr_t)this + this->basisMatricesOffset_);
+    }
+};
+
+struct NSBXXAnimationMAM
+{
+    NSBXXAnimationSignature signature_;
+    uint16_t unk_4;
+    uint16_t unk_6;
+    NSBXXNameList tracks_;
+
+    // Each entry in the track describes how to vary the corresponding 
+    // material property. The 32 bits are used as follows:
+    // bits 0-15: offset, relative to this MAM, to array of samples
+    // bits 16-28: index of last frame (i.e. number of frames - 1)
+    // bit 29: is constant
+    // bits 30-31: log_2(sample rate), only 0,1,2 supported
+    // If bit 29 is set, then there is no sample array and instead bits 0-15
+    // hold the constant value. Color samples (all except alpha) are 16-bit
+    // with only 15 bits used, alpha samples are 8-bit with only 5 bits used.
+    struct Track
+    {
+        uint32_t diffuse_;
+        uint32_t ambient_;
+        uint32_t reflection_;
+        uint32_t emission_;
+        uint32_t alpha_;
+    };
+};
+
+struct NSBXXAnimationMAT
+{
+    NSBXXAnimationSignature signature_;
+    uint16_t unk_4;
+    uint16_t unk_6;
+    NSBXXNameList tracks_;
+
+
+    struct Track
+    {
+        uint32_t unk_0;
+        uint32_t unk_4;
+        uint32_t unk_8;
+        uint32_t unk_c;
+        uint32_t unk_10;
+        uint32_t unk_14;
+        uint32_t unk_18;
+        uint32_t unk_1c;
+        uint32_t unk_20;
+        uint32_t unk_24;
+    };
+};
+
+struct NSBXXAnimationMPT
+{
+    NSBXXAnimationSignature signature_;
     uint16_t numFrames_;
     uint8_t numTextureNames_;
     uint8_t numPaletteNames_;
@@ -199,6 +337,20 @@ struct NSBXXPatternAnimation
             uint8_t paletteIdx_;
         };
     };
+};
+
+// not well documented at all, and doesn't seem to be used in DQIX anywhere.
+// signature is V.AV and controls visibility by interacting with render command 2.
+struct NSBXXAnimationVAV
+{
+    char unk_0[6];
+    unsigned short numConditions_;
+    char unk_8[4];
+    // to determine visibility, you generate a test index via
+    // testIndex = (frame * numConditions) + conditionIndex
+    // then look up bitfield[testIndex >> 5] & (1 << (testIndex & 0x1f)).
+    // if it's nonzero, the model is visible
+    uint32_t bitfield_[1];
 };
 
 struct ModelBoundingBox
@@ -454,6 +606,14 @@ struct NSBXXTex
     // by textureListOffset_, but some functions treat it as being in this fixed
     // location.
     NSBXXNameList textureList_;
+
+    inline NSBXXNameList* GetPaletteList() const
+    {
+        if (this != NULL && paletteListOffset_ != 0)
+            return (NSBXXNameList*)((intptr_t)this + paletteListOffset_);
+        else
+            return NULL;
+    }
 };
 
 struct NSBXXTexTexture
@@ -465,6 +625,9 @@ struct NSBXXTexTexture
 struct NSBXXTexPalette
 {
     uint16_t offsetWithinBlock4_; // need to left-shift by 3
+    // if bit 0 is set, the offset is right shifted by 1 before passing to
+    // PLTT_BASE, i.e. PLTT_BASE is expecting offset/16 instead of offset/8.
+    // This happens when texture format != 2
     uint16_t unk_2;
 };
 
@@ -548,8 +711,8 @@ void* NSBXX_GetObjectFromFirstSubfile(NSBXXContainer* nsbxx, unsigned int idx);
 
 // Might have other uses, but for now I've only seen it called on
 // pattern animations.
-const char* NSBXX_PatternAnimation_GetTextureName(NSBXXPatternAnimation* anim, unsigned int idx);
-const char* NSBXX_PatternAnimation_GetPaletteName(NSBXXPatternAnimation* anim, unsigned int idx);
-NSBXXPatternAnimation::Track::Keyframe* NSBXX_PatternAnimation_GetKeyframe(NSBXXPatternAnimation*, uint16_t track, uint16_t frameTime);
-NSBXXPatternAnimation::Track* NSBXX_PatternAnimation_GetTrack(NSBXXPatternAnimation*, unsigned int track);
+const char* NSBXX_PatternAnimation_GetTextureName(NSBXXAnimationMPT* anim, unsigned int idx);
+const char* NSBXX_PatternAnimation_GetPaletteName(NSBXXAnimationMPT* anim, unsigned int idx);
+NSBXXAnimationMPT::Track::Keyframe* NSBXX_PatternAnimation_GetKeyframe(NSBXXAnimationMPT*, uint16_t track, uint16_t frameTime);
+NSBXXAnimationMPT::Track* NSBXX_PatternAnimation_GetTrack(NSBXXAnimationMPT*, unsigned int track);
 }

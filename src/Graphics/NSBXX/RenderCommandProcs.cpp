@@ -162,7 +162,7 @@ extern "C" void BoneMatrixProc_TypeB_v1(BoneMatrixRenderData* renderData, NSBXXB
         if (thirdArg & 2)
         {
             unsigned int thisBoneIdx = ip[1];
-            data_0210a274->bonematrix_bitfield_[thisBoneIdx >> 5] |= (1 << (thisBoneIdx & 0x1f));
+            data_0210a274->boneMatrixBitfield_[thisBoneIdx >> 5] |= (1 << (thisBoneIdx & 0x1f));
         }
     }
     else
@@ -173,7 +173,7 @@ extern "C" void BoneMatrixProc_TypeB_v1(BoneMatrixRenderData* renderData, NSBXXB
         if (thirdArg & 2)
         {
             unsigned int thisBoneIdx = ip[1];
-            data_0210a274->bonematrix_bitfield_[thisBoneIdx >> 5] &= ~(1 << (thisBoneIdx & 0x1f));
+            data_0210a274->boneMatrixBitfield_[thisBoneIdx >> 5] &= ~(1 << (thisBoneIdx & 0x1f));
             data_0210b078[thisBoneIdx].vec1_.x = scaling->x_v2;
             data_0210b078[thisBoneIdx].vec1_.y = scaling->y_v2;
             data_0210b078[thisBoneIdx].vec1_.z = scaling->z_v2;
@@ -184,7 +184,7 @@ extern "C" void BoneMatrixProc_TypeB_v1(BoneMatrixRenderData* renderData, NSBXXB
     {
         unsigned int parentBoneIdx = ip[2];
         renderData->flags_ |= 0x20;
-        if (data_0210a274->bonematrix_bitfield_[parentBoneIdx >> 5] & (1 << (parentBoneIdx & 0x1f)))
+        if (data_0210a274->boneMatrixBitfield_[parentBoneIdx >> 5] & (1 << (parentBoneIdx & 0x1f)))
         {
             renderData->flags_ |= 8;
         }
@@ -444,9 +444,9 @@ extern "C" void BoneMatrixProc_TypeB_v2(BoneMatrixRenderData* renderData, NSBXXB
     if (boneMatrixFlags & 4) // no scaling
     {
         renderData->flags_ |= 1; // no scaling
-        if (data_0210a274->bonematrix_bitfield_[parentBoneIdx >> 5] & (1 << (parentBoneIdx & 0x1f)))
+        if (data_0210a274->boneMatrixBitfield_[parentBoneIdx >> 5] & (1 << (parentBoneIdx & 0x1f)))
         {
-            data_0210a274->bonematrix_bitfield_[thisBoneIdx >> 5] |= (1 << (thisBoneIdx & 0x1f));
+            data_0210a274->boneMatrixBitfield_[thisBoneIdx >> 5] |= (1 << (thisBoneIdx & 0x1f));
             renderData->flags_ |= 0x18;
         }
         else
@@ -462,15 +462,15 @@ extern "C" void BoneMatrixProc_TypeB_v2(BoneMatrixRenderData* renderData, NSBXXB
         renderData->scale_v0_.x = scaling->x;
         renderData->scale_v0_.y = scaling->y;
         renderData->scale_v0_.z = scaling->z;
-        if (data_0210a274->bonematrix_bitfield_[parentBoneIdx >> 5] & (1 << (parentBoneIdx & 0x1f)))
+        if (data_0210a274->boneMatrixBitfield_[parentBoneIdx >> 5] & (1 << (parentBoneIdx & 0x1f)))
         {
             func_020ca408(scaling, &data_0210b078[thisBoneIdx], 2 * 3 * sizeof(fix32_t));
-            data_0210a274->bonematrix_bitfield_[thisBoneIdx >> 5] &= ~(1 << (thisBoneIdx & 0x1f));
+            data_0210a274->boneMatrixBitfield_[thisBoneIdx >> 5] &= ~(1 << (thisBoneIdx & 0x1f));
             renderData->flags_ |= 0x18;
         }
         else
         {
-            data_0210a274->bonematrix_bitfield_[thisBoneIdx >> 5] &= ~(1 << (thisBoneIdx & 0x1f));
+            data_0210a274->boneMatrixBitfield_[thisBoneIdx >> 5] &= ~(1 << (thisBoneIdx & 0x1f));
             data_0210b078[thisBoneIdx].vec0_.x = ((int64_t)scaling->x * (int64_t)data_0210b078[parentBoneIdx].vec0_.x) >> 12;
             data_0210b078[thisBoneIdx].vec0_.y = ((int64_t)scaling->y * (int64_t)data_0210b078[parentBoneIdx].vec0_.y) >> 12;
             data_0210b078[thisBoneIdx].vec0_.z = ((int64_t)scaling->z * (int64_t)data_0210b078[parentBoneIdx].vec0_.z) >> 12;

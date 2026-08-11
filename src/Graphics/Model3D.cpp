@@ -37,8 +37,8 @@ void Model3D::Clear()
     unknown_9c_ = 0;
     unknown_a0_ = 0x1000;
     unknown_98_ = 0;
-    unknown_90_ = 0;
-    unknown_94_ = 0;
+    pBoneMatrixRenderData_ = 0;
+    pMaterialRenderData_ = 0;
     alpha_ = 0x1f;
     unknown_flags_a8_1_ = false;
     unknown_flags_a8_2_ = false;
@@ -404,19 +404,19 @@ void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
 {
     if (alloc != NULL)
     {
-        if (unknown_90_ == NULL && (args & 1))
-            unknown_90_ = (BoneMatrixRenderData*)alloc->Allocate(renderData_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRenderData));
+        if (pBoneMatrixRenderData_ == NULL && (args & 1))
+            pBoneMatrixRenderData_ = (BoneMatrixRenderData*)alloc->Allocate(renderData_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRenderData));
 
-        if (unknown_94_ == NULL && (args & 2))
-            unknown_94_ = (MaterialRenderData*)alloc->Allocate(renderData_.internalModel_->numMaterials_ * sizeof(MaterialRenderData));
+        if (pMaterialRenderData_ == NULL && (args & 2))
+            pMaterialRenderData_ = (MaterialRenderData*)alloc->Allocate(renderData_.internalModel_->numMaterials_ * sizeof(MaterialRenderData));
     }
 
     if (!(args & 4))
     {
-        if (unknown_90_ != NULL)
-            renderData_.boneMatrixRenderDataArray_ = unknown_90_;
-        if (unknown_94_ != NULL)
-            renderData_.materialRenderDataArray_ = unknown_94_;
+        if (pBoneMatrixRenderData_ != NULL)
+            renderData_.boneMatrixRenderDataArray_ = pBoneMatrixRenderData_;
+        if (pMaterialRenderData_ != NULL)
+            renderData_.materialRenderDataArray_ = pMaterialRenderData_;
 
         unknown_flags_a8_2_ = true;
     }
@@ -424,10 +424,10 @@ void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
 
 void Model3D::StoreBoneMatrixAndMaterialArrayPointers()
 {
-    if (unknown_90_ != NULL)
-        renderData_.boneMatrixRenderDataArray_ = unknown_90_;
-    if (unknown_94_ != NULL)
-        renderData_.materialRenderDataArray_ = unknown_94_;
+    if (pBoneMatrixRenderData_ != NULL)
+        renderData_.boneMatrixRenderDataArray_ = pBoneMatrixRenderData_;
+    if (pMaterialRenderData_ != NULL)
+        renderData_.materialRenderDataArray_ = pMaterialRenderData_;
     unknown_flags_a8_1_ = true;
 }
 

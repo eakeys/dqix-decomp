@@ -8,6 +8,7 @@
 #include "../../System/Graphics.h"
 #include "../GeometryFifo.h"
 #include "RenderCommands.h"
+#include "Animation.h"
 #include <asmhacks.h>
 
 #pragma optimize_for_size off
@@ -27,19 +28,20 @@ struct RenderCommandHandler
     MaterialRenderData* pMaterialRenderData_;
     BoneMatrixRenderData* pBoneMatrixRenderData_;
     int* pCommand2Word_;
-    unsigned int material_bitfield_[2];
+    unsigned int materialBitfield_[2];
     // If bit n is set (0 <= n <= 63), then the bone of index n has
     // no non-trivial scaling
-    unsigned int bonematrix_bitfield_[2];
-    unsigned int invbind_bitfield_[2];
+    unsigned int boneMatrixBitfield_[2];
+    unsigned int invBindBitfield_[2];
     NSBXXNameList* boneList_;
     NSBXXModelMaterialData* materialData_;
     NSBXXNameList* meshList_;
     fix32_t upScale_;
     fix32_t downScale_;
-    void (*boneMatrixRenderDataPopulateProc_)(BoneMatrixRenderData*, NSBXXBoneMatrix::Scaling* boneMatrixScaleData, uint8_t* ip, int boneMatrixFlags);
+    // specifically seems to populate the scaling part
+    void (*boneMatrixRenderDataScalePopulateProc_)(BoneMatrixRenderData*, NSBXXBoneMatrix::Scaling* boneMatrixScaleData, uint8_t* ip, int boneMatrixFlags);
     void (*boneMatrixRenderDataSubmitProc_)(BoneMatrixRenderData*);
-    void (*callback_f0_)(MaterialRenderData*);
+    void (*textureMatrixCreateProc_)(MaterialRenderData*);
     MaterialRenderData scratchMaterialRenderData_;
     BoneMatrixRenderData scratchBoneMatrixRenderData_;
     int scratchCommand2Word_;
@@ -86,9 +88,10 @@ struct RenderCommandHandler
 extern unsigned int const data_020e9240[];
 
 // pivot matrix a/b/c/d position lookup
+// both arrays are identical
 extern struct {
     uint8_t a, b, c, d;
-} const data_020e9260[];
+} const data_020e9260[], data_020e9284[];
 
 // Holds { func_020b9a2c, func_020b9b30, func_020ba390 }.
 // Called by command 6 to populate scaling data for the bone matrix

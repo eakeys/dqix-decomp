@@ -13,7 +13,7 @@ void ExecuteRenderCommands(RenderCommandHandler* handler)
 void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* modelData)
 {
     func_020ca458(0, handler, sizeof(RenderCommandHandler));
-    handler->bonematrix_bitfield_[0] = 1;
+    handler->boneMatrixBitfield_[0] = 1;
     handler->flags_ = 1;
 
     uint8_t* commands = modelData->renderCommandList_;
@@ -29,9 +29,9 @@ void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* m
 
     handler->materialData_ = modelData->internalModel_->GetMaterialData();
     handler->meshList_ = modelData->internalModel_->GetMeshList();
-    handler->boneMatrixRenderDataPopulateProc_ = data_020f1cec[modelData->internalModel_->boneScalingMode_];
+    handler->boneMatrixRenderDataScalePopulateProc_ = data_020f1cec[modelData->internalModel_->boneScalingMode_];
     handler->boneMatrixRenderDataSubmitProc_ = data_020f1ce0[modelData->internalModel_->boneScalingMode_];
-    handler->callback_f0_ = data_020f1cf8[modelData->internalModel_->materialCallbackType_];
+    handler->textureMatrixCreateProc_ = data_020f1cf8[modelData->internalModel_->materialCallbackType_];
 
     handler->upScale_ = modelData->internalModel_->upScale_;
     handler->downScale_ = modelData->internalModel_->downScale_;
@@ -62,7 +62,7 @@ void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* m
     modelData->flags_0_ &= ~1;
 }
 
-void PopulateBitfieldFromAnimData(unsigned int* bitfield, ModelRenderData::MaybeAnimationData* anim)
+void PopulateBitfieldFromAnimData(unsigned int* bitfield, AnimationData* anim)
 {
     if (anim == NULL)
         return;
@@ -74,14 +74,14 @@ void PopulateBitfieldFromAnimData(unsigned int* bitfield, ModelRenderData::Maybe
         {
             do
             {
-                if (anim->entries[counter] & 0x100)
+                if (anim->entries_[counter] & 0x100)
                 {
                     bitfield[counter >> 5] |= 1 << (counter & 0x1f);
                 }
                 counter++;
             } while (counter < anim->numEntries_);
         }
-        anim = anim->pNext;
+        anim = anim->pNext_;
     } while (anim != NULL);
 }
 
@@ -254,7 +254,7 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
         {
             targetData = &modelMaterialArray[idx];
         }
-        else if ((modifier == 0x20 || modifier == 0x40) && (handler->material_bitfield_[idx >> 5] & (1 << (idx & 0x1f))))
+        else if ((modifier == 0x20 || modifier == 0x40) && (handler->materialBitfield_[idx >> 5] & (1 << (idx & 0x1f))))
         {
             if (modelMaterialArray != NULL)
                 targetData = &modelMaterialArray[idx];
@@ -265,14 +265,14 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
         {
             if (modelMaterialArray != NULL)
             {
-                handler->material_bitfield_[idx >> 5] |= (1 << (idx & 0x1f));
+                handler->materialBitfield_[idx >> 5] |= (1 << (idx & 0x1f));
                 targetData = &handler->modelData_->materialRenderDataArray_[idx];
             }
             else
             {
                 if (!(modifier != 0x40))
                 {
-                    handler->material_bitfield_[idx >> 5] |= (1 << (idx & 0x1f));
+                    handler->materialBitfield_[idx >> 5] |= (1 << (idx & 0x1f));
                     targetData = &data_0210a278[idx];
                 }
                 else
@@ -389,7 +389,7 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
                 SubmitCommandToGeometryFifo(commands[0], &commands[1], 6);
 
                 if (targetData->flags_ & 0x18)
-                    handler->callback_f0_(targetData);
+                    handler->textureMatrixCreateProc_(targetData);
             }
         }
         else
@@ -608,7 +608,7 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
                     boneMatrixExtraPtr += sizeof(*rotation);
                 }
 
-                handler->boneMatrixRenderDataPopulateProc_(targetData, (NSBXXBoneMatrix::Scaling*)boneMatrixExtraPtr, handler->instructionPointer_, boneMatrix->flags_);
+                handler->boneMatrixRenderDataScalePopulateProc_(targetData, (NSBXXBoneMatrix::Scaling*)boneMatrixExtraPtr, handler->instructionPointer_, boneMatrix->flags_);
             }
         }
         handler->pBoneMatrixRenderData_ = targetData;

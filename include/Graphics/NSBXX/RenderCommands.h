@@ -17,6 +17,8 @@ struct BoneMatrixRenderData
     // bit 0: set if no scaling
     // bit 1: set if no rotation
     // bit 2: set if no translation
+    // if bit 3 is set, the bone matrix calculation callback treats scale_v1
+    // as the identity, and if bit 4 is set, it treats scale_v2 as the identity
     unsigned int flags_;
     Scale scale_v0_;
     Scale scale_v1_;
@@ -52,25 +54,19 @@ struct MaterialRenderData
     fix32_t materialyScale_;
 };
 
+struct AnimationData;
+
 struct ModelRenderData
 {
-    struct MaybeAnimationData
-    {
-        char unk_0[0x10];
-        MaybeAnimationData* pNext;
-        char unk_14[5];
-        unsigned char numEntries_;
-        unsigned short entries[1]; // can reference past end
-    };
-
     unsigned int flags_0_;
     NSBXXInternalModel* internalModel_;
-    MaybeAnimationData* dataPtr_8_; // some relation to M.AT objects
-    int (*functionPtr_c_)(MaterialRenderData*, MaybeAnimationData*, unsigned int);
-    MaybeAnimationData* dataPtr_10_; // something to do with J.AC animations
-    int (*functionPtr_14_)(BoneMatrixRenderData*, MaybeAnimationData*, unsigned int);
-    MaybeAnimationData* dataPtr_18_; // something to do with V.?? objects
-    int (*functionPtr_1c_)(void*, MaybeAnimationData*, int);
+    AnimationData* dataPtr_8_; // some relation to M.AT objects
+    int (*functionPtr_c_)(MaterialRenderData*, AnimationData*, unsigned int);
+    AnimationData* dataPtr_10_; // something to do with J.AC animations
+    // points to ProcessJointAnimationsOnBoneMatrix (020b3bac usa)
+    int (*functionPtr_14_)(BoneMatrixRenderData*, AnimationData*, unsigned int);
+    AnimationData* dataPtr_18_; // something to do with V.?? objects
+    int (*functionPtr_1c_)(void*, AnimationData*, int);
     void (*renderCommandHook_)(RenderCommandHandler*);
     unsigned char renderCommandHookCommandID_;
     unsigned char renderCommandHookStage_; // 1,2 or 3 depending on when in the function it gets called

@@ -49,7 +49,7 @@ void* NSBXX_GetObjectFromFirstSubfile(NSBXXContainer* nsbxx, unsigned int idx)
     return NULL;
 }
 
-const char* NSBXX_PatternAnimation_GetTextureName(NSBXXPatternAnimation* anim, unsigned int idx)
+const char* NSBXX_PatternAnimation_GetTextureName(NSBXXAnimationMPT* anim, unsigned int idx)
 {
     if (anim != NULL && idx < anim->numTextureNames_)
     {
@@ -59,7 +59,7 @@ const char* NSBXX_PatternAnimation_GetTextureName(NSBXXPatternAnimation* anim, u
     return NULL;
 }
 
-const char* NSBXX_PatternAnimation_GetPaletteName(NSBXXPatternAnimation* anim, unsigned int idx)
+const char* NSBXX_PatternAnimation_GetPaletteName(NSBXXAnimationMPT* anim, unsigned int idx)
 {
     if (anim != NULL && idx < anim->numPaletteNames_)
     {
@@ -69,12 +69,12 @@ const char* NSBXX_PatternAnimation_GetPaletteName(NSBXXPatternAnimation* anim, u
     return NULL;
 }
 
-NSBXXPatternAnimation::Track::Keyframe* NSBXX_PatternAnimation_GetKeyframe(
-    NSBXXPatternAnimation* anim, uint16_t track, uint16_t frameTime)
+NSBXXAnimationMPT::Track::Keyframe* NSBXX_PatternAnimation_GetKeyframe(
+    NSBXXAnimationMPT* anim, uint16_t track, uint16_t frameTime)
 {
-    NSBXXPatternAnimation::Track* pTrack = NSBXX_PatternAnimation_GetTrack(anim, track);
-    NSBXXPatternAnimation::Track::Keyframe* keyframes =
-        (NSBXXPatternAnimation::Track::Keyframe*)((intptr_t)anim + pTrack->keyframeArrayOffset_);
+    NSBXXAnimationMPT::Track* pTrack = NSBXX_PatternAnimation_GetTrack(anim, track);
+    NSBXXAnimationMPT::Track::Keyframe* keyframes =
+        (NSBXXAnimationMPT::Track::Keyframe*)((intptr_t)anim + pTrack->keyframeArrayOffset_);
     
     // Start with a heuristic for the index
     unsigned int index = (unsigned int)(pTrack->maybeSpeed_4_ * frameTime) >> 12u;
@@ -89,15 +89,15 @@ NSBXXPatternAnimation::Track::Keyframe* NSBXX_PatternAnimation_GetKeyframe(
     return &keyframes[index];
 }
 
-NSBXXPatternAnimation::Track* NSBXX_PatternAnimation_GetTrack(
-    NSBXXPatternAnimation* anim, unsigned int track)
+NSBXXAnimationMPT::Track* NSBXX_PatternAnimation_GetTrack(
+    NSBXXAnimationMPT* anim, unsigned int track)
 {
     intptr_t nameList = (intptr_t)&anim->tracks_;
     if (nameList != 0 && track < anim->tracks_.numEntries_)
     {
         uint16_t stride = *(uint16_t*)(nameList + anim->tracks_.offsetToDataStart_);
         intptr_t ret = nameList + anim->tracks_.offsetToDataStart_ + 4 + stride * track;
-        return (NSBXXPatternAnimation::Track*)ret;
+        return (NSBXXAnimationMPT::Track*)ret;
     }
     return NULL;
 }

@@ -6,7 +6,7 @@
 
 #include "NSBXX.h"
 #include "../../System/Graphics.h"
-#include "../GeometryFifo.h"
+#include "GeometryFifo.h"
 #include "RenderCommands.h"
 #include "RenderConfig.h"
 #include "Animation.h"

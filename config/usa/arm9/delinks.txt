@@ -149,7 +149,7 @@ src/Graphics/NSBXX/RenderCommands_10_13.cpp:
     complete
     .text start:0x020b5eb4 end:0x020b6998
 
-src/Graphics/GeometryFifo.cpp:
+src/Graphics/NSBXX/GeometryFifo.cpp:
     complete
     .text start:0x020b6998 end:0x020b6e98
 

@@ -1,4 +1,4 @@
-#include "Graphics/GeometryFifo.h"
+#include "Graphics/NSBXX/GeometryFifo.h"
 #include "System/Graphics.h"
 #include "Graphics/NSBXX/RenderCommands.h"
 #include "Graphics/NSBXX/RenderConfig.h"

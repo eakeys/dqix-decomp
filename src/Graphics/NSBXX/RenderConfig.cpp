@@ -1,5 +1,5 @@
 #include "Graphics/NSBXX/RenderConfig.h"
-#include "Graphics/GeometryFifo.h"
+#include "Graphics/NSBXX/GeometryFifo.h"
 #include <globaldefs.h>
 
 #pragma optimize_for_size off

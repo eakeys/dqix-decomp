@@ -1,6 +1,6 @@
 #include "Graphics/NSBXX/RenderCommands.h"
 #include "Graphics/NSBXX/RenderCommands_Common.h"
-#include "Graphics/GeometryFifo.h"
+#include "Graphics/NSBXX/GeometryFifo.h"
 
 // Holds { func_020b9a2c, func_020b9b30, func_020ba390 }
 //extern void (*data_020f1cec[])(BoneMatrixRenderData*, NSBXXBoneMatrix::Scaling* boneMatrixScaleData, uint8_t* ip, int boneMatrixFlags);

@@ -8,11 +8,11 @@
 class Model3D
 {
 public:
-    ModelRenderContext renderData_;
-    NSBXXInternalModel* modelData_54_;
-    void* texFileData_58_;
-    void* rawFileData_; // holds the (decompressed) NSBMD file
-    unsigned int rawFileSize_;
+    ModelRenderContext renderContext_;
+    NSBXXInternalModel* rawInternalModel_;
+    void* rawTEX_;
+    void* rawBMD_; // holds the (decompressed) NSBMD file
+    unsigned int rawBMDFileSize_;
     // should make these six numbers a struct
     fix32_t xMax_;
     fix32_t yMax_;

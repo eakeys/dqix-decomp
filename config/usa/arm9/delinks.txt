@@ -133,7 +133,7 @@ src/Graphics/NSBXX/RenderConfig.cpp:
     complete
     .text start:0x020b36c0 end:0x020b3ad0
 
-src/Graphics/NSBXX/Animation.cpp:
+src/Graphics/NSBXX/AnimationProcessing.cpp:
     complete
     .text start:0x020b3ad0 end:0x020b4020
 

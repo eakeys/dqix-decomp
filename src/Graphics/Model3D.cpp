@@ -31,9 +31,9 @@ extern unsigned int (*data_020f1ef4)(unsigned int);
 void Model3D::Clear()
 {
     unknown_flags_a8_0_ = false;
-    modelData_54_ = NULL;
-    texFileData_58_ = NULL;
-    rawFileData_ = NULL;
+    rawInternalModel_ = NULL;
+    rawTEX_ = NULL;
+    rawBMD_ = NULL;
     unknown_9c_ = 0;
     unknown_a0_ = 0x1000;
     unknown_98_ = 0;
@@ -80,48 +80,48 @@ void Model3D::CopyAndProcessRawFile(AllocatorUnion* alloc, void* data, unsigned 
         return;
 
     CopyRawFile(alloc, data, length);
-    CleanInvalidateCacheRange(rawFileData_, rawFileSize_);
+    CleanInvalidateCacheRange(rawBMD_, rawBMDFileSize_);
     ProcessRawFile(arg);
 }
 
 void Model3D::SetAndProcessRawFile(void* data, unsigned int length, int arg)
 {
-    rawFileData_ = data;
-    rawFileSize_ = length;
-    CleanInvalidateCacheRange(rawFileData_, rawFileSize_);
+    rawBMD_ = data;
+    rawBMDFileSize_ = length;
+    CleanInvalidateCacheRange(rawBMD_, rawBMDFileSize_);
     ProcessRawFile(arg);
 }
 
 void Model3D::CopyRawFile(AllocatorUnion* alloc, void* data, unsigned int length)
 {
-    rawFileData_ = alloc->Allocate(length);
-    if (rawFileData_ == NULL)
+    rawBMD_ = alloc->Allocate(length);
+    if (rawBMD_ == NULL)
     {
         this->Clear();
     }
     else
     {
-        memcpy(rawFileData_, data, length);
-        rawFileSize_ = length;
+        memcpy(rawBMD_, data, length);
+        rawBMDFileSize_ = length;
     }
 }
 
 void Model3D::SetRawFile(void* data, unsigned int length)
 {
-    rawFileData_ = data;
-    rawFileSize_ = length;
+    rawBMD_ = data;
+    rawBMDFileSize_ = length;
 }
 
 void Model3D::ClearRawFileCache()
 {
-    CleanInvalidateCacheRange(rawFileData_, rawFileSize_);
+    CleanInvalidateCacheRange(rawBMD_, rawBMDFileSize_);
 }
 
 void Model3D::ProcessRawFile(int arg)
 {
     bool block4Succeeded, block23Succeeded, block1Succeeded;
     NSBXXTex* tex0;
-    NSBXXContainer* data = (NSBXXContainer*)rawFileData_;
+    NSBXXContainer* data = (NSBXXContainer*)rawBMD_;
     if (data == NULL)
         return;
     switch (data->signature_)
@@ -200,7 +200,7 @@ void Model3D::ProcessRawFile(int arg)
         break;
     }
     }
-    NSBXXTex* tex = (NSBXXTex*)NSBXX_GetTEXFile((NSBXXContainer*)rawFileData_);
+    NSBXXTex* tex = (NSBXXTex*)NSBXX_GetTEXFile((NSBXXContainer*)rawBMD_);
     if (tex != NULL)
     {
         if (arg == 2)
@@ -217,7 +217,7 @@ void Model3D::ProcessRawFile(int arg)
         }
     }
 
-    NSBXXMdl* mdl0 = (NSBXXMdl*)NSBXX_GetFirstSubfile((NSBXXContainer*)rawFileData_);
+    NSBXXMdl* mdl0 = (NSBXXMdl*)NSBXX_GetFirstSubfile((NSBXXContainer*)rawBMD_);
     NSBXXInternalModel* model;
     if (mdl0 != NULL)
     {
@@ -240,13 +240,13 @@ void Model3D::ProcessRawFile(int arg)
 
     model = NULL;
 found_a_model:
-    modelData_54_ = model;
+    rawInternalModel_ = model;
 
-    func_020b2b6c(&renderData_); // probably &this->unk_0
-    texFileData_58_ = NSBXX_GetTEXFile((NSBXXContainer*)rawFileData_);
-    if (((NSBXXContainer*)rawFileData_)->signature_ == SIGNATURE_NSBMD)
+    func_020b2b6c(&renderContext_);
+    rawTEX_ = NSBXX_GetTEXFile((NSBXXContainer*)rawBMD_);
+    if (((NSBXXContainer*)rawBMD_)->signature_ == SIGNATURE_NSBMD)
     {
-        NSBXXInternalModel* model = modelData_54_;
+        NSBXXInternalModel* model = rawInternalModel_;
         int32_t scale = model->maybeScale_;
 
         int32_t scaledXMin = FIX32_MULTIPLY(model->bounds_.xMin_, scale);
@@ -289,18 +289,18 @@ bool Model3D::Draw(bool applyClipping)
 
     if (unknown_flags_a8_2_)
     {
-        renderData_.flags_ |= 1;
-        RenderModelFromRenderData(&renderData_);
-        renderData_.flags_ &= ~1;
+        renderContext_.flags_ |= 1;
+        RenderModelFromRenderData(&renderContext_);
+        renderContext_.flags_ &= ~1;
         unknown_flags_a8_2_ = false;
     }
     else if (unknown_flags_a8_1_)
     {
-        renderData_.flags_ |= 1;
-        RenderModelFromRenderData(&renderData_);
+        renderContext_.flags_ |= 1;
+        RenderModelFromRenderData(&renderContext_);
     }
     else
-        RenderModelFromRenderData(&renderData_);
+        RenderModelFromRenderData(&renderContext_);
     return true;
 }
 
@@ -312,14 +312,14 @@ bool Model3D::DrawMeshWithMaterial(bool applyClipping, unsigned int material, un
     if (applyClipping && !TestVisible())
         return false;
 
-    RenderMeshWithMaterial(modelData_54_, material, mesh, bind);
+    RenderMeshWithMaterial(rawInternalModel_, material, mesh, bind);
     return true;
 }
 
 int Model3D::TestVisible()
 {
     GXFIFO_MATRIX_PUSH = 0;
-    int scale = modelData_54_->maybeScale_;
+    int scale = rawInternalModel_->maybeScale_;
     // presumably 3 times for each of the components
     GXFIFO_MATRIX_SCALE = scale;
     GXFIFO_MATRIX_SCALE = scale;
@@ -333,7 +333,7 @@ int Model3D::TestVisible()
     GXFIFO_POLYGON_ATTRIBUTES = (1 << 13) | (1 << 12) | (1 << 7) | (1 << 6) | (1 << 0);
     GXFIFO_POLYGON_BEGIN = 0;
     GXFIFO_POLYGON_END = 0;
-    NSBXXInternalModel* model = modelData_54_;
+    NSBXXInternalModel* model = rawInternalModel_;
 
     union {
         ModelBoundingBox box;
@@ -365,13 +365,13 @@ int Model3D::TestVisible()
 
 int Model3D::GetBoneIndex(const char *boneName)
 {
-    if (modelData_54_ == NULL)
+    if (rawInternalModel_ == NULL)
         return -1;
 
     char zeroPaddedName[16];
     memset(zeroPaddedName, 0, sizeof(zeroPaddedName));
     strcpy(zeroPaddedName, boneName);
-    return NSBXXNameList_SearchIndex(&modelData_54_->boneList_, zeroPaddedName);
+    return NSBXXNameList_SearchIndex(&rawInternalModel_->boneList_, zeroPaddedName);
 }
 
 void Model3D::ApplyTexturesFromModel(Model3D* otherModel)
@@ -379,7 +379,7 @@ void Model3D::ApplyTexturesFromModel(Model3D* otherModel)
     if (!unknown_flags_a8_0_ || otherModel == NULL)
         return;
     NSBXXMdl* mdl0 = GetMDL0();
-    NSBXXTex* tex0 = (NSBXXTex*)otherModel->texFileData_58_;
+    NSBXXTex* tex0 = (NSBXXTex*)otherModel->rawTEX_;
     if (mdl0 == NULL || tex0 == NULL)
         return;
     NSBXX_LinkTEX0ToMDL0(mdl0, tex0);
@@ -387,9 +387,9 @@ void Model3D::ApplyTexturesFromModel(Model3D* otherModel)
 
 NSBXXMdl* Model3D::GetMDL0()
 {
-    if (rawFileData_ == NULL)
+    if (rawBMD_ == NULL)
         return NULL;
-    return (NSBXXMdl*)NSBXX_GetFirstSubfile((NSBXXContainer*)rawFileData_);
+    return (NSBXXMdl*)NSBXX_GetFirstSubfile((NSBXXContainer*)rawBMD_);
 }
 
 void Model3D::RemoveTextures()
@@ -405,18 +405,18 @@ void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
     if (alloc != NULL)
     {
         if (pBoneMatrixRenderData_ == NULL && (args & 1))
-            pBoneMatrixRenderData_ = (BoneMatrixRenderData*)alloc->Allocate(renderData_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRenderData));
+            pBoneMatrixRenderData_ = (BoneMatrixRenderData*)alloc->Allocate(renderContext_.internalModel_->numBoneMatrices_ * sizeof(BoneMatrixRenderData));
 
         if (pMaterialRenderData_ == NULL && (args & 2))
-            pMaterialRenderData_ = (MaterialRenderData*)alloc->Allocate(renderData_.internalModel_->numMaterials_ * sizeof(MaterialRenderData));
+            pMaterialRenderData_ = (MaterialRenderData*)alloc->Allocate(renderContext_.internalModel_->numMaterials_ * sizeof(MaterialRenderData));
     }
 
     if (!(args & 4))
     {
         if (pBoneMatrixRenderData_ != NULL)
-            renderData_.boneMatrixRenderDataArray_ = pBoneMatrixRenderData_;
+            renderContext_.boneMatrixRenderDataArray_ = pBoneMatrixRenderData_;
         if (pMaterialRenderData_ != NULL)
-            renderData_.materialRenderDataArray_ = pMaterialRenderData_;
+            renderContext_.materialRenderDataArray_ = pMaterialRenderData_;
 
         unknown_flags_a8_2_ = true;
     }
@@ -425,17 +425,17 @@ void Model3D::CreateBoneMatrixAndMaterialArrays(SafeAllocator *alloc, int args)
 void Model3D::StoreBoneMatrixAndMaterialArrayPointers()
 {
     if (pBoneMatrixRenderData_ != NULL)
-        renderData_.boneMatrixRenderDataArray_ = pBoneMatrixRenderData_;
+        renderContext_.boneMatrixRenderDataArray_ = pBoneMatrixRenderData_;
     if (pMaterialRenderData_ != NULL)
-        renderData_.materialRenderDataArray_ = pMaterialRenderData_;
+        renderContext_.materialRenderDataArray_ = pMaterialRenderData_;
     unknown_flags_a8_1_ = true;
 }
 
 void Model3D::SetAlpha(int alpha)
 {
-    if (modelData_54_ != NULL)
+    if (rawInternalModel_ != NULL)
     {
-        NSBXX_Model_SetAlpha(modelData_54_, alpha);
+        NSBXX_Model_SetAlpha(rawInternalModel_, alpha);
         alpha_ = alpha;
     }
 }

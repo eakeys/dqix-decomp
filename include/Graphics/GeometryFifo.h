@@ -1,6 +1,8 @@
 #pragma once
 
 #include "std_library_functions.h"
+#include "Vector.h"
+#include "Memory/AllocatorUnion.h"
 
 // Note: the convention seems to be that matrices act on *row vectors*
 // by right multiplication, rather than the more common setting of
@@ -134,3 +136,15 @@ extern "C"
     // (first word, ptr to second word, number total words - 1)
     void SubmitCommandToGeometryFifo(int command, const uint32_t* params, unsigned int numParams);
 }
+
+struct ModelRenderContext;
+struct AnimationData;
+struct NSBXXInternalModel;
+
+// these don't really fit here but are a bit too random to have their own TU...
+
+void GetCurrentPositionAndDirectionMatrices(fix32_t* position, fix32_t* direction);
+bool GetModelBonePositionAndDirectionMatrices(ModelRenderContext* context, fix32_t* outPos, fix32_t* outDir, unsigned int boneIndex);
+void Finish3DRendering();
+// returns 0 if point is visible and -1 if not
+int ConvertWorldToScreenCoordinates(const Vector3fix* world, int* outX, int* outY);

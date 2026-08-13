@@ -43,6 +43,7 @@
 
 #define GXFIFO_TEST_BOX (*(volatile unsigned int*)0x040005c0)
 
+#define GXSTATUS (*(volatile unsigned int*)0x04000600)
 
 #define BLEND_TARGET_BG0 1
 #define BLEND_TARGET_BG1 2

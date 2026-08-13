@@ -1,13 +1,52 @@
 #include "Graphics/NSBXX/NSBXX.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
+#include "Graphics/NSBXX/Animation.h"
+#include "Memory/AllocatorUnion.h"
 
 extern "C"
 {
-    
+    // get allocation size for animation data
+    unsigned int func_020b2a6c(const void* rawAnim, NSBXXInternalModel* model);
 }
 
 #pragma optimize_for_size off
+
+extern "C" AnimationData* NSBXX_Model_AllocateAnimationData(AllocatorUnion* alloc, const void* rawAnim, NSBXXInternalModel* model)
+{
+    unsigned int size = func_020b2a6c(rawAnim, model);
+    return (AnimationData*)alloc->Allocate(size);
+}
+
+extern "C" void NSBXX_Model_SetAllMaterialFlags(NSBXXInternalModel *model, int value, unsigned int mask)
+{
+    unsigned int numMaterials;
+    unsigned int materialIdx;
+    NSBXXModelMaterialData* materialList;
+    
+    numMaterials = model->numMaterials_;
+    if (model != NULL && model->materialsOffset_ != 0)
+    {
+        materialList = (NSBXXModelMaterialData*)((intptr_t)model + model->materialsOffset_);
+    }
+    else
+        materialList = NULL;
+
+    materialIdx = 0;
+    if (materialIdx < numMaterials)
+    {
+        int antimask = ~mask;
+        do
+        {
+            NSBXXMaterial* material = materialList->GetMaterialByIndex(materialIdx);
+            materialIdx++;
+            if (value)
+                material->flags_ |= mask;
+            else
+                material->flags_ &= antimask;
+        } while (materialIdx < numMaterials);
+    }
+}
 
 // 020b6f64
 extern "C" void NSBXX_Model_AdjustPolygonAttrMask(NSBXXInternalModel* model, bool setBits, unsigned int mask)

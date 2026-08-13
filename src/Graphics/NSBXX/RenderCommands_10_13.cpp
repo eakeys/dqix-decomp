@@ -57,7 +57,7 @@ void RenderCommand_11(RenderCommandHandler* handler, int modifier)
 // second parameter is unknown / seems to be unused
 void RenderCommand_12(RenderCommandHandler* handler, int modifier)
 {
-    fix32_t resultMatrix3x3[9];
+    fix32_t directionMat3x3[9];
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
     {
         // if texcoord transformation mode != 2 (normal), set it to 2 and submit
@@ -148,23 +148,23 @@ void RenderCommand_12(RenderCommandHandler* handler, int modifier)
             uint32_t posVectorMode = 2;
             SubmitCommandToGeometryFifo(GXFifoCommand_SetMatrixMode, &posVectorMode, 1);
             
-            func_020b6bb0(NULL, resultMatrix3x3);
+            GetCurrentPositionAndDirectionMatrices(NULL, directionMat3x3);
             uint32_t textureMode = 3;
             SubmitCommandToGeometryFifo(GXFifoCommand_SetMatrixMode, &textureMode, 1);
             if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
             {
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.viewMatrix, 9);
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.objectRotation, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)resultMatrix3x3, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)directionMat3x3, 9);
             }
             else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
             {
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.viewMatrix, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)resultMatrix3x3, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)directionMat3x3, 9);
             }
             else
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)resultMatrix3x3, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)directionMat3x3, 9);
             }
         }
         // switch back to position+vector mode
@@ -182,7 +182,7 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
     {
         fix32_t worldView[12];
-        func_020b6bb0(worldView, NULL);
+        GetCurrentPositionAndDirectionMatrices(worldView, NULL);
 
         // store onto the position+vector stack
         uint32_t storeMatrixPos = 30;

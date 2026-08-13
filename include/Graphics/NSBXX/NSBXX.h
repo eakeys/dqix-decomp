@@ -127,6 +127,7 @@ struct NSBXXBoneMatrix
     // bit 8: negate 1
     // bit 9: negate c 
     // bit 10: negate d
+    // bits 11-15: index of bone matrix on stack?
     uint16_t flags_;
 
     fix16_t m_11;
@@ -663,6 +664,14 @@ void NSBXX_UnlinkTEX0FromMDL0(NSBXXMdl* mdl0);
 
 // usa: func_020b66f4
 void NSBXX_Model_DrawShadow(NSBXXInternalModel* model, unsigned int arg_2, unsigned int arg_3, unsigned int arg_4);
+
+// 
+struct AnimationData* NSBXX_Model_AllocateAnimationData(class AllocatorUnion* alloc, const void* rawAnim, NSBXXInternalModel* model);
+
+// usa: func_020b6ebc
+// applies to all materials of the model. If value == 0 then the bits specified
+// by mask will be cleared, otherwise they will be set
+void NSBXX_Model_SetAllMaterialFlags(NSBXXInternalModel* model, int value, unsigned int mask);
 
 // usa: func_020b7184
 // The alpha value can be between 0-31.

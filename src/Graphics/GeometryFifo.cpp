@@ -1,10 +1,11 @@
 #include "Graphics/GeometryFifo.h"
 #include "System/Graphics.h"
+#include "Graphics/NSBXX/RenderCommands.h"
+#include "Graphics/NSBXX/RenderConfig.h"
 #include "System/DMA.h"
 #include <globaldefs.h>
 
-//#pragma optimize_for_size off
-#pragma dont_inline on
+#pragma optimize_for_size off
 
 extern "C"
 {
@@ -12,6 +13,24 @@ extern "C"
         DMACompletionCallback onCompletion, int callbackUserdata);
     void func_020ca2ac(int dmaChannel, const void* source, unsigned int length,
         DMACompletionCallback onCompletion, int callbackUserdata);
+
+    // transform 3-dimensional vector (treated as 4D in usual way) by 4x3 matrix
+    void func_020c2034(const fix32_t* vec, const fix32_t* mat, fix32_t* outVec);
+
+    // reduce 4x4 matrix to 4x3 matrix
+    void func_020c2208(const fix32_t* in, fix32_t* out);
+
+    // get high precision division result
+    int64_t func_020c2c38();
+
+    // prime hardware divider to calculate fixed point representation of 2^32/x
+    void func_020c2c94(fix32_t);
+
+    int func_020c54fc(fix32_t*); // try to read clip matrix, -1 on failure
+    int func_020c552c(fix32_t*); // try to read vector result matrix, -1 on failure
+
+    // reset various geometry registers
+    void func_020c51dc();
 
     // inverse memcpy doing 32 bytes at a time, assumes 4 byte alignment
     void func_020ca4b4(const void*, void*, unsigned);
@@ -118,4 +137,107 @@ extern "C" void SubmitCommandToGeometryFifo(int command, const uint32_t* params,
 
     GXFIFO = command;
     func_020ca430(params, &GXFIFO, numParams * 4);
+}
+
+void GetCurrentPositionAndDirectionMatrices(fix32_t* position, fix32_t* direction)
+{
+    SendQueuedDataToGeometryFifo();
+    GXFIFO_MATRIX_MODE = 0; // projection
+    GXFIFO_MATRIX_PUSH = 0;
+    GXFIFO_MATRIX_IDENTITY = 0;
+
+    if (position != NULL)
+    {
+        fix32_t clipMatrix4x4[16];
+        while (func_020c54fc(clipMatrix4x4) != 0) {}
+        func_020c2208(clipMatrix4x4, position);
+    }
+
+    if (direction != NULL)
+    {
+        while (func_020c552c(direction) != 0) {}
+    }
+
+    GXFIFO_MATRIX_POP = 1;
+    GXFIFO_MATRIX_MODE = 2; // return to position+direction mode
+}
+
+bool GetModelBonePositionAndDirectionMatrices(ModelRenderContext *context,
+    fix32_t *outPos, fix32_t *outDir, unsigned int boneIndex)
+{
+    NSBXXInternalModel* model = context->internalModel_;
+    NSBXXNameList* boneList = &model->boneList_;
+    NSBXXBoneMatrix* boneMatrix = boneList->GetEntryFromu32Offset_v2<NSBXXBoneMatrix>(boneIndex);
+
+    unsigned int stackPos = ((unsigned int)boneMatrix->flags_ & 0xf800) >> 11;
+    if (stackPos != 31)
+    {
+        uint32_t arg = stackPos;
+        SubmitCommandToGeometryFifo(GXFifoCommand_GetMatrix, &arg, 1);
+        if (outPos != NULL || outDir != NULL)
+            GetCurrentPositionAndDirectionMatrices(outPos, outDir);
+
+        return true;
+    }
+    return false;
+}
+
+void Finish3DRendering()
+{
+    func_020c51dc();
+    RenderConfig::Reset();
+    // set IRQ mode to 2: irq when fifo becomes empty
+    GXSTATUS = GXSTATUS & ~0xc0000000 | 0x80000000;
+}
+
+int ConvertWorldToScreenCoordinates(const Vector3fix *world, int *outX, int *outY)
+{
+    int success;
+    fix32_t viewVector[3];
+
+    fix32_t* proj = data_0210a010.projectionMatrix;
+
+    func_020c2034((const fix32_t*)world, &data_0210a010.viewMatrix[0], viewVector);
+
+    int64_t projectedW = (uint64_t)viewVector[0] * proj[3] +
+        (int64_t)viewVector[1] * proj[7] +
+        (int64_t)viewVector[2] * proj[11];
+
+    func_020c2c94((fix32_t)(projectedW >> 12) + proj[15]);
+
+    int64_t productX = (uint64_t)viewVector[0] * proj[0] +
+        (int64_t)viewVector[1] * proj[4] +
+        (int64_t)viewVector[2] * proj[8];
+
+    fix32_t reducedX = (fix32_t)(productX >> 12) + proj[12];
+
+    int64_t productY = (uint64_t)viewVector[0] * proj[1] +
+        (int64_t)viewVector[1] * proj[5] +
+        (int64_t)viewVector[2] * proj[9];
+
+    fix32_t reducedY = (fix32_t)(productY >> 12) + proj[13];
+
+    int64_t largeInvW = func_020c2c38();
+
+    // Compute x/w and y/w using a 32-bit right shift, then transform via
+    // u -> (1 + u)/2 to adjust the range from (-1, 1) to (0, 1)
+    fix32_t normalizedX = ((fix32_t)((largeInvW * reducedX + (1u << 31)) >> 32) + 0x1000) / 2;
+    fix32_t normalizedY = ((fix32_t)((largeInvW * reducedY + (1u << 31)) >> 32) + 0x1000) / 2;
+
+    success = 0;
+
+    if (normalizedX < 0 || normalizedY < 0 || normalizedX > 0x1000 || normalizedY > 0x1000)
+        success = -1;
+
+    int left, top, right, bottom;
+
+    RenderConfig::GetViewport(&left, &top, &right, &bottom);
+
+    int width = right - left;
+    int height = bottom - top;
+
+    *outX = left + ((normalizedX * width + 0x800) >> 12);
+    *outY = (191 - top) - ((normalizedY * height + 0x800) >> 12);
+
+    return success;
 }

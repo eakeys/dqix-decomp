@@ -151,11 +151,11 @@ src/Graphics/NSBXX/RenderCommands_10_13.cpp:
 
 src/Graphics/GeometryFifo.cpp:
     complete
-    .text start:0x020b6998 end:0x020b6bb0
+    .text start:0x020b6998 end:0x020b6e98
 
 src/Graphics/NSBXX/NSBXX.cpp:
     complete
-    .text start:0x020b6f64 end:0x020b736c
+    .text start:0x020b6e98 end:0x020b736c
 
 //src/Graphics/NSBXX/NameList.cpp:
 //    complete

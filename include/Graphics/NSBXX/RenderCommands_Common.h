@@ -164,10 +164,6 @@ struct Struct_0210b678
 
 extern "C"
 {  
-    // Get position (world*view) matrix and result matrix (if you don't pass null)
-    // world*view is obtained by reading CLIPMTX_RESULT after setting
-    // the projection matrix to the identity (this technique is documented in GBATEK)
-    void func_020b6bb0(fix32_t*, fix32_t*);
     // expand a 3x4 matrix (param 1) into a 4x4 matrix (param 2)
     void func_020c1868(const void*, void*);
     // multiply 4x4 matrices, store in param 3.

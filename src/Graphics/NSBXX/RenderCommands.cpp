@@ -10,7 +10,7 @@ void ExecuteRenderCommands(RenderCommandHandler* handler)
     } while (!(handler->flags_ & (1 << RCH_FLAG_5)));
 }
 
-void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* modelData)
+void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderContext* modelData)
 {
     func_020ca458(0, handler, sizeof(RenderCommandHandler));
     handler->boneMatrixBitfield_[0] = 1;
@@ -20,14 +20,14 @@ void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* m
     if (commands == NULL)
         commands = (uint8_t*)modelData->internalModel_ + modelData->internalModel_->renderCommandsOffset_;
     *(uint8_t* volatile*)&handler->instructionPointer_ = commands;
-    handler->modelData_ = modelData;
+    handler->modelContext_ = modelData;
 
     if (modelData->internalModel_ != NULL)
         handler->boneList_ = &modelData->internalModel_->boneList_;
     else
         handler->boneList_ = NULL;
 
-    handler->materialData_ = modelData->internalModel_->GetMaterialData();
+    handler->modelMaterials_ = modelData->internalModel_->GetMaterialData();
     handler->meshList_ = modelData->internalModel_->GetMeshList();
     handler->boneMatrixRenderDataScalePopulateProc_ = data_020f1cec[modelData->internalModel_->boneScalingMode_];
     handler->boneMatrixRenderDataSubmitProc_ = data_020f1ce0[modelData->internalModel_->boneScalingMode_];
@@ -43,23 +43,23 @@ void SetUpRenderCommandHandler(RenderCommandHandler* handler, ModelRenderData* m
         handler->hookStages_[modelData->renderCommandHookCommandID_] = modelData->renderCommandHookStage_;
     }
 
-    if (modelData->flags_0_ & 1)
+    if (modelData->flags_ & 1)
         handler->flags_ |= (1 << RCH_FLAG_7);
-    if (modelData->flags_0_ & 2)
+    if (modelData->flags_ & 2)
         handler->flags_ |= (1 << RCH_FLAG_8);
-    if (modelData->flags_0_ & 4)
+    if (modelData->flags_ & 4)
         handler->flags_ |= (1 << RCH_FLAG_9);
-    if (modelData->flags_0_ & 8)
+    if (modelData->flags_ & 8)
         handler->flags_ |= (1 << RCH_FLAG_10);
 
-    if (modelData->functionPtr_28_ != NULL)
+    if (modelData->preRenderCallback_ != NULL)
     {
-        void (*proc)(RenderCommandHandler*) = (void(*)(RenderCommandHandler*))modelData->functionPtr_28_;
+        void (*proc)(RenderCommandHandler*) = (void(*)(RenderCommandHandler*))modelData->preRenderCallback_;
         proc(handler);
     }
 
     ExecuteRenderCommands(handler);
-    modelData->flags_0_ &= ~1;
+    modelData->flags_ &= ~1;
 }
 
 void PopulateBitfieldFromAnimData(unsigned int* bitfield, AnimationData* anim)
@@ -85,23 +85,23 @@ void PopulateBitfieldFromAnimData(unsigned int* bitfield, AnimationData* anim)
     } while (anim != NULL);
 }
 
-void RenderModelFromRenderData(ModelRenderData* renderData)
+void RenderModelFromRenderData(ModelRenderContext* renderData)
 {
     RenderCommandHandler handler;
     
-    if ((renderData->flags_0_ & 0x10) == 0x10)
+    if ((renderData->flags_ & 0x10) == 0x10)
     {
-        func_020ca3ec(0, renderData->bitfield_3c_, sizeof(renderData->bitfield_3c_));
-        func_020ca3ec(0, renderData->bitfield_44_, sizeof(renderData->bitfield_44_));
-        func_020ca3ec(0, renderData->bitfield_4c_, sizeof(renderData->bitfield_4c_));
-        if (renderData->dataPtr_8_ != NULL)
-            PopulateBitfieldFromAnimData(renderData->bitfield_3c_, renderData->dataPtr_8_);
-        if (renderData->dataPtr_10_ != NULL)
-            PopulateBitfieldFromAnimData(renderData->bitfield_44_, renderData->dataPtr_10_);
-        if (renderData->dataPtr_18_ != NULL)
-            PopulateBitfieldFromAnimData(renderData->bitfield_4c_, renderData->dataPtr_18_);
+        func_020ca3ec(0, renderData->animatedMaterials_, sizeof(renderData->animatedMaterials_));
+        func_020ca3ec(0, renderData->animatedBoneMatrices_, sizeof(renderData->animatedBoneMatrices_));
+        func_020ca3ec(0, renderData->animatedVisibilityConditions_, sizeof(renderData->animatedVisibilityConditions_));
+        if (renderData->materialAnimations_ != NULL)
+            PopulateBitfieldFromAnimData(renderData->animatedMaterials_, renderData->materialAnimations_);
+        if (renderData->jointAnimations_ != NULL)
+            PopulateBitfieldFromAnimData(renderData->animatedBoneMatrices_, renderData->jointAnimations_);
+        if (renderData->visibilityAnimations_ != NULL)
+            PopulateBitfieldFromAnimData(renderData->animatedVisibilityConditions_, renderData->visibilityAnimations_);
 
-        renderData->flags_0_ &= ~0x10;
+        renderData->flags_ &= ~0x10;
     }
 
     if (data_0210a274 != NULL)
@@ -132,12 +132,14 @@ void RenderCommand_1(RenderCommandHandler* handler, int modifier)
     handler->flags_ |= (1 << RCH_FLAG_5);
 }
 
+// apply visibility condition to be used by animation
+// params: condition index, default value (lowest bit used)
 void RenderCommand_2(RenderCommandHandler* handler, int modifier)
 {
     if (!(handler->flags_ & (1 << RCH_FLAG_9)))
     {
-        unsigned int arg1 = handler->instructionPointer_[1];
-        handler->command2Arg1_ = arg1;
+        unsigned int conditionIdx = handler->instructionPointer_[1];
+        handler->command2Arg1_ = conditionIdx;
         handler->flags_ |= (1 << RCH_FLAG_2);
         handler->pCommand2Word_ = &handler->scratchCommand2Word_;
 
@@ -156,10 +158,10 @@ void RenderCommand_2(RenderCommandHandler* handler, int modifier)
 
         if (flagbit6 == 0)
         {
-            ModelRenderData* modelData = handler->modelData_;
-            if (modelData->dataPtr_18_ == NULL ||
-                !(modelData->bitfield_4c_[arg1 >> 5] & (1 << (arg1 & 0x1f))) ||
-                modelData->functionPtr_1c_(handler->pCommand2Word_, modelData->dataPtr_18_, arg1) == 0)
+            ModelRenderContext* modelData = handler->modelContext_;
+            if (modelData->visibilityAnimations_ == NULL ||
+                !(modelData->animatedVisibilityConditions_[conditionIdx >> 5] & (1 << (conditionIdx & 0x1f))) ||
+                !modelData->pfnProcessVisibilityAnimations_(handler->pCommand2Word_, modelData->visibilityAnimations_, conditionIdx))
             {
                 *handler->pCommand2Word_ = handler->instructionPointer_[2] & 1;
             }
@@ -192,6 +194,8 @@ void RenderCommand_2(RenderCommandHandler* handler, int modifier)
     handler->instructionPointer_ += 3;
 }
 
+// load matrix from stack
+// parameters: index to load from
 void RenderCommand_3(RenderCommandHandler* handler, int modifier)
 {
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
@@ -249,7 +253,7 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
     if (flagbit6 == 0)
     {
         MaterialRenderData* targetData;
-        MaterialRenderData* modelMaterialArray = handler->modelData_->materialRenderDataArray_;
+        MaterialRenderData* modelMaterialArray = handler->modelContext_->materialRenderDataArray_;
         if (modelMaterialArray != NULL && !(handler->flags_ & (1 << RCH_FLAG_7)))
         {
             targetData = &modelMaterialArray[idx];
@@ -266,7 +270,7 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
             if (modelMaterialArray != NULL)
             {
                 handler->materialBitfield_[idx >> 5] |= (1 << (idx & 0x1f));
-                targetData = &handler->modelData_->materialRenderDataArray_[idx];
+                targetData = &handler->modelContext_->materialRenderDataArray_[idx];
             }
             else
             {
@@ -280,20 +284,20 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
             }
 
             targetData->flags_ = 0;
-            NSBXXMaterial* lookupMaterial = handler->materialData_->GetMaterialByIndex(idx);
+            NSBXXMaterial* lookupMaterial = handler->modelMaterials_->GetMaterialByIndex(idx);
             if (lookupMaterial->flags_ & 0x20)
             {
                 targetData->flags_ |= 0x20;
             }
             int difambMask = data_020e9240[(material->flags_ >> 6) & 7];
-            targetData->paramDIF_AMB_ = (data_0210a010.unknown_94_ & ~difambMask) |
+            targetData->paramDIF_AMB_ = (data_0210a010.diffuseAmbientArg & ~difambMask) |
                 (material->paramDIF_AMB_ & difambMask);
 
             int speemiMask = data_020e9240[(material->flags_ >> 9) & 7];
-            targetData->paramSPE_EMI_ = (data_0210a010.unknown_98_ & ~speemiMask) |
+            targetData->paramSPE_EMI_ = (data_0210a010.specularArg & ~speemiMask) |
                 (material->paramSPE_EMI_ & speemiMask);
 
-            targetData->paramPOLYGON_ATTR_ = (data_0210a010.unknown_9c_ & ~material->maskPOLYGON_ATTR_) |
+            targetData->paramPOLYGON_ATTR_ = (data_0210a010.polygonAttrArg & ~material->maskPOLYGON_ATTR_) |
                 (material->paramPOLYGON_ATTR_ & material->maskPOLYGON_ATTR_);
             targetData->paramTEXIMAGE_PARAMS_ = material->paramTEXIMAGE_PARAMS_;
             targetData->texturePaletteBase_ = material->texturePaletteVRAMOffset_;
@@ -336,10 +340,10 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
                 targetData->flags_ |= 8;
             }
 
-            ModelRenderData* modelData = handler->modelData_;
-            if (modelData->dataPtr_8_ != NULL && (modelData->bitfield_3c_[idx >> 5] & (1 << (idx & 0x1f))))
+            ModelRenderContext* modelData = handler->modelContext_;
+            if (modelData->materialAnimations_ != NULL && (modelData->animatedMaterials_[idx >> 5] & (1 << (idx & 0x1f))))
             {
-                modelData->functionPtr_c_(targetData, modelData->dataPtr_8_, idx);
+                modelData->pfnProcessMaterialAnimations_(targetData, modelData->materialAnimations_, idx);
             }
 
             if (targetData->flags_ & 0x18)
@@ -404,6 +408,7 @@ void MaterialBindProc(RenderCommandHandler* handler, int modifier, NSBXXMaterial
 }
 
 // bind material
+// parameters: index of material within the model's MaterialList
 void RenderCommand_4(RenderCommandHandler* handler, int modifier)
 {
     if (!(handler->flags_ & (1 << RCH_FLAG_9)))
@@ -411,7 +416,7 @@ void RenderCommand_4(RenderCommandHandler* handler, int modifier)
         int materialIdx = handler->instructionPointer_[1];
         if ((handler->flags_ & (1 << RCH_FLAG_0)) || !(handler->flags_ & (1 << RCH_FLAG_3)) || materialIdx != handler->boundMaterial_)
         {
-            NSBXXMaterial* material = handler->materialData_->GetMaterialByIndex(materialIdx);
+            NSBXXMaterial* material = handler->modelMaterials_->GetMaterialByIndex(materialIdx);
             // MaterialBindProc
             data_020f1d08.materialBindFunctions[material->unk_0](handler, modifier, material, materialIdx);
         }
@@ -451,6 +456,7 @@ void MeshDrawProc(RenderCommandHandler* handler, int modifier, NSBXXMesh* mesh, 
 }
 
 // draw mesh
+// parameters: index of mesh to draw
 void RenderCommand_5(RenderCommandHandler* handler, int modifier)
 {
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)) && !(handler->flags_ & (1 << RCH_FLAG_1)))
@@ -463,7 +469,14 @@ void RenderCommand_5(RenderCommandHandler* handler, int modifier)
     handler->instructionPointer_ += 2;
 }
 
-// multiply by bone matrix
+// multiply current matrix by bone matrix (on the left)
+// parameters: 
+// 1) index of bone matrix
+// 2) index of parent bone's bone matrix (needed for certain scaling operations)
+// 3) unknown, seemingly unused
+// if modifier & 0x20: stack position to store result at the end
+// if modifier & 0x40: stack position of matrix to retrieve at the start, i.e. 
+// you'll retrieve a matrix off the stack and pre-multiply that by the bone matrix
 void RenderCommand_6(RenderCommandHandler* handler, int modifier)
 {
     int boneIdx = handler->instructionPointer_[1];
@@ -519,7 +532,7 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
     if (flagbit6 == 0)
     {
         BoneMatrixRenderData* targetData;
-        BoneMatrixRenderData* modelBoneArray = handler->modelData_->boneMatrixRenderDataArray_;
+        BoneMatrixRenderData* modelBoneArray = handler->modelContext_->boneMatrixRenderDataArray_;
 
         bool bit7clear;
         if (modelBoneArray != NULL)
@@ -536,8 +549,8 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
         if (!bit7clear)
         {
             targetData->flags_ = 0;
-            if (handler->modelData_->dataPtr_10_ == NULL ||
-                handler->modelData_->functionPtr_14_(targetData, handler->modelData_->dataPtr_10_, boneIdx) == 0)
+            if (handler->modelContext_->jointAnimations_ == NULL ||
+                !handler->modelContext_->pfnProcessJointAnimations_(targetData, handler->modelContext_->jointAnimations_, boneIdx))
             {
                 NSBXXBoneMatrix* boneMatrix = handler->boneList_->GetEntryFromu32Offset_v2<NSBXXBoneMatrix>(boneIdx);
                 intptr_t boneMatrixExtraPtr = (intptr_t)(boneMatrix + 1);
@@ -654,7 +667,12 @@ void RenderCommand_6(RenderCommandHandler* handler, int modifier)
 }
 
 // seems to be used for free billboarding, i.e. making stuff turn in any
-// direction to face the camera. Noticeable with evac animation
+// direction to face the camera. Noticeable with evac animation.
+// parameters:
+// 1) 
+// if modifier & 0x20: stack position to store result at the end
+// if modifier & 0x40: stack position of matrix to retrieve at the start, i.e. 
+// you'll retrieve a matrix off the stack and pre-multiply that by the bone matrix
 void RenderCommand_7(RenderCommandHandler* handler, int modifier)
 {
     int numBytesConsumed = 2;
@@ -704,21 +722,21 @@ void RenderCommand_7(RenderCommandHandler* handler, int modifier)
         GXFIFO = 0; // matrix mode 0: projection
         GXFIFO = 0; // why is this here?
         fix32_t clipMatrix[16];
-        // get the world * view matrix (we set projection matrix to identity, so
+        // get the current world * view matrix (we set projection matrix to identity, so
         // it doesn't contribute here)
         while (func_020c54fc(clipMatrix) != 0) {}
-        if (data_0210a010.flags_fc_ & 1)
+        if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
         {
-            fix32_t* mat4x3 = func_020b39ec();
-            fix32_t expanded[16];
-            func_020c1868(mat4x3, expanded);
-            func_020c223c(clipMatrix, expanded, clipMatrix);
+            const fix32_t* worldView4x3 = RenderConfig::GetCombinedWorldViewMatrix();
+            fix32_t worldView[16];
+            func_020c1868(worldView4x3, worldView);
+            func_020c223c(clipMatrix, worldView, clipMatrix);
         }
-        else if (data_0210a010.flags_fc_ & 2)
+        else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
         {
-            fix32_t expanded[16];
-            func_020c1868(data_0210a010.mat4x3_4c_, expanded);
-            func_020c223c(clipMatrix, expanded, clipMatrix);
+            fix32_t view4x4[16];
+            func_020c1868(data_0210a010.viewMatrix, view4x4);
+            func_020c223c(clipMatrix, view4x4, clipMatrix);
         }
 
         // store 4th row of matrix
@@ -734,25 +752,23 @@ void RenderCommand_7(RenderCommandHandler* handler, int modifier)
         // note: if clipMatrix has a representation as (scaling) * (rotation) * (translation)
         // then the above is extracting the scaling and translation components
 
-        if (data_0210a010.flags_fc_ & 1)
+        if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
         {
             GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
             func_020ca430(&data_020f1d78.popMatrixParameter, &GXFIFO, 8); // pass pop / matrix mode commands
             // load the matrix returned by func_020b3a24(), inverse of func_020b39ec()
-            func_020ca430(func_020b3a24(), &GXFIFO, 4*3 * sizeof(fix32_t));
+            func_020ca430(RenderConfig::GetInverseCombinedWorldViewMatrix(), &GXFIFO, 4*3 * sizeof(fix32_t));
             // the matrix to multiply by is a translation matrix, so we're composing
-            // translation with a scaling. (Why translate first though?)
+            // scaling with translation (remember the final operation represents
+            // the first matrix transformation to carry out)
             GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
             func_020ca430(&data_020f1d78.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
         }
-        else if (data_0210a010.flags_fc_ & 2)
+        else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
         {
             GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
             func_020ca430(&data_020f1d78.popMatrixParameter, &GXFIFO, 8);
-            // load the matrix returned by func_020b3950(), inverse of data_0210a010.mat4x3_4c_
-            func_020ca430(func_020b3950(), &GXFIFO, 4*3 * sizeof(fix32_t));
-            // the matrix to multiply by is a translation matrix, so we're composing
-            // translation with a scaling. (Why translate first though?)
+            func_020ca430(RenderConfig::GetInverseViewMatrix(), &GXFIFO, 4*3 * sizeof(fix32_t));
             GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
             func_020ca430(&data_020f1d78.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
         }
@@ -840,18 +856,18 @@ void RenderCommand_8(RenderCommandHandler* handler, int modifier)
         GXFIFO = 0; // why is this here?
         fix32_t clipMatrix[16];
         while (func_020c54fc(clipMatrix) != 0) {}
-        if (data_0210a010.flags_fc_ & 1)
+        if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
         {
-            fix32_t* mat4x3 = func_020b39ec();
-            fix32_t expanded[16];
-            func_020c1868(mat4x3, expanded);
-            func_020c223c(clipMatrix, expanded, clipMatrix);
+            const fix32_t* worldView4x3 = RenderConfig::GetCombinedWorldViewMatrix();
+            fix32_t worldView[16];
+            func_020c1868(worldView4x3, worldView);
+            func_020c223c(clipMatrix, worldView, clipMatrix);
         }
-        else if (data_0210a010.flags_fc_ & 2)
+        else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
         {
-            fix32_t expanded[16];
-            func_020c1868(data_0210a010.mat4x3_4c_, expanded);
-            func_020c223c(clipMatrix, expanded, clipMatrix);
+            fix32_t view4x4[16];
+            func_020c1868(data_0210a010.viewMatrix, view4x4);
+            func_020c223c(clipMatrix, view4x4, clipMatrix);
         }
 
         // store 4th row of matrix
@@ -885,26 +901,22 @@ void RenderCommand_8(RenderCommandHandler* handler, int modifier)
         // then the above extracts the components, and reduces the rotation part to
         // only be a rotation in the x-axis
 
-        if (data_0210a010.flags_fc_ & 1)
+        if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
         {
             GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
             func_020ca430(&data_020f1dc0.popMatrixParameter, &GXFIFO, 8); // pass pop / matrix mode commands
-            // load the matrix returned by func_020b3a24(). This is the inverse
-            // of the matrix from func_020b39ec()
-            func_020ca430(func_020b3a24(), &GXFIFO, 3 * 4 * sizeof(fix32_t));
+            func_020ca430(RenderConfig::GetInverseCombinedWorldViewMatrix(), &GXFIFO, 3 * 4 * sizeof(fix32_t));
             // the 4x3 matrix is a rotate-then-translate matrix. Recall that matrix multiplication
             // commands put the parameter on the inside, so we are actually ending 
             // up with (scale) -> (rotate then translate) -> (apply matrix from above)
             GXFIFO = COMBINE_GXFIFO_COMMANDS2(GXFifoCommand_MultiplyMat4x3, GXFifoCommand_ScaleMatrix);
             func_020ca430(&data_020f1dc0.matrixLinearPart, &GXFIFO, (4*3 + 3) * sizeof(fix32_t));
         }
-        else if (data_0210a010.flags_fc_ & 2)
+        else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
         {
             GXFIFO = COMBINE_GXFIFO_COMMANDS3(GXFifoCommand_PopMatrix, GXFifoCommand_SetMatrixMode, GXFifoCommand_LoadMat4x3);
             func_020ca430(&data_020f1dc0.popMatrixParameter, &GXFIFO, 8);
-            // load the matrix returned by func_020b3950(), which is the inverse
-            // of the matrix at 0210a05c
-            func_020ca430(func_020b3950(), &GXFIFO, 4*3 * sizeof(fix32_t));
+            func_020ca430(RenderConfig::GetInverseViewMatrix(), &GXFIFO, 4*3 * sizeof(fix32_t));
             // the 4x3 matrix is a rotate-then-translate matrix. Recall that matrix multiplication
             // commands put the parameter on the inside, so we are actually ending 
             // up with (scale) -> (rotate then translate) -> (apply matrix from above)

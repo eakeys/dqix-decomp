@@ -26,6 +26,7 @@ bool ProcessMaterialAnimationsOnBoundMaterial(MaterialRenderData* material, Anim
             {
                 if (anim->callback_ != NULL)
                 {
+                    // points to {MAM, MAT, MPT}AnimationProcessingCallback
                     anim->callback_(material, anim, anim->entries_[matIdx] & 0xff);
                     success = true;
                 }

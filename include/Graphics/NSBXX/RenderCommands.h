@@ -56,32 +56,41 @@ struct MaterialRenderData
 
 struct AnimationData;
 
-struct ModelRenderData
+struct ModelRenderContext
 {
-    unsigned int flags_0_;
+    // bits 0, 1, 2, 3 set flags 7, 8, 9, 10 in RenderCommandHandler
+    // bit 4: animation bitfields dirty
+    unsigned int flags_;
     NSBXXInternalModel* internalModel_;
-    AnimationData* dataPtr_8_; // some relation to M.AT objects
-    int (*functionPtr_c_)(MaterialRenderData*, AnimationData*, unsigned int);
-    AnimationData* dataPtr_10_; // something to do with J.AC animations
+    AnimationData* materialAnimations_; // M.AM, M.AT and M.PT animations
+    // points to ProcessMaterialAnimationsOnBoundMaterial (020b3ad0 usa)
+    bool (*pfnProcessMaterialAnimations_)(MaterialRenderData*, AnimationData*, unsigned int);
+    AnimationData* jointAnimations_; // J.AC animations
     // points to ProcessJointAnimationsOnBoneMatrix (020b3bac usa)
-    int (*functionPtr_14_)(BoneMatrixRenderData*, AnimationData*, unsigned int);
-    AnimationData* dataPtr_18_; // something to do with V.?? objects
-    int (*functionPtr_1c_)(void*, AnimationData*, int);
+    bool (*pfnProcessJointAnimations_)(BoneMatrixRenderData*, AnimationData*, unsigned int);
+    AnimationData* visibilityAnimations_; // V.AV animations (never used?)
+    // points to ProcessVisibilityAnimations (020b3f98 usa)
+    bool (*pfnProcessVisibilityAnimations_)(void*, AnimationData*, unsigned int);
     void (*renderCommandHook_)(RenderCommandHandler*);
     unsigned char renderCommandHookCommandID_;
     unsigned char renderCommandHookStage_; // 1,2 or 3 depending on when in the function it gets called
     char padding_26[2];
-    const void* functionPtr_28_;
+    void (*preRenderCallback_)(RenderCommandHandler*);
     char unk_2c[4];
     uint8_t* renderCommandList_;
     BoneMatrixRenderData* boneMatrixRenderDataArray_;
     MaterialRenderData* materialRenderDataArray_;
-    unsigned int bitfield_3c_[2]; // relates to dataPtr_8_
-    unsigned int bitfield_44_[2]; // relates to dataPtr_10_
-    unsigned int bitfield_4c_[2]; // relates to dataPtr_18_
+    // packed array of bools, where the k'th entry is given by the
+    // (k & 0x1f)'th bit of array[k >> 5]. The index refers to a material
+    // (matching the NSBXXInternalModel's MaterialList) or bone matrix (not 
+    // sure about visibility animations), and pfnProcess...Animations will
+    // only run for a particular object if its bit is set here.
+    unsigned int animatedMaterials_[2];
+    unsigned int animatedBoneMatrices_[2];
+    unsigned int animatedVisibilityConditions_[2];
 };
 
-void RenderModelFromRenderData(ModelRenderData* renderData);
+void RenderModelFromRenderData(ModelRenderContext* renderData);
 // much more barebones implementation of rendering and just does a single
 // mesh / material pair. In practice this seems to be used for shadows
 // bindMaterial is really a bool

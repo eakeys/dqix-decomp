@@ -51,9 +51,10 @@ void RenderCommand_11(RenderCommandHandler* handler, int modifier)
 }
 
 // This instruction isn't explained in the nsbmd docs. Given the use of normals
-// as inputs for texture coordinates and the same matrices showing up as used
-// in commands 7 and 8, which are probably camera-related, this might be something
-// like matcap lighting
+// as inputs for texture coordinates and the same camera matrices showing up
+// as in commands 7 and 8, this might be something like matcap lighting
+// 2 parameters: 1) index of material in model's material list to use
+// second parameter is unknown / seems to be unused
 void RenderCommand_12(RenderCommandHandler* handler, int modifier)
 {
     fix32_t resultMatrix3x3[9];
@@ -117,8 +118,7 @@ void RenderCommand_12(RenderCommandHandler* handler, int modifier)
         if (flagbit6 == 0)
         {
             unsigned int materialIdx = handler->instructionPointer_[1];
-            NSBXXModelMaterialData* materialData = handler->materialData_;
-            NSBXXMaterial* material = materialData->GetMaterialByIndex(materialIdx);
+            NSBXXMaterial* material = handler->modelMaterials_->GetMaterialByIndex(materialIdx);
             if (material->flags_ & 0x2000)
             {
                 intptr_t bit13data = (intptr_t)(material + 1);
@@ -151,15 +151,15 @@ void RenderCommand_12(RenderCommandHandler* handler, int modifier)
             func_020b6bb0(NULL, resultMatrix3x3);
             uint32_t textureMode = 3;
             SubmitCommandToGeometryFifo(GXFifoCommand_SetMatrixMode, &textureMode, 1);
-            if (data_0210a010.flags_fc_ & 1)
+            if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.mat4x3_4c_, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.mat3x3_bc_, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.viewMatrix, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.objectRotation, 9);
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)resultMatrix3x3, 9);
             }
-            else if (data_0210a010.flags_fc_ & 2)
+            else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.mat4x3_4c_, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.viewMatrix, 9);
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)resultMatrix3x3, 9);
             }
             else
@@ -174,6 +174,9 @@ void RenderCommand_12(RenderCommandHandler* handler, int modifier)
     handler->instructionPointer_ += 3;
 }
 
+// I have no idea what this is, but it's texture related. I couldn't find any
+// use of it in the game.
+// 2 parameters: 1) index of material in model's material list, 2) unknown/unused
 void RenderCommand_13(RenderCommandHandler* handler, int modifier)
 {
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
@@ -232,7 +235,7 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
         if (flagbit6 == 0)
         {
             unsigned int materialIdx = handler->instructionPointer_[1];
-            NSBXXModelMaterialData* materialData = handler->materialData_;
+            NSBXXModelMaterialData* materialData = handler->modelMaterials_;
             NSBXXMaterial* material = materialData->GetMaterialByIndex(materialIdx);
 
             if (material->flags_ & 0x2000)
@@ -261,20 +264,20 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
 
         if (flagbit6 == 0)
         {
-            if (data_0210a010.flags_fc_ & 1)
+            if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_TranslateMatrix, (uint32_t*)&data_0210a010.translation_e0_, 3);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.mat3x3_bc_, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_TranslateMatrix, (uint32_t*)&data_0210a010.objectPosition[0], 3);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.objectRotation[0], 9);
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
             }
-            else if (data_0210a010.flags_fc_ & 2)
+            else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
             {
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
             }
             else
             {
-                fix32_t* invMat4c = func_020b3950();
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)invMat4c, 12);
+                const fix32_t* invView = RenderConfig::GetInverseViewMatrix();
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)invView, 12);
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
             }
 

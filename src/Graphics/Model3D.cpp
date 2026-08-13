@@ -289,14 +289,14 @@ bool Model3D::Draw(bool applyClipping)
 
     if (unknown_flags_a8_2_)
     {
-        renderData_.flags_0_ |= 1;
+        renderData_.flags_ |= 1;
         RenderModelFromRenderData(&renderData_);
-        renderData_.flags_0_ &= ~1;
+        renderData_.flags_ &= ~1;
         unknown_flags_a8_2_ = false;
     }
     else if (unknown_flags_a8_1_)
     {
-        renderData_.flags_0_ |= 1;
+        renderData_.flags_ |= 1;
         RenderModelFromRenderData(&renderData_);
     }
     else

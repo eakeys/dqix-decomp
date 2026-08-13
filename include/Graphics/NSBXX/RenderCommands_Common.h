@@ -8,6 +8,7 @@
 #include "../../System/Graphics.h"
 #include "../GeometryFifo.h"
 #include "RenderCommands.h"
+#include "RenderConfig.h"
 #include "Animation.h"
 #include <asmhacks.h>
 
@@ -17,7 +18,7 @@
 struct RenderCommandHandler
 {
     uint8_t* instructionPointer_;
-    ModelRenderData* modelData_;
+    ModelRenderContext* modelContext_;
     unsigned int flags_;
     void (*hooks_[32])(RenderCommandHandler*);
     unsigned char hookStages_[32];
@@ -34,7 +35,7 @@ struct RenderCommandHandler
     unsigned int boneMatrixBitfield_[2];
     unsigned int invBindBitfield_[2];
     NSBXXNameList* boneList_;
-    NSBXXModelMaterialData* materialData_;
+    NSBXXModelMaterialData* modelMaterials_;
     NSBXXNameList* meshList_;
     fix32_t upScale_;
     fix32_t downScale_;
@@ -145,21 +146,6 @@ struct Struct_020f1d78 {
 // render command lookup
 extern void (*data_020f1e08[])(RenderCommandHandler*, int);
 
-struct Struct_0210a010
-{
-    char unk_0[0x4c];
-    fix32_t mat4x3_4c_[12];
-    char unk_7c[0x94 - 0x7c];
-    unsigned int unknown_94_;
-    unsigned int unknown_98_;
-    unsigned int unknown_9c_;
-    char unk_a0[0xbc - 0xa0];
-    fix32_t mat3x3_bc_[9]; // might be 3x4 or 4x4 but often treated as 3x3
-    Vector3fix translation_e0_;
-    char unk_ec[0xfc - 0xec];
-    unsigned int flags_fc_;
-} extern data_0210a010;
-
 extern struct RenderCommandHandler* data_0210a274;
 // sizeof == 0x38
 MaterialRenderData extern data_0210a278[64];
@@ -177,14 +163,7 @@ struct Struct_0210b678
 } extern data_0210b678[];
 
 extern "C"
-{
-    // get some 3x4 matrix, the inverse of data_0210a05c (cached)
-    fix32_t* func_020b3950();
-    // get some 3x4 matrix that gets cached
-    fix32_t* func_020b39ec();
-    // get another 3x4 matrix
-    fix32_t* func_020b3a24();
-    
+{  
     // Get position (world*view) matrix and result matrix (if you don't pass null)
     // world*view is obtained by reading CLIPMTX_RESULT after setting
     // the projection matrix to the identity (this technique is documented in GBATEK)

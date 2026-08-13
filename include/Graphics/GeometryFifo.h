@@ -113,6 +113,11 @@ enum GXFifoCommand
     // uint8_t equal to n is encoding the real number (n/256)
     GXFifoCommand_SetShininessTable = 0x34,
 
+    // 1 parameter which packs: min x (left) in bits 0-7, min y (top)
+    // in bits 8-15, max x (right) in bits 16-23, max y (bottom) in
+    // bits 24-31
+    GXFifoCommand_SetViewport = 0x60,
+
 };
 
 #define COMBINE_GXFIFO_COMMANDS2(a, b) ((int)(a) | ((int)(b) << 8))
@@ -124,5 +129,8 @@ extern "C"
     void SendQueuedDataToGeometryFifo();
 
     void SendRawDataToGeometryFifo(const uint32_t* data, unsigned int numBytes);
+    // In practice you just send the command followed by the params, so this is
+    // often used to submit multiple commands by just passing
+    // (first word, ptr to second word, number total words - 1)
     void SubmitCommandToGeometryFifo(int command, const uint32_t* params, unsigned int numParams);
 }

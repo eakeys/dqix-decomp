@@ -8,7 +8,7 @@
 class Model3D
 {
 public:
-    ModelRenderData renderData_;
+    ModelRenderContext renderData_;
     NSBXXInternalModel* modelData_54_;
     void* texFileData_58_;
     void* rawFileData_; // holds the (decompressed) NSBMD file

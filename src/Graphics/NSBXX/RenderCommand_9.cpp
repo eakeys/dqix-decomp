@@ -4,7 +4,7 @@
 // notably there is no hook/callback stuff in this command.
 extern "C" void RenderCommand_9(RenderCommandHandler* handler, int modifier)
 {
-    NSBXXInternalModel* model = handler->modelData_->internalModel_;
+    NSBXXInternalModel* model = handler->modelContext_->internalModel_;
     int numTerms = handler->instructionPointer_[2];
     fix32_t weight = 0;
     NSBXXInvBindMatrix* invBindMatrices = (NSBXXInvBindMatrix*)((intptr_t)model + model->inverseBindsOffset_);

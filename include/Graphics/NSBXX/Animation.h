@@ -12,6 +12,8 @@
 // called V.AV just comes from looking at 0x020f1ca8 in the binary (USA)
 struct AnimationData
 {
+    typedef void (*Callback)(void*, AnimationData*, int);
+
     fix32_t time_;
     // used for e.g. combining effects of multiple bones
     fix32_t weight_;
@@ -20,7 +22,7 @@ struct AnimationData
     void (*callback_)(void* renderData, AnimationData* animData, int arg);
     AnimationData* pNext_;
     NSBXXTex* pTex0_; // we always supply this, but only M.PT animations use it
-    char unk_18;
+    unsigned char unk_18;
     unsigned char numEntries_;
     // Not sure about max array length.
     // Each entry combines the following values:
@@ -38,3 +40,22 @@ struct AnimationData
     // only run if entry & 0x300 == 0x100)
     unsigned short entries_[64];
 };
+
+void InitializeModelAnimation(AnimationData* anim, void* pRawData, NSBXXInternalModel* model, NSBXXTex* tex);
+void PopulateModelRenderContext(ModelRenderContext* context, NSBXXInternalModel* model);
+
+// Only the first animation in the list is checked to determine where to add it,
+// so maybe it's assumed that you only add one? But in theory you can add
+// multiple of the same type if they're already chained together
+void AddAnimationsToModelRenderContext(ModelRenderContext* context, AnimationData* anim);
+
+void RemoveAnimationFromModelRenderContext(ModelRenderContext* context, AnimationData* anim);
+
+// really doesn't fit here...
+void SetModelRenderContextRenderCommandHook(ModelRenderContext* context, RenderCommandHook hook, int unknown, int commandID, int stage);
+
+// Defined in AnimationProcessing.cpp 
+
+bool ProcessMaterialAnimationsOnBoundMaterial(MaterialRenderData* material, AnimationData* anim, unsigned int matIdx);
+bool ProcessJointAnimationsOnBoneMatrix(BoneMatrixRenderData* bone, AnimationData* anim, unsigned int boneIdx);
+bool ProcessVisibilityAnimations(int* output, AnimationData* anim, unsigned int boneIdx);

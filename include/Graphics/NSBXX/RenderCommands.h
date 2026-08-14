@@ -4,6 +4,7 @@
 #include "NSBXX.h"
 
 struct RenderCommandHandler;
+typedef void (*RenderCommandHook)(RenderCommandHandler*);
 
 struct BoneMatrixRenderData
 {
@@ -70,7 +71,7 @@ struct ModelRenderContext
     bool (*pfnProcessJointAnimations_)(BoneMatrixRenderData*, AnimationData*, unsigned int);
     AnimationData* visibilityAnimations_; // V.AV animations (never used?)
     // points to ProcessVisibilityAnimations (020b3f98 usa)
-    bool (*pfnProcessVisibilityAnimations_)(void*, AnimationData*, unsigned int);
+    bool (*pfnProcessVisibilityAnimations_)(int*, AnimationData*, unsigned int);
     void (*renderCommandHook_)(RenderCommandHandler*);
     unsigned char renderCommandHookCommandID_;
     unsigned char renderCommandHookStage_; // 1,2 or 3 depending on when in the function it gets called

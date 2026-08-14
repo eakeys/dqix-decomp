@@ -14,8 +14,6 @@ extern "C"
     // zero memory
     void func_0200f374(void*, unsigned);
 
-    void func_020b2b6c(void*);
-
     int32_t func_020c2eb8(Vector3i*);
 
     int func_020c56b0(int*);
@@ -241,8 +239,8 @@ void Model3D::ProcessRawFile(int arg)
     model = NULL;
 found_a_model:
     rawInternalModel_ = model;
-
-    func_020b2b6c(&renderContext_);
+    
+    PopulateModelRenderContext(&renderContext_, model);
     rawTEX_ = NSBXX_GetTEXFile((NSBXXContainer*)rawBMD_);
     if (((NSBXXContainer*)rawBMD_)->signature_ == SIGNATURE_NSBMD)
     {
@@ -270,8 +268,8 @@ found_a_model:
         zMiddle_ = scaledZMin + (scaledZSize / 2);
         copyOfHeight_ = scaledYSize;
 
-        Vector3i span;
-        func_0200f374(&span, sizeof(Vector3i));
+        Vector3fix span;
+        func_0200f374(&span, sizeof(Vector3fix));
         span.x = scaledXSize;
         span.z = scaledZSize;
         maybeApproxRadius_ = func_020c2eb8(&span) / 2;

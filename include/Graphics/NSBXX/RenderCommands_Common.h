@@ -20,7 +20,7 @@ struct RenderCommandHandler
     uint8_t* instructionPointer_;
     ModelRenderContext* modelContext_;
     unsigned int flags_;
-    void (*hooks_[32])(RenderCommandHandler*);
+    RenderCommandHook hooks_[32];
     unsigned char hookStages_[32];
     unsigned char command2Arg1_;
     unsigned char boundMaterial_;

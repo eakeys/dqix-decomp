@@ -4,6 +4,7 @@
 #include "Vector.h"
 #include "Memory/SafeAllocator.h"
 #include "NSBXX/RenderCommands.h"
+#include "NSBXX/Animation.h"
 
 class Model3D
 {

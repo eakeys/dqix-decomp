@@ -5,6 +5,10 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020c2bf4 func_020c46c0
+#endif
+
 extern "C"
 {
     // fixed point division

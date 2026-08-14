@@ -12,6 +12,10 @@
 #define VRAM_BANK_H 0x80
 #define VRAM_BANK_I 0x100
 
+#if defined(jpn)
+#define data_02111224 data_02110ec4
+#endif
+
 struct VRAMBankUsages
 {
     unsigned short lcdcMappedBanks_; // 24

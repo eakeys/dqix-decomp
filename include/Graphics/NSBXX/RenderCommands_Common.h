@@ -14,6 +14,43 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define data_020e9240 data_020e934c
+#define data_020e9260 data_020e936c
+#define data_020e9284 data_020e9390
+#define data_020f1ce0 data_020f1e4c
+#define data_020f1cec data_020f1e58
+#define data_020f1cf8 data_020f1e64
+#define data_020f1d08 data_020f1e74
+#define data_020f1d78 data_020f1ee4
+#define data_020f1dc0 data_020f1f2c
+#define data_020f1e08 data_020f1f74
+#define data_0210a274 data_02109f2c
+#define data_0210a278 data_02109f30
+#define data_0210b078 data_0210ad30
+
+#define func_020c1868 func_020c3334
+#define func_020c223c func_020c3d08
+#define func_020c2c5c func_020c4728
+#define func_020c2cf0 func_020c47bc
+#define func_020c2eb8 func_020c4984
+#define func_020c2f18 func_020c49e4
+#define func_020c54fc func_020c6fc8
+#define func_020ca3ec func_020cbeb8
+#define func_020ca408 func_020cbed4
+#define func_020ca430 func_020cbefc
+#define func_020ca458 func_020cbf24
+#define func_020ca7d0 func_020cc29c
+
+#elif false
+
+void func_020c2f18(const void*, void*);
+void func_020c5188(const fix32_t*);
+void func_020c51a4(const fix32_t*);
+void func_020c51c0(const fix32_t*);
+int func_020c552c(void*);
+#endif
+
 // sizeof == 0x188
 struct RenderCommandHandler
 {

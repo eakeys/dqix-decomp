@@ -7,6 +7,16 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020ca3b8 func_020cbe84
+#define func_020ca408 func_020cbed4
+
+#define data_020ed658 data_020ed764
+#define data_020ed668 data_020ed774
+#define data_02111240 data_02110ee0
+#define data_0211125c data_02110efc
+#endif
+
 #define ADDR_MAIN_BG_STANDARD_PALETTE 0x05000000
 #define ADDR_MAIN_OBJ_STANDARD_PALETTE 0x05000200
 #define ADDR_SUB_BG_STANDARD_PALETTE 0x05000400

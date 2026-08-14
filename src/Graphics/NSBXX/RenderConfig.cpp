@@ -4,23 +4,30 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020c1180 func_020c2c4c
+#define func_020c1840 func_020c330c
+#define func_020c1948 func_020c3414
+#define func_020c19d4 func_020c34a0
+#define func_020c1d60 func_020c382c
+#define func_020c21dc func_020c3ca8
+
+#endif
+
 extern "C"
 {
     // write 3x3 identity
     void func_020c1180(fix32_t*);
     // write 3x4 identity
     void func_020c1840(fix32_t*);
-    // write 4x4 identity
-    void func_020c21dc(fix32_t*);
-
-    // invert 3x4 matrix (returns determinant?)
-    fix32_t func_020c19d4(const fix32_t* in, fix32_t* out);
-    
     // sets out = diag(x, y, z) * mat
     void func_020c1948(const fix32_t* mat, fix32_t* out, fix32_t x, fix32_t y, fix32_t z);
-    
+    // invert 3x4 matrix (returns determinant?)
+    fix32_t func_020c19d4(const fix32_t* in, fix32_t* out);
     // multiply 3x4 matrices, store a * b in out
     void func_020c1d60(const fix32_t* a, const fix32_t* b, fix32_t* out);
+    // write 4x4 identity
+    void func_020c21dc(fix32_t*);
 }
 
 #define BUILD_LIGHT_VECTOR(idx, x, y, z) (((unsigned)(idx) << 30) | ((unsigned)(z) << 20) | ((unsigned)(y) << 10) | ((unsigned)(x)))
@@ -117,7 +124,14 @@ void RenderConfig::Reset()
 void RenderConfig::SubmitToFifo()
 {
     RenderConfig* instance = &data_0210a010;
-    uint32_t* commands = (uint32_t*)0x0210a010; // i hate this
+    uint32_t* commands = 
+#if defined(usa)
+    (uint32_t*)0x0210a010; // i hate this
+#elif defined(jpn)
+    (uint32_t*)0x02109cc8;
+#else
+#error need to hardcode address of RenderConfig instance
+#endif
     SubmitCommandToGeometryFifo(instance->magicCommands_0, commands + 1, 0x3e);
 
     instance->flags &= ~(1 << RENDER_CONFIG_FLAG_0);

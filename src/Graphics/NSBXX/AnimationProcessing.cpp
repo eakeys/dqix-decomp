@@ -2,6 +2,14 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020c2bf4 func_020c46c0
+#define func_020c2e34 func_020c4900
+#define func_020c2f18 func_020c49e4
+#define func_020ca408 func_020cbed4
+#define func_020ca458 func_020cbf24
+#endif
+
 extern "C"
 {
     // fix32_t division

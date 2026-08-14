@@ -9,6 +9,17 @@
 #include "Filesystem/FileIO.h"
 #include <globaldefs.h>
 
+#if defined(jpn)
+#define data_020f1ee8 data_020f2054
+#define data_020f1eec data_020f2058
+#define data_020f1ef0 data_020f205c
+#define data_020f1ef4 data_020f2060
+
+#define func_0200f374 func_0200f238
+#define func_020c2eb8 func_020c4984
+#define func_020c56b0 func_020c717c
+#endif
+
 extern "C"
 {
     // zero memory

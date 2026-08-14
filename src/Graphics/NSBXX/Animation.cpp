@@ -2,6 +2,16 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020ca3ec func_020cbeb8
+
+#define data_020f1c6c data_020f1dd8
+#define data_020f1c84 data_020f1df0
+#define data_020f1c88 data_020f1df4
+#define data_020f1c8c data_020f1df8
+#define data_020f1c90 data_020f1dfc
+#endif
+
 extern "C"
 {
     // memset

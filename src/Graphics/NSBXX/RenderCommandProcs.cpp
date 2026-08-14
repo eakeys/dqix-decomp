@@ -61,6 +61,12 @@
 // S = ( s_x  0  ) with translation (0, 16h(1 - s_y))
 //     (  0  s_y )
 
+#if defined(jpn)
+#define data_020f1e88 data_020f1ff4
+#define data_020f1ea8 data_020f2014
+#define data_020f1ec8 data_020f2034
+#endif
+
 #pragma optimize_for_size off
 
 extern void (*data_020f1e88[8])(fix32_t*, MaterialRenderData*);

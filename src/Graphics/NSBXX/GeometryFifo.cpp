@@ -7,13 +7,24 @@
 
 #pragma optimize_for_size off
 
+#if defined(jpn)
+#define func_020c2034 func_020c3b00
+#define func_020c2208 func_020c3cd4
+#define func_020c2c38 func_020c4704
+#define func_020c2c94 func_020c4760
+#define func_020c51dc func_020c6ca8
+#define func_020c54fc func_020c6fc8
+#define func_020c552c func_020c6ff8
+#define func_020ca0a8 func_020cbb74
+#define func_020ca2ac func_020cbd78
+#define func_020ca4b4 func_020cbf80
+#define func_020ca430 func_020cbefc
+
+#define data_0210cf78 data_0210cc30
+#endif
+
 extern "C"
 {
-    void func_020ca0a8(int dmaChannel, const void* source, unsigned int length,
-        DMACompletionCallback onCompletion, int callbackUserdata);
-    void func_020ca2ac(int dmaChannel, const void* source, unsigned int length,
-        DMACompletionCallback onCompletion, int callbackUserdata);
-
     // transform 3-dimensional vector (treated as 4D in usual way) by 4x3 matrix
     void func_020c2034(const fix32_t* vec, const fix32_t* mat, fix32_t* outVec);
 
@@ -26,11 +37,16 @@ extern "C"
     // prime hardware divider to calculate fixed point representation of 2^32/x
     void func_020c2c94(fix32_t);
 
+    // reset various geometry registers
+    void func_020c51dc();
+
     int func_020c54fc(fix32_t*); // try to read clip matrix, -1 on failure
     int func_020c552c(fix32_t*); // try to read vector result matrix, -1 on failure
 
-    // reset various geometry registers
-    void func_020c51dc();
+    void func_020ca0a8(int dmaChannel, const void* source, unsigned int length,
+        DMACompletionCallback onCompletion, int callbackUserdata);
+    void func_020ca2ac(int dmaChannel, const void* source, unsigned int length,
+        DMACompletionCallback onCompletion, int callbackUserdata);
 
     // inverse memcpy doing 32 bytes at a time, assumes 4 byte alignment
     void func_020ca4b4(const void*, void*, unsigned);
@@ -50,8 +66,6 @@ struct QueuedData
 
 struct Struct_0210cf78
 {
-    // points to an array in which [0] = amount of data
-    // and [1], ..., [pQueuedData[0]] is the queued data
     QueuedData* pQueuedData;
     volatile int fifoProcessingFlag; // 1 = processing, 0 = done
     int unknown_8;

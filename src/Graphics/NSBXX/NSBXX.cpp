@@ -4,6 +4,10 @@
 #include "Graphics/NSBXX/Animation.h"
 #include "Memory/AllocatorUnion.h"
 
+#if defined(jpn)
+#define func_020b2a6c func_020b4538
+#endif
+
 extern "C"
 {
     // get allocation size for animation data

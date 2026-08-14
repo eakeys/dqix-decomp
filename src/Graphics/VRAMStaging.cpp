@@ -1,6 +1,10 @@
 #include "Graphics/VRAMStaging.h"
 #include <globaldefs.h>
 
+#if defined(jpn)
+#define data_0214e5e4 data_0214fdac
+#endif
+
 extern VRAMStagingManager data_0214e5e4;
 
 void LockStagedTextureVRAMCopying()

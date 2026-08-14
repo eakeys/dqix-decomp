@@ -3,7 +3,12 @@
 
 #pragma optimize_for_size off
 
-extern unsigned short data_02111220;
+#if defined(jpn)
+#define data_02111222 data_02110ec2
+
+#define func_020c9a88 func_020cb554
+#endif
+
 extern unsigned short data_02111222;
 
 extern "C"

@@ -7,6 +7,31 @@
 #include "std_library_functions.h"
 #include <globaldefs.h>
 
+#if defined(jpn)
+#define data_01ff8734 data_01ff8740
+#define data_01ff873c data_01ff8748
+#define data_01ff8744 data_01ff8750
+#define data_01ffdd78 data_01ffddbc
+#define data_01ffdf70 data_01ffdfb4
+#define data_01ffe270 data_01ffe2b4
+
+#define data_020ee694 data_020ee7a0
+#define data_020ee6b0 data_020ee7bc
+#define data_020ee6ba data_020ee7c6
+#define data_020ee6d0 data_020ee7dc
+#define data_020ee6e8 data_020ee7f4
+
+#define data_0214e628 data_0214fdf0
+
+#define func_0202ae18 func_0202a9d0
+#define func_0202ae24 func_0202a9dc
+#define func_0202b2f0 func_0202aea0
+#define func_0205e57c func_0205f868
+#define func_020d84f8 func_020d9e5c
+#define func_020d8704 func_020da068
+
+#endif
+
 #define DATA_027fffa8 (*(unsigned short*)0x027fffa8)
 
 extern "C"

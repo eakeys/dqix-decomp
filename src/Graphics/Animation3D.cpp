@@ -1,6 +1,10 @@
 #include "Graphics/Animation3D.h"
 #include "Graphics/Model3D.h"
 
+#if defined(jpn)
+#define func_02035544 func_02034fa0
+#endif
+
 #define ANIMATION_FLAG_NOT_LOOPING 0
 
 extern "C"

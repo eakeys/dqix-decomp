@@ -4,11 +4,9 @@
 
 #pragma optimize_for_size off
 
-extern "C"
-{
-    // memset
-    void func_020ca390(int, void*, unsigned);
-}
+#if defined(jpn)
+#define data_020f1c70 data_020f1ddc
+#endif
 
 // processing callback for V.AV animations
 extern void (*data_020f1c70)(void* data, AnimationData* anim, int arg);

@@ -2,13 +2,6 @@
 #include "Graphics/NSBXX/RenderCommands_Common.h"
 #include "Graphics/NSBXX/GeometryFifo.h"
 
-// Holds { func_020b9a2c, func_020b9b30, func_020ba390 }
-//extern void (*data_020f1cec[])(BoneMatrixRenderData*, NSBXXBoneMatrix::Scaling* boneMatrixScaleData, uint8_t* ip, int boneMatrixFlags);
-// Holds { func_020b99b0, func_020b9a6c, func_020ba264 }
-//extern void (*data_020f1ce0[])(BoneMatrixRenderData*);
-// Holds { func_020ba11c func_020ba5ac, func_020bac74, func_020bb29c }
-//extern void (*data_020f1cf8[])(MaterialRenderData*);
-
 // Texture matrix generation procedures:
 // In all instances, we build a texture matrix of the form 
 //  ( a b 0 0 )  
@@ -74,7 +67,7 @@ extern void (*data_020f1e88[8])(fix32_t*, MaterialRenderData*);
 extern void (*data_020f1ea8[8])(fix32_t*, MaterialRenderData*);
 extern void (*data_020f1ec8[8])(fix32_t*, MaterialRenderData*);
 
-extern "C" void BoneMatrixProc_TypeA_v0(BoneMatrixRenderData* renderData)
+void BoneMatrixDataSubmissionProc_Type0(BoneMatrixRenderData* renderData)
 {
     if (!(renderData->flags_ & 4))
     {
@@ -99,7 +92,7 @@ extern "C" void BoneMatrixProc_TypeA_v0(BoneMatrixRenderData* renderData)
     }
 }
 
-extern "C" void BoneMatrixProc_TypeB_v0(BoneMatrixRenderData* renderData, NSBXXBoneMatrix::Scaling* scaling, uint8_t* ip, int boneMatrixFlags)
+void BoneMatrixScaleCalculationProc_Type0(BoneMatrixRenderData* renderData, NSBXXBoneMatrix::Scaling* scaling, uint8_t* ip, int boneMatrixFlags)
 {
     if (boneMatrixFlags & 4) // bone matrix has no scaling data
         renderData->flags_ |= 1;
@@ -113,7 +106,7 @@ extern "C" void BoneMatrixProc_TypeB_v0(BoneMatrixRenderData* renderData, NSBXXB
     renderData->flags_ |= 0x18;
 }
 
-extern "C" void BoneMatrixProc_TypeA_v1(BoneMatrixRenderData* renderData)
+void BoneMatrixDataSubmissionProc_Type1(BoneMatrixRenderData* renderData)
 {
     bool needSubmitTranslateCommand = false;
     if (!(renderData->flags_ & 4))
@@ -153,7 +146,7 @@ extern "C" void BoneMatrixProc_TypeA_v1(BoneMatrixRenderData* renderData)
     }
 }
 
-extern "C" void BoneMatrixProc_TypeB_v1(BoneMatrixRenderData* renderData, NSBXXBoneMatrix::Scaling* scaling, uint8_t* ip, int boneMatrixFlags)
+void BoneMatrixScaleCalculationProc_Type1(BoneMatrixRenderData* renderData, NSBXXBoneMatrix::Scaling* scaling, uint8_t* ip, int boneMatrixFlags)
 {
     int thirdArg = ip[3];
     if (boneMatrixFlags & 4) // no scaling
@@ -353,7 +346,7 @@ extern "C" void CreateTextureMatrix_v0_NoExtensions(fix32_t* matrix, MaterialRen
     matrix[13] = 0;
 }
 
-extern "C" void MaterialProc_v0(MaterialRenderData* renderData)
+void MaterialTextureMatrixLoadProc_Type0(MaterialRenderData* renderData)
 {
     struct {
         uint32_t commands;
@@ -396,7 +389,7 @@ extern "C" void MaterialProc_v0(MaterialRenderData* renderData)
     SubmitCommandToGeometryFifo(fifoData.commands, (uint32_t*)&fifoData + 1, 18);
 }
 
-extern "C" void BoneMatrixProc_TypeA_v2(BoneMatrixRenderData* renderData)
+void BoneMatrixDataSubmissionProc_Type2(BoneMatrixRenderData* renderData)
 {
     bool bVar2 = false;
     int flag10orflag8 = renderData->flags_ & 0x18;
@@ -437,7 +430,7 @@ extern "C" void BoneMatrixProc_TypeA_v2(BoneMatrixRenderData* renderData)
         SubmitCommandToGeometryFifo(GXFifoCommand_ScaleMatrix, (uint32_t*)&renderData->scale_v0_, 3);
 }
 
-extern "C" void BoneMatrixProc_TypeB_v2(BoneMatrixRenderData* renderData, NSBXXBoneMatrix::Scaling* scaling, uint8_t* ip, int boneMatrixFlags)
+void BoneMatrixScaleCalculationProc_Type2(BoneMatrixRenderData* renderData, NSBXXBoneMatrix::Scaling* scaling, uint8_t* ip, int boneMatrixFlags)
 {
     unsigned int thisBoneIdx = ip[1];
     unsigned int parentBoneIdx = ip[2];
@@ -482,7 +475,7 @@ extern "C" void BoneMatrixProc_TypeB_v2(BoneMatrixRenderData* renderData, NSBXXB
     }
 }
 
-extern "C" void MaterialProc_v1(MaterialRenderData* renderData)
+void MaterialTextureMatrixLoadProc_Type1(MaterialRenderData* renderData)
 {
     struct {
         uint32_t commands;
@@ -738,7 +731,7 @@ extern "C" void CreateTextureMatrix_v2_NoExtensions(fix32_t* matrix, MaterialRen
     matrix[13] = 0;
 }
 
-extern "C" void MaterialProc_v2(MaterialRenderData* renderData)
+void MaterialTextureMatrixLoadProc_Type2(MaterialRenderData* renderData)
 {
     struct {
         uint32_t commands;
@@ -970,7 +963,7 @@ extern "C" void CreateTextureMatrix_v3_NoExtensions(fix32_t* matrix, MaterialRen
     matrix[13] = 0;
 }
 
-extern "C" void MaterialProc_v3(MaterialRenderData* renderData)
+void MaterialTextureMatrixLoadProc_Type3(MaterialRenderData* renderData)
 {
     struct {
         uint32_t commands;

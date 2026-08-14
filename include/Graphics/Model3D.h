@@ -5,13 +5,14 @@
 #include "Memory/SafeAllocator.h"
 #include "NSBXX/RenderCommands.h"
 #include "NSBXX/Animation.h"
+#include "Animation3D.h"
 
 class Model3D
 {
 public:
     ModelRenderContext renderContext_;
     NSBXXInternalModel* rawInternalModel_;
-    void* rawTEX_;
+    NSBXXTex* rawTEX_;
     void* rawBMD_; // holds the (decompressed) NSBMD file
     unsigned int rawBMDFileSize_;
     // should make these six numbers a struct
@@ -85,4 +86,26 @@ public:
 
     void SetAlpha(int alpha);
     int GetAlpha() const;
+
+    void AddAnimation(Animation3D* anim);
+    void RemoveAnimations();
+
+    void SetBoneMatrixRenderData(BoneMatrixRenderData*);
+    BoneMatrixRenderData* GetBoneMatrixRenderData();
+
+    // mark all materials to ignore their built-in diffuse color and instead
+    // use the color specified in RenderConfig
+    void ApplyRenderConfigMaterialDiffuseColor();
+
+    // bits 0-4 specify red, 5-9 specify green, 10-14 specify blue
+    // color is applied to all materials, except ones marked as using the
+    // RenderConfig's diffuse color instead
+    void SetMaterialDiffuseColor(unsigned int rgb);
+
+    NSBXXTex* GetTEX0();
+    void SetTEX0(NSBXXTex* tex);
+
+    // Presumably you need to call this if you update the TEX
+    void RestageTexturePalette();
+    void RestageTextureImage();
 };

@@ -384,6 +384,9 @@ struct NSBXXMaterial
     // bit 4: ???
     // bit 5: if set, the alpha gets overwritten to 0, what?
     // bits 6,7,8: which parts of paramDIF_AMB_ to use
+    // (6 = use diffuse color, 7 = use ambient color, 8 = vertex color flag)
+    // if a bit is set, the corresponding value will be taken from here, otherwise
+    // the value specified in the RenderConfig will be used
     // bits 9,10,11: which parts of paramSPE_EMI_ to use 
     // bit 12: ???
     // bit 13: has bit-13 extension data (comes after 1,2,3 if present)
@@ -678,6 +681,13 @@ void NSBXX_Model_SetAllMaterialFlags(NSBXXInternalModel* model, int value, unsig
 // (This function should become static later)
 void NSBXX_Model_SetMaterialAlpha(NSBXXInternalModel* model, unsigned int materialIndex, int alpha);
 
+// usa: func_020b71fc
+int NSBXX_Model_GetMaterialPolygonID(NSBXXInternalModel* model, unsigned int materialIndex);
+
+// usa: func_020b726c
+// color to be specified with red in bits 0-4, green in bits 5-9, blue in bits 10-14
+void NSBXX_Model_SetDiffuseReflectionColor(NSBXXInternalModel* model, int rgb);
+
 // usa: func_020b732c
 // The alpha value can be between 0-31.
 void NSBXX_Model_SetAlpha(NSBXXInternalModel* model, int alpha);
@@ -702,13 +712,13 @@ int NSBXXNameList_SearchIndex(NSBXXNameList* nameList, const char* name);
 void* NSBXX_GetFirstSubfile(NSBXXContainer* nsbxx);
 
 // usa: func_020b76a4
-// Returns a pointer to a .TEX file within the file provided.
+// Returns a pointer to a TEX0 file within the file provided.
 // Assumes that the provided file either
 //  - contains multiple files, of which the second is a TEX, or
 //  - is an NSBTX containing only one file.
 // From limited testing the first case is often satisfied
 // by NSBMD files that contain one MDL and one TEX.
-void* NSBXX_GetTEXFile(NSBXXContainer* nsbxx);
+NSBXXTex* NSBXX_GetTEXFile(NSBXXContainer* nsbxx);
 
 // Various subfiles consist of multiple objects (e.g. MDL files
 // comprise multiple models, JNT files contain multiple animations)
@@ -716,6 +726,9 @@ void* NSBXX_GetTEXFile(NSBXXContainer* nsbxx);
 // uint32_t signature; // e.g. "MDL0"
 // uint32_t filesize; 
 // NameListU32 offsetsToObjectWithin;
+// For example, this can be used to extract J.AC animations fron an nsbca file,
+// M.AT animations from an nsbta file etc, or an NSBXXInternalModel from an
+// nsbmd file
 void* NSBXX_GetObjectFromFirstSubfile(NSBXXContainer* nsbxx, unsigned int idx);
 
 // Might have other uses, but for now I've only seen it called on

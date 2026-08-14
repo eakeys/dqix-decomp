@@ -62,9 +62,13 @@ src/Filesystem/FileIO.cpp:
     complete
     .text start:0x02075098 end:0x0207568c
 
+src/Graphics/Animation3D.cpp:
+    complete
+    .text start:0x0207e060 end:0x0207e23c
+
 src/Graphics/Model3D.cpp:
     complete
-    .text start:0x0207e264 end:0x0207ebf0
+    .text start:0x0207e264 end:0x0207ed1c
 
 src/Grotto/Main/ActiveGrottoClass.cpp:
     complete

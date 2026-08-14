@@ -10,17 +10,17 @@ void* NSBXX_GetFirstSubfile(NSBXXContainer* nsbxx)
     return (char*)nsbxx + SUBFILE_OFFSETS(nsbxx)[0];
 }
 
-void* NSBXX_GetTEXFile(NSBXXContainer* nsbxx)
+NSBXXTex* NSBXX_GetTEXFile(NSBXXContainer* nsbxx)
 {
     const uint32_t* subfiles = SUBFILE_OFFSETS(nsbxx);
     if (nsbxx->numSubfiles_ == 1)
     {
         if (nsbxx->signature_ == SIGNATURE_NSBTX)
-            return (char*)nsbxx + subfiles[0];
+            return (NSBXXTex*)((intptr_t)nsbxx + subfiles[0]);
 
         return NULL;
     }
-    return (char*)nsbxx + subfiles[1];
+    return (NSBXXTex*)((intptr_t)nsbxx + subfiles[1]);
 }
 
 void* NSBXX_GetObjectFromFirstSubfile(NSBXXContainer* nsbxx, unsigned int idx)

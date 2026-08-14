@@ -17,8 +17,6 @@ extern "C"
     int32_t func_020c2eb8(Vector3i*);
 
     int func_020c56b0(int*);
-
-    bool func_0207e97c(Model3D*);
 }
 
 extern unsigned int (*data_020f1ee8)(unsigned int, int, int);
@@ -241,7 +239,7 @@ found_a_model:
     rawInternalModel_ = model;
     
     PopulateModelRenderContext(&renderContext_, model);
-    rawTEX_ = NSBXX_GetTEXFile((NSBXXContainer*)rawBMD_);
+    rawTEX_ = (NSBXXTex*)NSBXX_GetTEXFile((NSBXXContainer*)rawBMD_);
     if (((NSBXXContainer*)rawBMD_)->signature_ == SIGNATURE_NSBMD)
     {
         NSBXXInternalModel* model = rawInternalModel_;
@@ -439,3 +437,67 @@ void Model3D::SetAlpha(int alpha)
 }
 
 int Model3D::GetAlpha() const { return alpha_; }
+
+void Model3D::AddAnimation(Animation3D* anim)
+{
+    if (anim == NULL || anim->GetBasicAnimationData() == NULL)
+        return;
+
+    AddAnimationsToModelRenderContext(&renderContext_, anim->GetBasicAnimationData());
+}
+
+void Model3D::RemoveAnimations()
+{
+    while (renderContext_.materialAnimations_ != NULL)
+        RemoveAnimationFromModelRenderContext(&renderContext_, renderContext_.materialAnimations_);
+
+    while (renderContext_.jointAnimations_ != NULL)
+        RemoveAnimationFromModelRenderContext(&renderContext_, renderContext_.jointAnimations_);
+
+    while (renderContext_.visibilityAnimations_ != NULL)
+        RemoveAnimationFromModelRenderContext(&renderContext_, renderContext_.visibilityAnimations_);
+}
+
+void Model3D::SetBoneMatrixRenderData(BoneMatrixRenderData* data)
+{
+    pBoneMatrixRenderData_ = data;
+}
+
+BoneMatrixRenderData* Model3D::GetBoneMatrixRenderData()
+{
+    return pBoneMatrixRenderData_;
+}
+
+void Model3D::ApplyRenderConfigMaterialDiffuseColor()
+{
+    if (rawInternalModel_ != NULL)
+        NSBXX_Model_SetAllMaterialFlags(rawInternalModel_, false, 1 << 6);
+}
+
+void Model3D::SetMaterialDiffuseColor(unsigned int rgb)
+{
+    if (rawInternalModel_ != NULL)
+        NSBXX_Model_SetDiffuseReflectionColor(rawInternalModel_, rgb);
+}
+
+NSBXXTex* Model3D::GetTEX0()
+{
+    return rawTEX_;
+}
+
+void Model3D::SetTEX0(NSBXXTex* tex)
+{
+    rawTEX_ = tex;
+}
+
+void Model3D::RestageTexturePalette()
+{
+    CancelVRAMStagingOperation(paletteStagingTaskID_);
+    paletteStagingTaskID_ = StageTexFilePaletteData(rawTEX_, false);
+}
+
+void Model3D::RestageTextureImage()
+{
+    CancelVRAMStagingOperation(imageStagingTaskID_);
+    imageStagingTaskID_ = StageTexFileImageData(rawTEX_, false);
+}

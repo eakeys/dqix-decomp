@@ -8,13 +8,6 @@
 #include <globaldefs.h>
 
 #if defined(jpn)
-#define data_01ff8734 data_01ff8740
-#define data_01ff873c data_01ff8748
-#define data_01ff8744 data_01ff8750
-#define data_01ffdd78 data_01ffddbc
-#define data_01ffdf70 data_01ffdfb4
-#define data_01ffe270 data_01ffe2b4
-
 #define data_020ee694 data_020ee7a0
 #define data_020ee6b0 data_020ee7bc
 #define data_020ee6ba data_020ee7c6
@@ -47,9 +40,9 @@ extern "C"
 }
 
 // seems to be one per VRAMRegion
-extern VRAMStagingManager::CommonVRAMRegionTaskSet data_01ffdd78[10];
-extern VRAMStagingManager::StagingSpaceAllocation data_01ffdf70[0x80];
-extern VRAMStagingManager::Task data_01ffe270[0x100];
+extern VRAMStagingManager::CommonVRAMRegionTaskSet g_vramStagingRegionalTaskSets[10];
+extern VRAMStagingManager::StagingSpaceAllocation g_vramStagingAllocations[0x80];
+extern VRAMStagingManager::Task g_vramStagingTaskQueue[0x100];
 extern unsigned char g_vramStagingBuffer[0x5000];
 
 #define TASK_FLAG_VALID_TASK 0
@@ -76,11 +69,11 @@ extern const char data_020ee6d0[];
 
 // function pointers to get the main/sub screen master brightness (-16...16)
 // note -16 means fully black and 16 means fully white
-extern int (*data_01ff8734[2])();
+extern int (*g_masterBrightnessFunctions[2])();
 
 // function pointers to get the currently active components (BG0, .., BG3, Obj)
 // of the main/sub engine
-extern int (*data_01ff873c[2])();
+extern int (*g_activeComponentFunctions[2])();
 
 // maps VRAMSubregion to a bitmask of layers
 // (BG0 = 1, BG1 = 2, BG2 = 4, BG3 = 8, Obj = 16)
@@ -89,20 +82,20 @@ extern const char data_020ee6e8[];
 
 // maps VRAMSubregion to the function pointer for loading data to said
 // subregion
-extern void (*data_01ff8744[24])(const void*, unsigned int, unsigned int);
+extern void (*g_vramSubregionLoadFunctions[24])(const void*, unsigned int, unsigned int);
 
 bool IsSafeToModifySubregion(int subregion)
 {
     int mainOrSubScreen = data_020ee6b0[data_020ee6d0[subregion]];
     bool safe = true;
     
-    int absBrightness = abs(data_01ff8734[mainOrSubScreen]());
+    int absBrightness = abs(g_masterBrightnessFunctions[mainOrSubScreen]());
 
     // if the brightness is +16 or -16 the whole screen is white or black
     // so it's safe to mess with vram no matter what
     if (absBrightness < 16)
     {
-        int activeComponents = data_01ff873c[mainOrSubScreen]();
+        int activeComponents = g_activeComponentFunctions[mainOrSubScreen]();
         if (data_020ee6e8[subregion] & activeComponents)
             safe = false;
     }
@@ -125,11 +118,11 @@ void VRAMStagingManager::ZeroInitialize()
 
 VRAMStagingManager::Task* VRAMStagingManager::GetTaskByID(int id)
 {
-    Task* entry = &data_01ffe270[queueFront_];
+    Task* entry = &g_vramStagingTaskQueue[queueFront_];
     for (unsigned int i = 0; i < 0x100; i++, entry++)
     {
-        if (entry >= &data_01ffe270[0x100])
-            entry = &data_01ffe270[0];
+        if (entry >= &g_vramStagingTaskQueue[0x100])
+            entry = &g_vramStagingTaskQueue[0];
 
         unsigned int flags = entry->flags_;
         if (!(flags & (1 << TASK_FLAG_VALID_TASK)))
@@ -152,7 +145,7 @@ VRAMStagingManager::GetStagingSpaceAllocation(const void* allocation)
     uintptr_t targetOffset = (uintptr_t)allocation - (uintptr_t)&g_vramStagingBuffer[0];
     if (targetOffset >= STAGING_BUFFER_SIZE)
         return NULL;
-    StagingSpaceAllocation* candidate = &data_01ffdf70[0];
+    StagingSpaceAllocation* candidate = &g_vramStagingAllocations[0];
     for (unsigned int i = 0; i < 0x80; i++, candidate++)
     {
         if ((candidate->flags_ & (1 << STAGING_SPACE_ALLOC_FLAG_ALLOCATED))
@@ -173,7 +166,7 @@ void* VRAMStagingManager::AllocateInStagingSpace(unsigned int length)
     // Insertion sort to generate a sorted list of active allocations by
     // start address, and also find a free space in the array to store
     // details of the new allocation 
-    StagingSpaceAllocation* insertionPtr = &data_01ffdf70[0];
+    StagingSpaceAllocation* insertionPtr = &g_vramStagingAllocations[0];
     for (unsigned int i = 0; i < 0x80; i++, insertionPtr++)
     {
         if (insertionPtr->flags_ & (1 << STAGING_SPACE_ALLOC_FLAG_ALLOCATED))
@@ -282,7 +275,7 @@ bool VRAMStagingManager::FreeStagingSpaceAllocationByIndex(unsigned int idx)
     bool success = false;
     if (idx < 0x80)
     {
-        StagingSpaceAllocation* entry = &data_01ffdf70[idx];
+        StagingSpaceAllocation* entry = &g_vramStagingAllocations[idx];
         if (entry->flags_ & (1 << STAGING_SPACE_ALLOC_FLAG_ALLOCATED))
         {
             entry->SetFlagBitValue(STAGING_SPACE_ALLOC_FLAG_ALLOCATED, false);
@@ -314,7 +307,7 @@ int VRAMStagingManager::Stage(VRAMSubregion subregion, const void* data, unsigne
                 break;
             }
             CleanInvalidateCacheRange(data, length);
-            data_01ff8744[subregion](data, offset, length);
+            g_vramSubregionLoadFunctions[subregion](data, offset, length);
             CleanCacheRange(data, length);
             switch (region)
             {
@@ -331,7 +324,7 @@ int VRAMStagingManager::Stage(VRAMSubregion subregion, const void* data, unsigne
         else
         {
             StagingSpaceAllocation* allocSpaceData = GetStagingSpaceAllocation(data);
-            Task* newTask = &data_01ffe270[queueEnd_];
+            Task* newTask = &g_vramStagingTaskQueue[queueEnd_];
             if (!(newTask->flags_ & (1 << TASK_FLAG_VALID_TASK))) // check for space in queue
             {
                 const void* stagingSpace = data;
@@ -352,7 +345,7 @@ int VRAMStagingManager::Stage(VRAMSubregion subregion, const void* data, unsigne
                 {
                     newTask->Reset();
                     newTask->taskID_ = stagedTaskCounter_;
-                    short allocIndex = allocSpaceData == NULL ? -1 : allocSpaceData - data_01ffdf70;
+                    short allocIndex = allocSpaceData == NULL ? -1 : allocSpaceData - g_vramStagingAllocations;
                     newTask->stagingAllocIndex_ = allocIndex;
                     newTask->subregion_ = (char)subregion;
                     newTask->region_ = (char)region;
@@ -415,11 +408,11 @@ bool VRAMStagingManager::CancelTaskByID(int id)
 
 void VRAMStagingManager::CancelAllTasksInRegion(VRAMRegion region)
 {
-    Task* task = &data_01ffe270[queueFront_];
+    Task* task = &g_vramStagingTaskQueue[queueFront_];
     for (unsigned int i = 0; i < 0x100; i++, task++)
     {
-        if (task >= &data_01ffe270[0x100])
-            task = &data_01ffe270[0];
+        if (task >= &g_vramStagingTaskQueue[0x100])
+            task = &g_vramStagingTaskQueue[0];
         unsigned int flags = task->flags_;
         if (!(flags & (1 << TASK_FLAG_VALID_TASK)))
             return;
@@ -433,11 +426,11 @@ void VRAMStagingManager::CancelAllTasksInRegion(VRAMRegion region)
 void VRAMStagingManager::CancelOverwrittenTasks(VRAMSubregion subregion,
     unsigned int offset, unsigned int length)
 {
-    Task* task = &data_01ffe270[queueFront_];
+    Task* task = &g_vramStagingTaskQueue[queueFront_];
     for (unsigned int i = 0; i < 0x100; i++, task++)
     {
-        if (task >= &data_01ffe270[0x100])
-            task = &data_01ffe270[0];
+        if (task >= &g_vramStagingTaskQueue[0x100])
+            task = &g_vramStagingTaskQueue[0];
 
         unsigned int flags = task->flags_;
         if (!(flags & (1 << TASK_FLAG_VALID_TASK)))
@@ -455,7 +448,7 @@ void VRAMStagingManager::CancelOverwrittenTasks(VRAMSubregion subregion,
 
 void VRAMStagingManager::CancelAllTasks()
 {
-    Task* entry = &data_01ffe270[0];
+    Task* entry = &g_vramStagingTaskQueue[0];
     for (unsigned int i = 0; i < 0x100; i++, entry++)
         entry->SetFlagBitValue(TASK_FLAG_COMPLETE, true);
 }
@@ -528,7 +521,7 @@ void VRAMStagingManager::SendReadyDataToVRAM()
     
     unsigned int queueHead;
     queueHead = queueFront_;
-    CommonVRAMRegionTaskSet* regionSet = &data_01ffdd78[0];
+    CommonVRAMRegionTaskSet* regionSet = &g_vramStagingRegionalTaskSets[0];
     for (unsigned int i = 0; i < 10; i++, regionSet++)
         regionSet->Reset();
 
@@ -541,12 +534,12 @@ void VRAMStagingManager::SendReadyDataToVRAM()
     }
 
     unsigned int currentQueueIndex = queueHead;
-    Task* pTask = &data_01ffe270[currentQueueIndex];
+    Task* pTask = &g_vramStagingTaskQueue[currentQueueIndex];
     for (unsigned int i = 0; i < 0x100; i++, currentQueueIndex++, pTask++)
     {
         if (currentQueueIndex >= 0x100)
         {
-            pTask = &data_01ffe270[0];
+            pTask = &g_vramStagingTaskQueue[0];
             currentQueueIndex = 0;
         }
         unsigned int flags = pTask->flags_;
@@ -556,7 +549,7 @@ void VRAMStagingManager::SendReadyDataToVRAM()
         if (!(flags & (1 << TASK_FLAG_COMPLETE)) && regionsToModifyLookup[pTask->subregion_])
         {
             CommonVRAMRegionTaskSet* foo;
-            foo = &data_01ffdd78[pTask->region_];
+            foo = &g_vramStagingRegionalTaskSets[pTask->region_];
             if (foo->numTasks_ < foo->maxNumTasks_)
             {
                 thisFunctionTaskCount++;
@@ -583,7 +576,7 @@ void VRAMStagingManager::SendReadyDataToVRAM()
             break;
         int region = groupingData[0];
         
-        loopRegionTaskSet = &data_01ffdd78[region];
+        loopRegionTaskSet = &g_vramStagingRegionalTaskSets[region];
         if (loopRegionTaskSet->numTasks_ == 0)
             continue;
         if (groupingData[1] >= 0)
@@ -633,7 +626,7 @@ void VRAMStagingManager::SendReadyDataToVRAM()
             if (maxAmount <= amountCopiedThisGroup)
                 break;
             int taskIndex = loopRegionTaskSet->pendingTaskIndices_[taskSetInnerCounter];
-            pTask = &data_01ffe270[taskIndex];
+            pTask = &g_vramStagingTaskQueue[taskIndex];
             if (pTask->flags_ & (1 << TASK_FLAG_COMPLETE))
                 continue;
             if (groupingData[1] == 1 && !(pTask->flags_ & (1 << TASK_FLAG_HIGH_PRIORITY)))
@@ -650,7 +643,7 @@ void VRAMStagingManager::SendReadyDataToVRAM()
             destination = (pTask->destinationOffset_ + pTask->wordsCopied_) * 4;
             CleanInvalidateCacheRange(copySource, amountToCopyThisTask);
             // e.g. LoadToTexturePalette
-            data_01ff8744[pTask->subregion_](copySource, destination, amountToCopyThisTask);
+            g_vramSubregionLoadFunctions[pTask->subregion_](copySource, destination, amountToCopyThisTask);
             CleanCacheRange(copySource, amountToCopyThisTask);
             amountCopiedThisGroup += amountToCopyThisTask;
             pTask->wordsCopied_ += amountToCopyThisTask >> 2;
@@ -673,12 +666,12 @@ void VRAMStagingManager::SendReadyDataToVRAM()
     }
     
     unsigned int pos = queueHead;
-    Task* completionLoopTask = &data_01ffe270[pos];
+    Task* completionLoopTask = &g_vramStagingTaskQueue[pos];
     for (unsigned int i = 0; i < 0x100; i++, pos++, completionLoopTask++)
     {
         if (pos >= 0x100)
         {
-            completionLoopTask = &data_01ffe270[0];
+            completionLoopTask = &g_vramStagingTaskQueue[0];
             pos = 0;
         }
         unsigned int flags = completionLoopTask->flags_;

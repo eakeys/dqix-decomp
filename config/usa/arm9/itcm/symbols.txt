@@ -13,9 +13,9 @@ func_01ff85b8 kind:function(arm,size=0x38) addr:0x01ff85b8
 func_01ff85f0 kind:function(arm,size=0x1c) addr:0x01ff85f0
 func_01ff860c kind:function(arm,size=0x34) addr:0x01ff860c
 cachedFilePaths kind:bss addr:0x01ff8640
-data_01ff8734 kind:data(any) addr:0x01ff8734
-data_01ff873c kind:data(any) addr:0x01ff873c
-data_01ff8744 kind:data(any) addr:0x01ff8744
+g_masterBrightnessFunctions kind:data(any) addr:0x01ff8734
+g_activeComponentFunctions kind:data(any) addr:0x01ff873c
+g_vramSubregionLoadFunctions kind:data(any) addr:0x01ff8744
 _Z23IsSafeToModifySubregioni kind:function(arm,size=0x6c) addr:0x01ff87a4
 _ZN18VRAMStagingManager14ZeroInitializeEv kind:function(arm,size=0x40) addr:0x01ff8810
 _ZN18VRAMStagingManager11GetTaskByIDEi kind:function(arm,size=0x74) addr:0x01ff8850
@@ -58,7 +58,7 @@ data_01ffdcb8 kind:bss addr:0x01ffdcb8
 data_01ffdcd8 kind:bss addr:0x01ffdcd8
 data_01ffdcf8 kind:bss addr:0x01ffdcf8
 data_01ffdd38 kind:bss addr:0x01ffdd38
-data_01ffdd78 kind:bss addr:0x01ffdd78
+g_vramStagingRegionalTaskSets kind:bss addr:0x01ffdd78
 data_01ffdd84 kind:bss addr:0x01ffdd84
 data_01ffdd90 kind:bss addr:0x01ffdd90
 data_01ffdd9c kind:bss addr:0x01ffdd9c
@@ -70,6 +70,6 @@ data_01ffddd8 kind:bss addr:0x01ffddd8
 data_01ffdde4 kind:bss addr:0x01ffdde4
 data_01ffddf0 kind:bss addr:0x01ffddf0
 data_01ffde70 kind:bss addr:0x01ffde70
-data_01ffdf70 kind:bss addr:0x01ffdf70
-data_01ffe270 kind:bss addr:0x01ffe270
+g_vramStagingAllocations kind:bss addr:0x01ffdf70
+g_vramStagingTaskQueue kind:bss addr:0x01ffe270
 data_01fff270 kind:bss addr:0x01fff270

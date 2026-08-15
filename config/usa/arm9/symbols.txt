@@ -6481,6 +6481,10 @@ data_020e92a8 kind:data(any) addr:0x020e92a8
 data_020e9338 kind:data(any) addr:0x020e9338
 data_020e9348 kind:data(any) addr:0x020e9348
 data_020e93fc kind:data(any) addr:0x020e93fc
+
+// random observation: this is a sin/cos lookup table with 0x1000 = 4096 entries
+// the kth entry is the pair (sin(2pi * k/4096), cos(2pi * k/4096)), each stored 
+// as 1.3.12 fixed point
 data_020e9450 kind:data(any) addr:0x020e9450
 data_020e9a50 kind:data(any) addr:0x020e9a50
 data_020ed450 kind:data(any) addr:0x020ed450
@@ -7908,10 +7912,13 @@ data_0214e4a0 kind:bss addr:0x0214e4a0
 data_0214e4c8 kind:bss addr:0x0214e4c8
 data_0214e5b0 kind:bss addr:0x0214e5b0
 data_0214e5bc kind:bss addr:0x0214e5bc
-data_0214e5e4 kind:bss addr:0x0214e5e4
-data_0214e628 kind:bss addr:0x0214e628
-data_02150215 kind:bss addr:0x02150215
-data_02150fdd kind:bss addr:0x02150fdd
+g_stagingManagerInstance kind:bss addr:0x0214e5e4
+g_vramStagingBuffer kind:bss addr:0x0214e628
+
+// 02150215 and 02150fdd were in here, but these are fake
+// (the former arises in a list that spams the u16 value 0x0215
+// and the latter is an entry in a rodata sine/cosine table)
+
 data_02153628 kind:bss addr:0x02153628
 data_02153634 kind:bss addr:0x02153634
 data_02153637 kind:bss addr:0x02153637

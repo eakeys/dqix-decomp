@@ -21,8 +21,6 @@
 #define data_020ee6d0 data_020ee7dc
 #define data_020ee6e8 data_020ee7f4
 
-#define data_0214e628 data_0214fdf0
-
 #define func_0202ae18 func_0202a9d0
 #define func_0202ae24 func_0202a9dc
 #define func_0202b2f0 func_0202aea0
@@ -52,7 +50,7 @@ extern "C"
 extern VRAMStagingManager::CommonVRAMRegionTaskSet data_01ffdd78[10];
 extern VRAMStagingManager::StagingSpaceAllocation data_01ffdf70[0x80];
 extern VRAMStagingManager::Task data_01ffe270[0x100];
-extern unsigned char data_0214e628[0x5000];
+extern unsigned char g_vramStagingBuffer[0x5000];
 
 #define TASK_FLAG_VALID_TASK 0
 #define TASK_FLAG_COMPLETE 1
@@ -151,7 +149,7 @@ VRAMStagingManager::Task* VRAMStagingManager::GetTaskByID(int id)
 VRAMStagingManager::StagingSpaceAllocation*
 VRAMStagingManager::GetStagingSpaceAllocation(const void* allocation)
 {
-    uintptr_t targetOffset = (uintptr_t)allocation - (uintptr_t)&data_0214e628[0];
+    uintptr_t targetOffset = (uintptr_t)allocation - (uintptr_t)&g_vramStagingBuffer[0];
     if (targetOffset >= STAGING_BUFFER_SIZE)
         return NULL;
     StagingSpaceAllocation* candidate = &data_01ffdf70[0];
@@ -245,7 +243,7 @@ void* VRAMStagingManager::AllocateInStagingSpace(unsigned int length)
                 totalSpaceUsed += alignedLength;
                 numEntries++;
                 firstFree->SetFlagBitValue(STAGING_SPACE_ALLOC_FLAG_ALLOCATED, true);
-                allocation = &data_0214e628[chosenOffset];
+                allocation = &g_vramStagingBuffer[chosenOffset];
             }
         }
     }

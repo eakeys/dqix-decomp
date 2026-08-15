@@ -1,37 +1,34 @@
 #include "Graphics/VRAMStaging.h"
 #include <globaldefs.h>
 
-#if defined(jpn)
-#define data_0214e5e4 data_0214fdac
-#endif
-
-extern VRAMStagingManager data_0214e5e4;
+VRAMStagingManager g_stagingManagerInstance;
+unsigned char g_vramStagingBuffer[0x5000];
 
 void LockStagedTextureVRAMCopying()
 {
-    data_0214e5e4.textureLockMask_ <<= 1;
-    data_0214e5e4.textureLockMask_ |= 1;
+    g_stagingManagerInstance.textureLockMask_ <<= 1;
+    g_stagingManagerInstance.textureLockMask_ |= 1;
 }
 
 void UnlockStagedTextureVRAMCopying()
 {
-    data_0214e5e4.textureLockMask_ >>= 1;
+    g_stagingManagerInstance.textureLockMask_ >>= 1;
 }
 
 void* AllocateVRAMStagingMemory(unsigned int length)
 {
-    return data_0214e5e4.AllocateInStagingSpace(length);
+    return g_stagingManagerInstance.AllocateInStagingSpace(length);
 }
 
 void FreeVRAMStagingMemory(const void* allocation)
 {
-    data_0214e5e4.FreeStagingSpaceAllocation(allocation);
+    g_stagingManagerInstance.FreeStagingSpaceAllocation(allocation);
 }
 
 void StageMemoryToVRAM(VRAMSubregion subregion, const void* data, unsigned int offset,
     unsigned int length, bool highPriority, bool allocateStagingSpace)
 {
-    data_0214e5e4.Stage(subregion, data, offset, length, highPriority, allocateStagingSpace);
+    g_stagingManagerInstance.Stage(subregion, data, offset, length, highPriority, allocateStagingSpace);
 }
 
 int StageTexFilePaletteData(volatile NSBXXTex* texture, bool highPriority)
@@ -46,7 +43,7 @@ int StageTexFilePaletteData(volatile NSBXXTex* texture, bool highPriority)
     int offset = (unsigned short)texture->block4VRAMLoadOffset_ << 3;
     const void* src = (const void*)((intptr_t)texture + texture->block4Offset_);
 
-    return data_0214e5e4.Stage(VRAMSubregion_TexturePalette,
+    return g_stagingManagerInstance.Stage(VRAMSubregion_TexturePalette,
         src, offset, size, highPriority, false);
 }
 
@@ -62,16 +59,16 @@ int StageTexFileImageData(volatile NSBXXTex* texture, bool highPriority)
     int offset = (unsigned short)texture->block1VRAMLoadOffset_ << 3;
     const void* src = (const void*)((intptr_t)texture + texture->block1Offset_);
 
-    return data_0214e5e4.Stage(VRAMSubregion_TextureImage,
+    return g_stagingManagerInstance.Stage(VRAMSubregion_TextureImage,
         src, offset, size, highPriority, false);
 }
 
 bool CancelVRAMStagingOperation(int id)
 {
-    return data_0214e5e4.CancelTaskByID(id);
+    return g_stagingManagerInstance.CancelTaskByID(id);
 }
 
 void UpdateVRAMStagingVRAMBanks()
 {
-    data_0214e5e4.UpdateBanks();
+    g_stagingManagerInstance.UpdateBanks();
 }

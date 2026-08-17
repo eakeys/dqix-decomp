@@ -10,6 +10,13 @@
 class Model3D
 {
 public:
+    enum TextureStagingMode
+    {
+        TextureStagingMode_Normal = 0,
+        TextureStagingMode_HighPriority = 1,
+        TextureStagingMode_Immediate = 2
+    };
+
     ModelRenderContext renderContext_;
     NSBXXInternalModel* rawInternalModel_;
     NSBXXTex* rawTEX_;
@@ -54,15 +61,15 @@ public:
     void Clear();
 
     void Func0207e2e0();
-    void LoadFromFile(const char* path, AllocatorUnion* alloc, int arg);
+    void LoadFromFile(const char* path, AllocatorUnion* alloc, TextureStagingMode stagingMode);
 
-    void CopyAndProcessRawFile(AllocatorUnion* alloc, void* data, unsigned int len, int arg);
-    void SetAndProcessRawFile(void* data, unsigned int len, int arg);
+    void CopyAndProcessRawFile(AllocatorUnion* alloc, const void* data, unsigned int len, TextureStagingMode stagingMode);
+    void SetAndProcessRawFile(void* data, unsigned int len, TextureStagingMode stagingMode);
 
-    void CopyRawFile(AllocatorUnion* alloc, void* data, unsigned int len);
+    void CopyRawFile(AllocatorUnion* alloc, const void* data, unsigned int len);
     void SetRawFile(void* rawData, unsigned int length);
     void ClearRawFileCache();
-    void ProcessRawFile(int arg);
+    void ProcessRawFile(TextureStagingMode stagingMode);
 
     bool Draw(bool applyClipping);
     // In practice this is used for shadows

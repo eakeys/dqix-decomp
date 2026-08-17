@@ -35,6 +35,7 @@
 #define GXFIFO_MATRIX_IDENTITY (*(volatile unsigned int*)0x04000454)
 
 #define GXFIFO_MATRIX_SCALE (*(volatile unsigned int*)0x0400046c)
+#define GXFIFO_MATRIX_TRANSLATE (*(volatile unsigned int*)0x04000470)
 
 #define GXFIFO_POLYGON_ATTRIBUTES (*(volatile unsigned int*)0x040004a4)
 

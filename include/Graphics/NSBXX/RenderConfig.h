@@ -60,9 +60,9 @@ struct RenderConfig
 
     // you can safely combine these into a 4x3 matrix representing rotation->translation
     fix32_t objectRotation[9];
-    fix32_t objectPosition[3];
+    Vector3fix objectPosition;
 
-    fix32_t objectScale[3];
+    Vector3fix objectScale;
 
     uint32_t texImageParams;
 

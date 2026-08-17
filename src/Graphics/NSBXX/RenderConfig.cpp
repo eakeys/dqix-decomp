@@ -100,15 +100,15 @@ void RenderConfig::Reset()
     data_0210a010.lightColors[2] = BUILD_LIGHT_COLOR(2, 0, 31, 0);
     data_0210a010.lightColors[3] = BUILD_LIGHT_COLOR(3, 0, 0, 31);
 
-    data_0210a010.objectPosition[0] = 0;
-    data_0210a010.objectPosition[1] = 0;
-    data_0210a010.objectPosition[2] = 0;
+    data_0210a010.objectPosition.x = 0;
+    data_0210a010.objectPosition.y = 0;
+    data_0210a010.objectPosition.z = 0;
 
     func_020c1180(&data_0210a010.objectRotation[0]);
 
-    data_0210a010.objectScale[0] = 1 << 12;
-    data_0210a010.objectScale[1] = 1 << 12;
-    data_0210a010.objectScale[2] = 1 << 12;
+    data_0210a010.objectScale.x = 1 << 12;
+    data_0210a010.objectScale.y = 1 << 12;
+    data_0210a010.objectScale.z = 1 << 12;
 
     data_0210a010.texImageParams = 0;
     data_0210a010.flags = 0;
@@ -142,7 +142,7 @@ void RenderConfig::SetObjectPosition(Vector3fix *pos)
 {
     if (pos != NULL)
     {
-        ArrayCopyVec3(&data_0210a010.objectPosition[0], pos);
+        ArrayCopyVec3(&data_0210a010.objectPosition, pos);
         data_0210a010.flags &= ~((1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID) | (1 << RENDER_CONFIG_FLAG_5) | (1 << RENDER_CONFIG_FLAG_2));
     }
 }
@@ -151,7 +151,7 @@ void RenderConfig::SetObjectScale(Vector3fix *scale)
 {
     if (scale != NULL)
     {
-        ArrayCopyVec3(&data_0210a010.objectScale[0], scale);
+        ArrayCopyVec3(&data_0210a010.objectScale, scale);
         data_0210a010.flags &= ~((1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID) | (1 << RENDER_CONFIG_FLAG_5) | (1 << RENDER_CONFIG_FLAG_2));
     }
 }
@@ -197,7 +197,7 @@ void RecalculateWorldViewAndInverse()
 {
     func_020c1d60(&data_0210a010.objectRotation[0], &data_0210a010.viewMatrix[0], &data_0210a010.cachedWorldView[0]);
     func_020c1948(&data_0210a010.cachedWorldView[0], &data_0210a010.cachedWorldView[0],
-        data_0210a010.objectScale[0], data_0210a010.objectScale[1], data_0210a010.objectScale[2]);
+        data_0210a010.objectScale.x, data_0210a010.objectScale.y, data_0210a010.objectScale.z);
     func_020c19d4(&data_0210a010.cachedWorldView[0], &data_0210a010.cachedInverseWorldView[0]);
 }
 

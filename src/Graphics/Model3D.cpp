@@ -62,7 +62,7 @@ void Model3D::Func0207e2e0()
     this->Clear();
 }
 
-void Model3D::LoadFromFile(const char* path, AllocatorUnion* alloc, int arg)
+void Model3D::LoadFromFile(const char* path, AllocatorUnion* alloc, TextureStagingMode stagingMode)
 {
     if (alloc == NULL)
         return;
@@ -76,30 +76,31 @@ void Model3D::LoadFromFile(const char* path, AllocatorUnion* alloc, int arg)
     else
     {
         CleanInvalidateCacheRange(scratchData, length);
-        CopyAndProcessRawFile(alloc, scratchData, length, arg);
+        CopyAndProcessRawFile(alloc, scratchData, length, stagingMode);
     }
     BackgroundLoader::RemoveLockGlobal();
 }
 
-void Model3D::CopyAndProcessRawFile(AllocatorUnion* alloc, void* data, unsigned int length, int arg)
+void Model3D::CopyAndProcessRawFile(AllocatorUnion* alloc, const void* data,
+    unsigned int length, TextureStagingMode stagingMode)
 {
     if (alloc == NULL || data == NULL || length == 0)
         return;
 
     CopyRawFile(alloc, data, length);
     CleanInvalidateCacheRange(rawBMD_, rawBMDFileSize_);
-    ProcessRawFile(arg);
+    ProcessRawFile(stagingMode);
 }
 
-void Model3D::SetAndProcessRawFile(void* data, unsigned int length, int arg)
+void Model3D::SetAndProcessRawFile(void* data, unsigned int length, TextureStagingMode stagingMode)
 {
     rawBMD_ = data;
     rawBMDFileSize_ = length;
     CleanInvalidateCacheRange(rawBMD_, rawBMDFileSize_);
-    ProcessRawFile(arg);
+    ProcessRawFile(stagingMode);
 }
 
-void Model3D::CopyRawFile(AllocatorUnion* alloc, void* data, unsigned int length)
+void Model3D::CopyRawFile(AllocatorUnion* alloc, const void* data, unsigned int length)
 {
     rawBMD_ = alloc->Allocate(length);
     if (rawBMD_ == NULL)
@@ -124,7 +125,7 @@ void Model3D::ClearRawFileCache()
     CleanInvalidateCacheRange(rawBMD_, rawBMDFileSize_);
 }
 
-void Model3D::ProcessRawFile(int arg)
+void Model3D::ProcessRawFile(TextureStagingMode stagingMode)
 {
     bool block4Succeeded, block23Succeeded, block1Succeeded;
     NSBXXTex* tex0;
@@ -210,7 +211,7 @@ void Model3D::ProcessRawFile(int arg)
     NSBXXTex* tex = (NSBXXTex*)NSBXX_GetTEXFile((NSBXXContainer*)rawBMD_);
     if (tex != NULL)
     {
-        if (arg == 2)
+        if (stagingMode == TextureStagingMode_Immediate)
         {
             LockStagedTextureVRAMCopying();
             NSBXX_Tex_LoadPaletteToVRAM(tex, true);
@@ -219,8 +220,8 @@ void Model3D::ProcessRawFile(int arg)
         }
         else
         {
-            paletteStagingTaskID_ = StageTexFilePaletteData(tex, arg == 1);
-            imageStagingTaskID_ = StageTexFileImageData(tex, arg == 1);
+            paletteStagingTaskID_ = StageTexFilePaletteData(tex, stagingMode == TextureStagingMode_HighPriority);
+            imageStagingTaskID_ = StageTexFileImageData(tex, stagingMode == TextureStagingMode_HighPriority);
         }
     }
 

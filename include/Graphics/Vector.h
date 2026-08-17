@@ -16,9 +16,19 @@ typedef int16_t fix16_t;
 
 struct Vector3i
 {
-    int x;
-    int y;
-    int z;
+    int32_t x;
+    int32_t y;
+    int32_t z;
+};
+
+struct Vector3s
+{
+    int16_t x;
+    int16_t y;
+    int16_t z;
 };
 
 typedef Vector3i Vector3fix;
+typedef Vector3s Vector3fix16;
+
+#define FIX_2PI 0x6488

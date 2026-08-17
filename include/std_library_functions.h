@@ -59,3 +59,27 @@ typedef unsigned int uintptr_t;
 typedef signed int intptr_t;
 
 typedef unsigned int size_t;
+
+#define INLINE_MEMCPY(to, from, size) \
+    { \
+        int i; \
+        unsigned char* dst; \
+        const unsigned char* src; \
+        i = (size); \
+        src = (const unsigned char*)(from); \
+        dst = (unsigned char*)(to); \
+        do { \
+            i--; \
+            *dst = *src; \
+            dst++; \
+            src++; \
+        } while (i != 0); \
+    }
+
+// appeases the ide, array1 = array2 is not officially allowed but mwcc
+// allows it, and sometimes we have to use it
+#ifdef __MWERKS__
+#define COPY_ARRAY(dst, src) dst = src
+#else
+#define COPY_ARRAY(dst, src) INLINE_MEMCPY(dst, src, sizeof(dst))
+#endif

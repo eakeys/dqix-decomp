@@ -266,8 +266,8 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
         {
             if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_TranslateMatrix, (uint32_t*)&data_0210a010.objectPosition[0], 3);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.objectRotation[0], 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_TranslateMatrix, (uint32_t*)&data_0210a010.objectPosition, 3);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.objectRotation, 9);
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
             }
             else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))

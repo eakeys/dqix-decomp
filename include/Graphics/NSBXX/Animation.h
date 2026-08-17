@@ -15,7 +15,7 @@ struct AnimationData
     typedef void (*Callback)(void*, AnimationData*, int);
 
     fix32_t time_;
-    // used for e.g. combining effects of multiple bones
+    // used for e.g. combining effects of multiple bones?
     fix32_t weight_;
     void* pRawData_;
     // call this to populate renderData as appropriate

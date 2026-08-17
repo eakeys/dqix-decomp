@@ -1,17 +1,8 @@
 #include "Graphics/Animation3D.h"
 #include "Graphics/Model3D.h"
-
-#if defined(jpn)
-#define func_02035544 func_02034fa0
-#endif
+#include "World/Object3D.h"
 
 #define ANIMATION_FLAG_NOT_LOOPING 0
-
-extern "C"
-{
-    // length of animation, as number of frames in fixed point representation
-    fix32_t func_02035544(AnimationData*);
-}
 
 void Animation3D::DefaultInitialize()
 {
@@ -75,17 +66,17 @@ void Animation3D::AdvanceTimer(fix32_t dt)
     int64_t prod = (int64_t)dt;
     prod = ((playbackSpeed_ * prod) + 0x800) >> 12;
     pAnimData_->time_ += (fix32_t)prod;
-    if (func_02035544(pAnimData_) <= pAnimData_->time_)
+    if (GetAnimationFrameCountFix32(pAnimData_) <= pAnimData_->time_)
     {
         if (flags_ & (1 << ANIMATION_FLAG_NOT_LOOPING))
         {
-            pAnimData_->time_ = func_02035544(pAnimData_);
+            pAnimData_->time_ = GetAnimationFrameCountFix32(pAnimData_);
         }
         else
         {
-            while (func_02035544(pAnimData_) <= pAnimData_->time_)
+            while (GetAnimationFrameCountFix32(pAnimData_) <= pAnimData_->time_)
             {
-                pAnimData_->time_ -= func_02035544(pAnimData_);
+                pAnimData_->time_ -= GetAnimationFrameCountFix32(pAnimData_);
             }
             if (pAnimData_->time_ < 0)
                 pAnimData_->time_ = 0;

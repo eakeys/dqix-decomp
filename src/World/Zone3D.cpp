@@ -25,8 +25,6 @@ extern "C"
     void* func_0207df50(void*);
     void func_0207df90(void*);
     void func_0207dfac(void*);
-    void* func_0207ecc4(void*);
-    void func_0207eccc(void*, void*);
 
     void* func_0208a9b4();
     void func_02094d00(void*);
@@ -99,7 +97,7 @@ void Zone3D::SwitchZone(unsigned short newID)
     texturePaletteMemory_ = 0;
     unknown_424_ = 1;
     firstBMDJStruct_41c_ = 0;
-    firstTextureStruct_418_ = NULL;
+    firstModel_418_ = NULL;
     unknown_476_ = 0;
     unknown_477_ = 0;
     unknown_82c_ = 0;
@@ -190,6 +188,8 @@ void Zone3D::SwitchZone(unsigned short newID)
 }
 
 // implicitly defined Vector3i::operator=(const Vector3i&)
+
+#if false
 
 void Zone3D::LoadMapAMBL()
 {
@@ -338,48 +338,49 @@ bool Zone3D::ProcessNSBTXFile(const void* filedata, unsigned int filesize, const
     SafeAllocator* allocator = pAllocator_68_;
     void* graphicsPtr = unknown_ptr_50_;
 
-    Model3DListNode* texStruct = (Model3DListNode*)allocator->Allocate(sizeof(Model3DListNode));
-    if (texStruct != NULL)
+    Model3DListNode* modelNode = (Model3DListNode*)allocator->Allocate(sizeof(Model3DListNode));
+    if (modelNode != NULL)
     {
-        texStruct->model_.Clear();
-        texStruct->filename_ = NULL;
-        texStruct->pNext_ = NULL;
+        modelNode->model_.Clear();
+        modelNode->filename_ = NULL;
+        modelNode->pNext_ = NULL;
         char* newFilenameBuffer = (char*)allocator->Allocate(strlen(filename) + 1);
-        texStruct->filename_ = newFilenameBuffer;
+        modelNode->filename_ = newFilenameBuffer;
         if (newFilenameBuffer != NULL)
         {
             strcpy(newFilenameBuffer, filename);
-            texStruct->pNext_ = firstTextureStruct_418_;
-            firstTextureStruct_418_ = texStruct;
+            modelNode->pNext_ = firstModel_418_;
+            firstModel_418_ = modelNode;
             unsigned int decompressedLength;
             void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
             if (decompressed != NULL)
             {
                 func_0207df90(graphicsPtr);
-                texStruct->model_.SetRawFile(decompressed, decompressedLength);
-                texStruct->model_.ClearRawFileCache();;
-                texStruct->model_.ProcessRawFile(2);
+                modelNode->model_.SetRawFile(decompressed, decompressedLength);
+                modelNode->model_.ClearRawFileCache();
+                modelNode->model_.ProcessRawFile(2);
                 func_0207dfac(graphicsPtr);
-                NSBXXTex* pVar5 = (NSBXXTex*)func_0207ecc4(texStruct);
-                if (pVar5 != NULL)
+                NSBXXTex* texture = modelNode->model_.GetTEX0();
+                if (texture != NULL)
                 {
-                    textureImageMemory_ += NSBXX_Tex_GetBlock1Length(pVar5);
-                    texturePaletteMemory_ += NSBXX_Tex_GetBlock4Length(pVar5);
+                    textureImageMemory_ += NSBXX_Tex_GetBlock1Length(texture);
+                    texturePaletteMemory_ += NSBXX_Tex_GetBlock4Length(texture);
                 }
                 bool success = false;
-                if (pVar5 != 0)
+                if (texture != 0)
                 {
-                    unsigned int pVar5Size = *(unsigned int*)((int)pVar5 + 0x14);
-                    void* copyOfpVar5 = allocator->Allocate(pVar5Size);
+                    // bit weird, but I guess block 1 starts right after the metadata ends
+                    unsigned int textureMetadataLength = texture->block1Offset_;
+                    NSBXXTex* copyOfpVar5 = (NSBXXTex*)allocator->Allocate(textureMetadataLength);
                     if (copyOfpVar5 != NULL)
                     {
-                        memcpy(copyOfpVar5, pVar5, pVar5Size);
-                        func_0207eccc(texStruct, copyOfpVar5);
+                        memcpy(copyOfpVar5, texture, textureMetadataLength);
+                        modelNode->model_.SetTEX0(copyOfpVar5);
                         success = true;
                     }
                 }
                 if (!success)
-                    texStruct->model_.Clear();
+                    modelNode->model_.Clear();
             }
         }
     }
@@ -521,3 +522,5 @@ bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, BData:
     firstBMDJStruct_41c_ = newStruct;
     return true;
 }
+
+#endif

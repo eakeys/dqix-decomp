@@ -78,7 +78,7 @@ public:
     } unknownBData_;
     char unknown_struct_f4_[0x18]; //
     char unknown_struct_10c_[0x30c]; // passed to func_0207b9cc
-    Model3DListNode* firstTextureStruct_418_;
+    Model3DListNode* firstModel_418_;
     Zone3D_BMDJStruct* firstBMDJStruct_41c_;
     void* grottoTileMapData_420_; // pointer to array of stride 0x48
     int unknown_424_;

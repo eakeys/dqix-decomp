@@ -358,23 +358,26 @@ void CalculateBoneMatrixRenderDataFromJAC(NSBXXAnimationJAC* jac, int arg, fix32
     data_0210a274->boneMatrixRenderDataScalePopulateProc_(bmrd, &scaleData, data_0210a274->instructionPointer_, boneMatrixFlags);
 }
 
-// not quite a match, some register nonsense
 void CalculateTranslationAmountFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)
 {
+    unsigned int highWeightFrame, lowWeightFrame;
+    unsigned int metadata;
     unsigned int thisFrame = time >> 12;
     fix32_t* samples = (fix32_t*)((intptr_t)jac + channel->samplesOffset_);
+    fix16_t* samples16 = (fix16_t*)samples;
 
     unsigned int averageIndex, directIndex = thisFrame;
 
+    metadata = channel->metadata_;
     // log-rate = 0: every frame is sampled, no need for averaging
-    if ((channel->metadata_ & 0xc0000000) == 0)
+    if ((metadata & 0xc0000000) == 0)
         goto compute_directly;
 
 {
-    unsigned int endFrame = (channel->metadata_ & 0x1fff0000) >> 16;
+    unsigned int endFrame = (metadata & 0x1fff0000) >> 16;
 
     // log-rate = 1 or 3: case 3 ignored, so only case 1 (sample every 2nd frame)
-    if (channel->metadata_ & 0x40000000)
+    if (metadata & 0x40000000)
     {
         if (thisFrame & 1) // odd frame, need to average
         {
@@ -402,14 +405,11 @@ void CalculateTranslationAmountFrameAligned(fix32_t* out, fix32_t time, NSBXXAni
         {
             if (thisFrame > endFrame)
             {
-                // why do we add mod4 here?
                 directIndex = (endFrame / 4) + mod4;
                 goto compute_directly;
             }
             else if (thisFrame & 1) // odd frame: interpolate with 1/4, 3/4 or vice versa
             {
-                unsigned int highWeightFrame, lowWeightFrame;
-
                 if (thisFrame & 2) // 3 mod 4: put weight on the later frame
                 {
                     highWeightFrame = (thisFrame / 4) + 1;
@@ -421,16 +421,15 @@ void CalculateTranslationAmountFrameAligned(fix32_t* out, fix32_t time, NSBXXAni
                     highWeightFrame = thisFrame / 4;
                 }
 
-                if (channel->metadata_ & 0x20000000) // 16-bit samples
+                if (metadata & 0x20000000) // 16-bit samples
                 {
-                    fix16_t* samplesShort = (fix16_t*)samples;
-                    fix32_t rescaledHigh = samplesShort[highWeightFrame] * 3;
-                    *out = (rescaledHigh + samplesShort[lowWeightFrame]) >> 2;
+                    fix32_t rescaledHigh = samples16[highWeightFrame] * 3;
+                    *out = (rescaledHigh + samples16[lowWeightFrame]) >> 2;
                 }
                 else
                 {
-                    int64_t sum64 = (int64_t)samples[highWeightFrame] * 3 + samples[lowWeightFrame];
-                    *out = sum64 >> 2;
+                    int64_t high = samples[highWeightFrame];
+                    *out = (high * 3 + samples[lowWeightFrame]) >> 2;
                 }
                 return;
             }
@@ -449,26 +448,16 @@ void CalculateTranslationAmountFrameAligned(fix32_t* out, fix32_t time, NSBXXAni
 }
 
 compute_average:
-    if (channel->metadata_ & 0x20000000) // 16-bit samples
-    {
-        fix16_t* window = (fix16_t*)samples + averageIndex;
-        *out = (window[0] + window[1]) >> 1;
-    }
+    if (metadata & 0x20000000) // 16-bit samples
+        *out = (*(samples16 + averageIndex) + *(samples16 + averageIndex + 1)) >> 1;
     else // 32-bit samples
-    {
-        fix32_t* window = &samples[averageIndex];
-        *out = (window[0] >> 1) + (window[1] >> 1);
-    }
+        *out = (*(samples + averageIndex) >> 1) + (*(samples + averageIndex + 1) >> 1);
     return;
 compute_directly:
-    if (channel->metadata_ & 0x20000000) // 16-bit samples
-    {
-        *out = ((fix16_t*)samples)[directIndex];
-    }
+    if (metadata & 0x20000000) // 16-bit samples
+        *out = samples16[directIndex];
     else
-    {
         *out = samples[directIndex];
-    }
 }
 
 void CalculateTranslationAmountSmooth(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)

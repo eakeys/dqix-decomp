@@ -83,7 +83,7 @@ CBool NitroVM_FinishRead(NitroVM* vm)
     return true;
 }
 
-void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLength)
+CBool NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLength)
 {
     if (vm->pendingCommand != NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH)
     {
@@ -94,9 +94,7 @@ void NitroVM_WriteOutFilePath(NitroVM* vm, char* buffer, unsigned int bufferLeng
     vm->regext_abc.a.ptr = buffer;
     vm->regext_abc.b.u32 = bufferLength;
 
-    // This might be a bool function, in which case we return the return value
-    // of this. (We still get tail call optimisation though)
-    NitroVM_QueueCommand(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH);
+    return NitroVM_QueueCommand(vm, NITROVM_OPCODE_GET_FILE_OR_DIRECTORY_PATH);
 }
 
 CBool NitroVM_AwaitCommandCompletion(NitroVM* vm)

@@ -91,6 +91,69 @@ struct ModelRenderContext
     unsigned int animatedVisibilityConditions_[2];
 };
 
+// sizeof == 0x188
+struct RenderCommandHandler
+{
+    uint8_t* instructionPointer_;
+    ModelRenderContext* modelContext_;
+    unsigned int flags_;
+    RenderCommandHook hooks_[32];
+    unsigned char hookStages_[32];
+    unsigned char command2Arg1_;
+    unsigned char boundMaterial_;
+    unsigned char currentBoneMatrix_;
+    char padding_af;
+    MaterialRenderData* pMaterialRenderData_;
+    BoneMatrixRenderData* pBoneMatrixRenderData_;
+    int* pCommand2Word_;
+    unsigned int materialBitfield_[2];
+    // If bit n is set (0 <= n <= 63), then the bone of index n has
+    // no non-trivial scaling
+    unsigned int boneMatrixBitfield_[2];
+    unsigned int invBindBitfield_[2];
+    NSBXXNameList* boneList_;
+    NSBXXModelMaterialData* modelMaterials_;
+    NSBXXNameList* meshList_;
+    fix32_t upScale_;
+    fix32_t downScale_;
+    // specifically seems to populate the scaling part
+    void (*boneMatrixRenderDataScalePopulateProc_)(BoneMatrixRenderData*, NSBXXBoneMatrix::Scaling* boneMatrixScaleData, uint8_t* ip, int boneMatrixFlags);
+    void (*boneMatrixRenderDataSubmitProc_)(BoneMatrixRenderData*);
+    void (*textureMatrixCreateProc_)(MaterialRenderData*);
+    MaterialRenderData scratchMaterialRenderData_;
+    BoneMatrixRenderData scratchBoneMatrixRenderData_;
+    int scratchCommand2Word_;
+};
+
+// acts as a gate for commands 3, 5, 12 and 13, and sometimes 4: if not set,
+// the command will be skipped
+#define RCH_FLAG_0 0
+// set if the bound material has alpha = 0
+#define RCH_FLAG_1 1
+// set when command 2 runs, never checked or cleared
+#define RCH_FLAG_2 2
+// set if there's a material bound
+#define RCH_FLAG_3 3
+// set by command 6. I don't see it being cleared anywhere though?
+// Some functions that hook command 6 (see Object3D's bone tracking mechanism)
+// check this before doing their operations
+#define RCH_FLAG_4 4
+// execution done (hit the 1 opcode)
+#define RCH_FLAG_5 5
+// cleared before calling every hook, if then set by the hook the subsequent
+// code will not execute
+#define RCH_FLAG_6 6
+// relates to material/bone matrix render data in the NSBXXInternalModel somehow
+#define RCH_FLAG_7 7
+// if set, most commands have their main operations skipped, but
+// callbacks/hooks all happen as normal
+#define RCH_FLAG_8 8
+// if set, all commands other than 0, 1, 6, 9, 10 are skipped
+#define RCH_FLAG_9 9
+// probably something like 'no bone matrices' given that it forces command
+// 6 to return early
+#define RCH_FLAG_10 10
+
 void RenderModelFromRenderData(ModelRenderContext* renderData);
 // much more barebones implementation of rendering and just does a single
 // mesh / material pair. In practice this seems to be used for shadows

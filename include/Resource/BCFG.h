@@ -8,6 +8,8 @@
 class BCFG
 {
 public:
+    // These are attached to particular animation entries, connected in a linked
+    // list per animation entry. But all of these are actually in one big array
     struct SizeCEntry
     {
         unsigned short unk_0;
@@ -20,23 +22,26 @@ public:
     // these could be the same struct
     struct AltSizeCEntry
     {
-        unsigned short unk_0;
+        unsigned short maybeSoundEffect;
         unsigned short animationIndex;
-        short unk_4;
+        fix16_t triggerTime;
         char unk_6[2];
         AltSizeCEntry* pNext;
     };
 
-    struct AnimationEntry
+    struct AnimationRecord
     {
         char name[16];
-        // the first two entries in this vector are times
-        Vector3fix unknown_vector;
+        fix32_t startTime;
+        fix32_t endTime;
+        // might be fps or something more exact like that. either way, it scales
+        // the speed at which animations play
+        fix32_t frameRate;
         SizeCEntry* firstSizeC;
         AltSizeCEntry* firstAlt;
     };
 
-    AnimationEntry* animations_;
+    AnimationRecord* animations_;
     unsigned short maybeAnimationCount;
     unsigned short maybeAnimationCapacity;
     SizeCEntry* sizeCEntries_;
@@ -56,9 +61,9 @@ public:
     // ought to be private tbh
 public:
     void AllocateAnimationEntries(SafeAllocator* alloc, int count);
-    void InsertAnimationEntry(const AnimationEntry* entry);
+    void InsertAnimationRecord(const AnimationRecord* entry);
     int SearchAnimationByName(const char* name);
-    AnimationEntry* GetAnimationEntry(int idx);
+    AnimationRecord* GetAnimationRecord(int idx);
     int GetNumAnimations() const;
     
     void AllocateSizeCEntries(SafeAllocator* alloc, int count);

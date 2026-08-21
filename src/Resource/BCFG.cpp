@@ -30,14 +30,14 @@ int BCFGScript_Opcode_66(Script::Parameter* params, int paramCount)
         success = false;
     else
     {
-        BCFG::AnimationEntry entry;
+        BCFG::AnimationRecord entry;
         strcpy(entry.name, name);
-        entry.unknown_vector.x = 4096 * params[1].ToFloat();
-        entry.unknown_vector.y = 4096 * params[2].ToFloat();
-        entry.unknown_vector.z = 4096 * params[3].ToFloat();
+        entry.startTime = 4096 * params[1].ToFloat();
+        entry.endTime = 4096 * params[2].ToFloat();
+        entry.frameRate = 4096 * params[3].ToFloat();
         entry.firstSizeC = NULL;
         entry.firstAlt = 0;
-        data_02104b10.pBCFG->InsertAnimationEntry(&entry);
+        data_02104b10.pBCFG->InsertAnimationRecord(&entry);
         success = true;
     }
     return success;
@@ -54,6 +54,8 @@ int BCFGScript_Opcode_6b(Script::Parameter* params, int paramCount)
     return 1;
 }
 
+// when enemies have these it's nearly always only attack1 or attack1a,
+// i.e. the regular attack.
 int BCFGScript_Opcode_6c(Script::Parameter* params, int paramCount)
 {
     BCFG::SizeCEntry entry;
@@ -81,8 +83,8 @@ int BCFGScript_Opcode_6f(Script::Parameter* params, int paramCount)
     BCFG::AltSizeCEntry entry;
 
     entry.animationIndex = data_02104b10.pBCFG->SearchAnimationByName(params[0].ToString());
-    entry.unk_4 = 4096 * params[1].ToFloat();
-    entry.unk_0 = params[2].ToInt();
+    entry.triggerTime = 4096 * params[1].ToFloat();
+    entry.maybeSoundEffect = params[2].ToInt();
     data_02104b10.pBCFG->InsertAltSizeCEntry(&entry);
     return 1;
 }
@@ -131,7 +133,7 @@ void BCFG::AllocateAnimationEntries(SafeAllocator *alloc, int count)
     if (alloc == NULL)
         return;
 
-    animations_ = (AnimationEntry*)alloc->Allocate(count * sizeof(AnimationEntry));
+    animations_ = (AnimationRecord*)alloc->Allocate(count * sizeof(AnimationRecord));
     if (animations_ != NULL)
     {
         maybeAnimationCount = 0;
@@ -144,15 +146,15 @@ void BCFG::AllocateAnimationEntries(SafeAllocator *alloc, int count)
     }
 }
 
-void BCFG::InsertAnimationEntry(const AnimationEntry *entry)
+void BCFG::InsertAnimationRecord(const AnimationRecord *entry)
 {
     if (maybeAnimationCapacity > maybeAnimationCount)
     {
-        AnimationEntry* dest = &animations_[maybeAnimationCount++];
+        AnimationRecord* dest = &animations_[maybeAnimationCount++];
         COPY_ARRAY(dest->name, entry->name);
-        dest->unknown_vector.x = entry->unknown_vector.x;
-        dest->unknown_vector.y = entry->unknown_vector.y;
-        dest->unknown_vector.z = entry->unknown_vector.z;
+        dest->startTime = entry->startTime;
+        dest->endTime = entry->endTime;
+        dest->frameRate = entry->frameRate;
         dest->firstSizeC = entry->firstSizeC;
         dest->firstAlt = entry->firstAlt;
     }
@@ -168,7 +170,7 @@ int BCFG::SearchAnimationByName(const char* name)
     return -1;
 }
 
-BCFG::AnimationEntry* BCFG::GetAnimationEntry(int idx)
+BCFG::AnimationRecord* BCFG::GetAnimationRecord(int idx)
 {
     if (idx < 0 || maybeAnimationCount <= idx)
         return NULL;
@@ -199,7 +201,7 @@ void BCFG::InsertSizeCEntry(const SizeCEntry *entry)
 {
     if (sizeCCapacity_ > sizeCCount_)
     {
-        AnimationEntry* anim = GetAnimationEntry(entry->animationIndex);
+        AnimationRecord* anim = GetAnimationRecord(entry->animationIndex);
         if (anim == NULL)
             return;
         SizeCEntry* dest = &sizeCEntries_[sizeCCount_];
@@ -232,13 +234,13 @@ void BCFG::InsertAltSizeCEntry(const AltSizeCEntry *entry)
 {
     if (altSizeCCapacity_ > altSizeCCount_)
     {
-        AnimationEntry* anim = GetAnimationEntry(entry->animationIndex);
+        AnimationRecord* anim = GetAnimationRecord(entry->animationIndex);
         if (anim == NULL)
             return;
         AltSizeCEntry* dest = &altSizeCEntries_[altSizeCCount_];
-        dest->unk_0 = entry->unk_0;
+        dest->maybeSoundEffect = entry->maybeSoundEffect;
         dest->animationIndex = entry->animationIndex;
-        dest->unk_4 = entry->unk_4;
+        dest->triggerTime = entry->triggerTime;
         dest->pNext = entry->pNext;
         altSizeCEntries_[altSizeCCount_].pNext = anim->firstAlt;
         anim->firstAlt = &altSizeCEntries_[altSizeCCount_];

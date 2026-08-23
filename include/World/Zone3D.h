@@ -49,8 +49,10 @@ public:
     Zone3D_StructPtr_8* pUnknownStruct_8_;
     char string_c_[10]; // holds e.g. "Z02M0100" while in a grotto
     char unknown_16_[0x10];
-    char unknown_26_;
-    char unk_27[0x36 - 0x27];
+    char unknown_26_[0x10];
+#if defined(jpn)
+    char extraBytesJPN_36[0x20]; // not sure if extending previous or a new member
+#endif
     short unknown_36_;
     short unknown_38_;
     int unknown_3c_;

@@ -2,6 +2,10 @@
 #include "std_library_functions.h"
 #include <globaldefs.h>
 
+#if defined(jpn)
+#define data_020ef918 data_020ef808
+#endif
+
 extern char data_020ef918[]; // holds a blank string
 
 inline float BitCastIntToFloat(const uint32_t* num)

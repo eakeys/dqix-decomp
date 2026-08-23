@@ -11,6 +11,44 @@
 #include "Resource/ResourceMutex.h"
 #include "Graphics/VRAMStaging.h"
 
+#if defined(jpn)
+#define func_020100bc func_0200ff18
+#define func_02010208 func_02010064
+#define func_02010218 func_02010074
+#define func_02010220 func_0201007c
+#define func_02016d8c func_02016b2c
+#define func_0202ed74 func_0202e8e4
+#define func_02030c68 func_020307a0
+#define func_02030c9c func_020307d4
+#define func_02030e2c func_02030964
+#define func_02030e88 func_020309c0
+#define func_020311f0 func_02030d28
+#define func_02031234 func_02030d6c
+#define func_02031278 func_02030db0
+#define func_0203ac40 func_0203a698
+#define func_020ca528 func_020cbff4
+#define func_020d8524 func_020d9e88
+#define func_020d1d1c func_020d37e8
+
+#define data_020e7800 data_020e8144
+
+#define data_020efaa8 data_020ef998
+#define data_020efae8 data_020ef9d8
+#define data_020efaf8 data_020ef9e8
+#define data_020efb08 data_020ef9f8
+#define data_020efb0f data_020ef9ff
+#define data_020efb13 data_020efa03
+#define data_020efb1a data_020efa0a
+#define data_020efb21 data_020efa11
+#define data_020efb28 data_020efa18
+#define data_020efb2f data_020efa1f
+#define data_020efb36 data_020efa26
+#define data_020efb3c data_020efa2c
+
+#define data_02104b18 data_02104858
+#define data_02108760 data_021086a4
+#endif
+
 ModelRenderContext* GetModel3DContext(Model3D* model);
 void AnimationPackageListInsert(AnimationPackage** pListStart, AnimationPackage* entry);
 

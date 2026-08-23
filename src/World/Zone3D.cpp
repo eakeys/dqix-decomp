@@ -13,6 +13,25 @@
 // defined after it (a very incomplete list atm)
 //#define ZONE3D_EXPERIMENTAL
 
+#if defined(jpn)
+#define func_0200fdcc func_0200fc28
+#define func_0200fddc func_0200fc38
+#define func_02011584 func_020112f4
+#define func_02013750 func_02013518
+#define func_02013490 func_02013258
+#define func_0201b5b0 func_0201b328
+#define func_02053c6c func_02054fe4
+#define func_0207a5b8 func_0207b3f0
+#define func_0207b9cc func_0207c804
+#define func_0207df50 func_0207ecd0
+#define func_0208a9b4 func_0208b2a8
+#define func_02094d00 func_02096950
+#define func_02099950 func_0209b684
+#define func_020de848 func_020e01c4
+
+#define data_020ef0f0 data_020ef02c
+#endif
+
 extern "C"
 {
     void* func_02011584(BattleStruct*);
@@ -133,7 +152,7 @@ void Zone3D::SwitchZone(unsigned short newID)
 
     string_c_[0] = 0;
     unknown_16_[0] = 0;
-    unknown_26_ = 0;
+    unknown_26_[0] = 0;
     unknown_36_ = 0x7fff;
     unknown_38_ = 0;
     unknown_3c_ = 10;

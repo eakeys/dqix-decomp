@@ -1,6 +1,12 @@
 #include "Resource/BCFG.h"
 #include "Resource/Script.h"
 
+#if defined(jpn)
+#define data_02104b10 data_02104850
+#define data_020efa48 data_020ef938
+#define data_020efaa0 data_020ef990
+#endif
+
 struct Struct_02104b10
 {
     SafeAllocator* allocator;

@@ -76,6 +76,22 @@ typedef unsigned int size_t;
         } while (i != 0); \
     }
 
+#define INLINE_MEMCPY_4(to, from, size) \
+    { \
+        int i; \
+        unsigned int* dst; \
+        const unsigned int* src; \
+        i = (size); \
+        src = (const unsigned int*)(from); \
+        dst = (unsigned int*)(to); \
+        do { \
+           i -= 4; \
+           *dst = *src; \
+           dst++; \
+           src++; \
+        } while (i != 0); \
+    }
+
 // appeases the ide, array1 = array2 is not officially allowed but mwcc
 // allows it, and sometimes we have to use it
 #ifdef __MWERKS__

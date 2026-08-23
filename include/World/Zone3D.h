@@ -4,6 +4,7 @@
 #include "Memory/SafeAllocator.h"
 #include "Graphics/Vector.h"
 #include "Graphics/Model3D.h"
+#include "ZoneFeatures.h"
 
 struct Zone3D_StructPtr_8
 {
@@ -46,7 +47,7 @@ public:
     short unknown_4_;
     char unk_6[2];
     Zone3D_StructPtr_8* pUnknownStruct_8_;
-    char unknown_c_[10]; // holds e.g. "Z02M0100" while in a grotto
+    char string_c_[10]; // holds e.g. "Z02M0100" while in a grotto
     char unknown_16_[0x10];
     char unknown_26_;
     char unk_27[0x36 - 0x27];
@@ -62,22 +63,14 @@ public:
     SafeAllocator internalAllocator_;
     SafeAllocator* pAllocator_68_;
 
-    struct BData
-    {
-        struct BStruct // might be the same as Zone3D_BMDJStruct but not sure
-        {
-            int unknown_0_;
-            Vector3i vec_4_;
-            char buffer_10_[0x48];
-        };
-
-        BStruct* entries_;
-        int arraySize_;
-        int arrayCapacity_;
-        char unk_8[0x7c];
-    } unknownBData_;
+    // Populated from BMBL and BPOS scripts, among other things holds data
+    // about warps and placement of stairs/chests in grottos
+    ZoneFeatures bFeatures_;
     char unknown_struct_f4_[0x18]; //
-    char unknown_struct_10c_[0x30c]; // passed to func_0207b9cc
+    // populated by BATS files.
+    // If you remove it, lighting goes weird outdoors, but I don't see any 
+    // change in towns / battlefields
+    char unknown_struct_10c_[0x30c];
     Model3DListNode* firstModel_418_;
     Zone3D_BMDJStruct* firstBMDJStruct_41c_;
     void* grottoTileMapData_420_; // pointer to array of stride 0x48
@@ -89,7 +82,7 @@ public:
     int unknown_434_;
     int mapAMBLLoadHandle_; // loads things like data/map/Z02M01.ambl
     int mapAMDJLoadHandle_;
-    int unknown_440_;
+    int atsAMBLLoadHandle_; // data/map/ats_%c.ambl
 
     char unk_444[0x474 - 0x444];
 
@@ -109,7 +102,6 @@ public:
     char unknown_834_;
     char unk_835[3];
 
-    // these might be sth like number of vertices / indices for draw commands
     int textureImageMemory_;
     int texturePaletteMemory_;
 
@@ -149,6 +141,8 @@ public:
     bool ProcessBMBLFile(const void* filedata, unsigned int filesize);
     // usa: func_020143d8
     bool ProcessBPOSFile(const void* filedata, unsigned int filesize);
+    // usa: func_02014414
+    bool ProcessBATSFile(const void* filedata, unsigned int filesize);
     
     // usa: func_0201445c
     bool ProcessNSBTXFile(const void* filedata, unsigned int filesize, const char* filename);
@@ -159,5 +153,10 @@ public:
     // usa: func_020146fc
     bool UnpackMapAMDJ();
     // usa: func_02014900
-    bool ProcessBMDJFile(const void* filedata, unsigned int filesize, BData::BStruct* misc);
+    bool ProcessBMDJFile(const void* filedata, unsigned int filesize, ZoneFeatures::Opcode64Entry* misc);
+
+    // usa: func_02014b04
+    void QueueLoadATS_AMBL();
+    // usa: func_02014c04
+    bool UnpackATS_AMBL();
 };

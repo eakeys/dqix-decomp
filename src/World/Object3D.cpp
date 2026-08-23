@@ -2064,7 +2064,6 @@ void BoneTrackingRenderCommandHook(RenderCommandHandler* handler)
             continue;
         
         GetCurrentPositionAndDirectionMatrices(&tracker->matrix[0], NULL);
-        // why does this work? copying bytes gets optimized to copying dwords? Not complaining though...
         COPY_ARRAY(data_02104b18.boneMatrixWithView, tracker->matrix);
         func_020c1d60(&tracker->matrix[0], RenderConfig::GetInverseViewMatrix(), &tracker->matrix[0]);
     }

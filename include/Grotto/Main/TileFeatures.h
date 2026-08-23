@@ -2,7 +2,8 @@
 
 struct TileFeaturePlacementData
 {
-    unsigned char unk[2];
+    // identifier for the tile type (e.g. D01A is 0, D02A is 1, ...)
+    unsigned short tileID;
     // For each of the nine positions (NW, N, NE, ..., SE) this stores the
     // valid directions for a feature placed at said position. The upper four
     // bits are zero; bits 0, 1, 2, 3 correspond to whether it's possible to

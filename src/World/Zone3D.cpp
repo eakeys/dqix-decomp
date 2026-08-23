@@ -8,6 +8,11 @@
 #include "Grotto/Overlay_17/Struct44C8.h"
 #include "Graphics/NSBXX/NSBXX.h"
 
+// we still need to include this file because of Vector3i::operator= being
+// implicitly defined here, so use this to include all the other functions 
+// defined after it (a very incomplete list atm)
+//#define ZONE3D_EXPERIMENTAL
+
 extern "C"
 {
     void* func_02011584(BattleStruct*);
@@ -19,7 +24,11 @@ extern "C"
     void func_0205e104(const char*, SafeAllocator*, const void*, unsigned int);
     void func_0207a5b8(void*);
     void func_0207a614(void*, const char*);
+
+    // member functions of the struct at 0x10c
+    void func_0207b98c(void*);
     void func_0207b9cc(void*);
+    void func_0207ba0c(void*, void*, unsigned int, SafeAllocator*);
 
     // Texture functions
     void* func_0207df50(void*);
@@ -35,17 +44,8 @@ extern "C"
 
     void func_02013490(void*);
     void func_02013750(Zone3D*, bool);
-    // handle bmbl file
-    void func_02014390(Zone3D*, const void*, unsigned int);
-    // handle nsbtx file
-    void func_0201445c(Zone3D*, const void*, unsigned int, const char*);
-    // handle bpos file
-    void func_020143d8(Zone3D*, const void*, unsigned int);
+    void func_02014414(Zone3D*, const void*, unsigned);
     void func_02014a24(Zone3D*, void*);
-    void func_02014b04(Zone3D*);
-    void func_0201e248(void*);
-    void func_0201e2b4(void*, SafeAllocator*, const void*, unsigned int);
-    Zone3D::BData::BStruct* func_0201e2d8(Zone3D::BData*, int);
     void func_0201f040(void*, SafeAllocator*, const void*, unsigned int);
 
     // checks if zone id corresponds to a main floor of a grotto
@@ -74,6 +74,19 @@ extern char data_020ef19f[]; // "Z0%dM0100"
 extern char data_020ef1a9[]; // "Z0%dM0101"
 extern char data_020ef1b3[]; // "Z0%dM0102"
 extern char data_020ef1bd[]; // "Z0%dM0103"
+extern char data_020ef1c7[]; // "%s/ats_%c.ambl"
+extern char data_020ef1d6[]; // "%s.bats"
+extern char data_020ef1de[]; // "ARC:/%s"
+extern char data_020ef1e6[]; // "."
+extern char data_020ef1e8[]; // "nsbmd"
+extern char data_020ef1ee[]; // "col2"
+extern char data_020ef1f3[]; // "open"
+extern char data_020ef1f8[]; // "open2"
+extern char data_020ef1fe[]; // "close"
+extern char data_020ef204[]; // "close2"
+extern char data_020ef20b[]; // "/data/ani/d_%c%03d.spr"
+extern char data_020ef222[]; // "tsuboware"
+extern char data_020ef22c[]; // "ARC:%s"
 
 void Zone3D::SwitchZone(unsigned short newID)
 {
@@ -109,16 +122,16 @@ void Zone3D::SwitchZone(unsigned short newID)
     unknown_434_ = -1;
     mapAMBLLoadHandle_ = -1;
     mapAMDJLoadHandle_ = -1;
-    unknown_440_ = -1;
+    atsAMBLLoadHandle_ = -1;
 
     unknown_478_ = 0;
     unknown_47c_ = 0;
     unknown_834_ = 0;
     unknown_2820_ = 0;
 
-    func_0201e248(&unknownBData_);
+    bFeatures_.Reset();
 
-    unknown_c_[0] = 0;
+    string_c_[0] = 0;
     unknown_16_[0] = 0;
     unknown_26_ = 0;
     unknown_36_ = 0x7fff;
@@ -189,7 +202,7 @@ void Zone3D::SwitchZone(unsigned short newID)
 
 // implicitly defined Vector3i::operator=(const Vector3i&)
 
-#if false
+#ifdef ZONE3D_EXPERIMENTAL
 
 void Zone3D::LoadMapAMBL()
 {
@@ -280,7 +293,8 @@ bool Zone3D::UnpackMapAMBL()
                         SafeAllocator* alloc = pAllocator_68_;
                         unsigned int decompressedSize;
                         const void* decompressed = DecompressLZ77FileIntoScratchSpace(*alloc, innerFilePtr, decompressedSize);
-                        func_0205e104(unknown_c_, alloc, decompressed, decompressedSize);
+                        // this call is responsible for setting the top-screen map
+                        func_0205e104(string_c_, alloc, decompressed, decompressedSize);
                     }
                     // bpos file. From testing these seem to be a grotto thing
                     else if (strcmp(data_020ef150, extension) == 0)
@@ -304,7 +318,7 @@ bool Zone3D::UnpackMapAMBL()
     }
     loader->RemoveTask(mapAMBLLoadHandle_);
     mapAMBLLoadHandle_ = -1;
-    func_02014b04(this);
+    QueueLoadATS_AMBL();
     return true;
 }
 
@@ -315,8 +329,9 @@ bool Zone3D::ProcessBMBLFile(const void* filedata, unsigned int /*filesize*/)
     void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
     Zone3D_StructPtr_8* ptr8 = pUnknownStruct_8_;
 
-    func_0201e248(&unknownBData_);
-    func_0201e2b4(&unknownBData_, allocator, decompressed, decompressedLength);
+    bFeatures_.Reset();
+    // run another script with opcode table at 0x020ef388
+    bFeatures_.LoadFromScript(allocator, decompressed, decompressedLength);
     pUnknownStruct_8_ = ptr8; // why?
     return true;
 }
@@ -328,8 +343,18 @@ bool Zone3D::ProcessBPOSFile(const void* filedata, unsigned int /*filesize*/)
     void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
     Zone3D_StructPtr_8* ptr8 = pUnknownStruct_8_;
 
-    func_0201e2b4(&unknownBData_, allocator, decompressed, decompressedLength);
+    bFeatures_.LoadFromScript(allocator, decompressed, decompressedLength);
     pUnknownStruct_8_ = ptr8; // why?
+    return true;
+}
+
+bool Zone3D::ProcessBATSFile(const void* filedata, unsigned int /*filesize*/)
+{
+    SafeAllocator* allocator = pAllocator_68_;
+    unsigned int decompressedLength;
+    void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
+    func_0207b98c(unknown_struct_10c_);
+    func_0207ba0c(unknown_struct_10c_, decompressed, decompressedLength, allocator);
     return true;
 }
 
@@ -358,7 +383,7 @@ bool Zone3D::ProcessNSBTXFile(const void* filedata, unsigned int filesize, const
                 func_0207df90(graphicsPtr);
                 modelNode->model_.SetRawFile(decompressed, decompressedLength);
                 modelNode->model_.ClearRawFileCache();
-                modelNode->model_.ProcessRawFile(2);
+                modelNode->model_.ProcessRawFile(Model3D::TextureStagingMode_Immediate);
                 func_0207dfac(graphicsPtr);
                 NSBXXTex* texture = modelNode->model_.GetTEX0();
                 if (texture != NULL)
@@ -471,11 +496,11 @@ bool Zone3D::UnpackMapAMDJ()
             const void* innerFilePtr = narc.GetFileByIndex(fileID);
             if (strcmp(data_020ef199, extension) == 0)
             {
-                int numIterations = unknownBData_.arraySize_;
+                int numIterations = bFeatures_.arraySize64_;
                 for (int i = 0; i < numIterations; i++)
                 {
-                    BData::BStruct* bstr = func_0201e2d8(&unknownBData_, i);
-                    if (strstr(innerFilePath, bstr->buffer_10_))
+                    ZoneFeatures::Opcode64Entry* bstr = bFeatures_.GetOpcode64Entry(i);
+                    if (strstr(innerFilePath, bstr->string_10))
                         ProcessBMDJFile(innerFilePtr, innerFilesize, bstr);
                 }
             }
@@ -502,7 +527,7 @@ bool Zone3D::UnpackMapAMDJ()
     return true;
 }
 
-bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, BData::BStruct* misc)
+bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, ZoneFeatures::Opcode64Entry* misc)
 {
     SafeAllocator* allocator = pAllocator_68_;
     Zone3D_BMDJStruct* newStruct = (Zone3D_BMDJStruct*)allocator->Allocate(sizeof(Zone3D_BMDJStruct));
@@ -510,8 +535,8 @@ bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, BData:
         return false;
 
     func_02013454(newStruct);
-    newStruct->unknown_0_ = misc->unknown_0_;
-    newStruct->vec_48_ = misc->vec_4_;
+    newStruct->unknown_0_ = misc->unk_0;
+    newStruct->vec_48_ = misc->vector_4.vec;
     unsigned int decompressedLength;
     void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
     if (decompressed == NULL)
@@ -520,6 +545,74 @@ bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, BData:
     func_0201f040(&newStruct->unk_4, allocator, decompressed, decompressedLength);
     newStruct->pNext_ = firstBMDJStruct_41c_;
     firstBMDJStruct_41c_ = newStruct;
+    return true;
+}
+
+void Zone3D::QueueLoadATS_AMBL()
+{
+    if (isInMainGrottoFloor_23b8_)
+    {
+        int environ = grotto_.GetActiveGrottoEnviron();
+        if (environ == 0)
+            environ = 1;
+        if (currentGrottoFloor_23ba_ <= 4)
+            sprintf(string_c_, data_020ef19f, environ);
+        else if (currentGrottoFloor_23ba_ <= 8)
+            sprintf(string_c_, data_020ef1a9, environ);
+        else if (currentGrottoFloor_23ba_ <= 12)
+            sprintf(string_c_, data_020ef1b3, environ);
+        else if (currentGrottoFloor_23ba_ <= 16)
+            sprintf(string_c_, data_020ef1bd, environ);
+    }
+    if (strlen(string_c_) == 0)
+        LoadMapAMDJ();
+    else
+    {
+        BackgroundLoader* loader = BackgroundLoader::GetInstance();
+        char filename[40];
+        sprintf(filename, data_020ef1c7, data_020ef116, string_c_[0]);
+        atsAMBLLoadHandle_ = loader->QueueLoadFile(filename, NULL);
+    }
+}
+
+bool Zone3D::UnpackATS_AMBL()
+{
+    if (atsAMBLLoadHandle_ < 0)
+        return true;
+    
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+    if (loader->GetTaskStatus(atsAMBLLoadHandle_) == 0)
+        return false;
+
+    if (loader->GetDetailedTaskStatus(atsAMBLLoadHandle_) != BackgroundLoader::TaskStatus_Complete)
+    {
+        loader->RemoveTask(atsAMBLLoadHandle_);
+        atsAMBLLoadHandle_ = -1;
+        LoadMapAMDJ();
+        return true;
+    }
+
+    void* narcBuffer;
+    unsigned int narcLength;
+    loader->GetLoadedFileByID(atsAMBLLoadHandle_, &narcBuffer, &narcLength);
+    char targetInnerFile[40];
+    sprintf(targetInnerFile, data_020ef1d6, string_c_);
+
+    const void* batsFile;
+    unsigned int batsFileLength;
+
+    if (!GetFileInNarc(narcBuffer, targetInnerFile, &batsFile, &batsFileLength, 0))
+    {
+        loader->RemoveTask(atsAMBLLoadHandle_);
+        atsAMBLLoadHandle_ = -1;
+        LoadMapAMDJ();
+        return true;
+    }
+
+    func_02014414(this, batsFile, batsFileLength);
+    loader->RemoveTask(atsAMBLLoadHandle_);
+    atsAMBLLoadHandle_ = -1;
+    LoadMapAMDJ();
     return true;
 }
 

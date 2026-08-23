@@ -57,7 +57,7 @@ void RenderCommand_11(RenderCommandHandler* handler, int modifier)
 // second parameter is unknown / seems to be unused
 void RenderCommand_12(RenderCommandHandler* handler, int modifier)
 {
-    fix32_t directionMat3x3[9];
+    Matrix3x3 directionMat3x3;
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
     {
         // if texcoord transformation mode != 2 (normal), set it to 2 and submit
@@ -130,7 +130,7 @@ void RenderCommand_12(RenderCommandHandler* handler, int modifier)
                     bit13data += sizeof(NSBXXMaterial::ExtensionData_Bit3);
                 
                 NSBXXMaterial::ExtensionData_Bit13* ptr = (NSBXXMaterial::ExtensionData_Bit13*)bit13data;
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x4, (uint32_t*)&ptr->matrix_[0], 16);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x4, (uint32_t*)ptr->matrix_.entries, 16);
             }
         }
 
@@ -148,23 +148,23 @@ void RenderCommand_12(RenderCommandHandler* handler, int modifier)
             uint32_t posVectorMode = 2;
             SubmitCommandToGeometryFifo(GXFifoCommand_SetMatrixMode, &posVectorMode, 1);
             
-            GetCurrentPositionAndDirectionMatrices(NULL, directionMat3x3);
+            GetCurrentPositionAndDirectionMatrices(NULL, &directionMat3x3);
             uint32_t textureMode = 3;
             SubmitCommandToGeometryFifo(GXFifoCommand_SetMatrixMode, &textureMode, 1);
             if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.viewMatrix, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.objectRotation, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)directionMat3x3, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.viewMatrix.entries, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.objectRotationPosition.rotation.entries, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&directionMat3x3.entries, 9);
             }
             else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)data_0210a010.viewMatrix, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)directionMat3x3, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.viewMatrix.entries, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&directionMat3x3.entries, 9);
             }
             else
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)directionMat3x3, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&directionMat3x3.entries, 9);
             }
         }
         // switch back to position+vector mode
@@ -181,8 +181,8 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
 {
     if (!(handler->flags_ & (1 << RCH_FLAG_9)) && (handler->flags_ & (1 << RCH_FLAG_0)))
     {
-        fix32_t worldView[12];
-        GetCurrentPositionAndDirectionMatrices(worldView, NULL);
+        Matrix4x3 worldView;
+        GetCurrentPositionAndDirectionMatrices(&worldView, NULL);
 
         // store onto the position+vector stack
         uint32_t storeMatrixPos = 30;
@@ -215,11 +215,11 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
             unsigned int materialWidth = handler->pMaterialRenderData_->materialWidth_;
             unsigned int materialHeight = handler->pMaterialRenderData_->materialHeight_;
 
-            data_020f1d08.command13Matrix4x4_[0] = materialWidth * 0x8000;
-            data_020f1d08.command13Matrix4x4_[5] = -materialHeight * 0x8000;
-            data_020f1d08.command13Matrix4x4_[12] = materialWidth * 0x8000;
-            data_020f1d08.command13Matrix4x4_[13] = materialHeight * 0x8000;
-            SubmitCommandToGeometryFifo(GXFifoCommand_LoadMat4x4, (uint32_t*)data_020f1d08.command13Matrix4x4_, 16);
+            data_020f1d08.command13Matrix4x4_.entries[0] = materialWidth * 0x8000;
+            data_020f1d08.command13Matrix4x4_.entries[5] = -materialHeight * 0x8000;
+            data_020f1d08.command13Matrix4x4_.entries[12] = materialWidth * 0x8000;
+            data_020f1d08.command13Matrix4x4_.entries[13] = materialHeight * 0x8000;
+            SubmitCommandToGeometryFifo(GXFifoCommand_LoadMat4x4, (uint32_t*)data_020f1d08.command13Matrix4x4_.entries, 16);
         }
 
         if (callbackStage == 2)
@@ -249,7 +249,7 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
                     bit13addr += sizeof(NSBXXMaterial::ExtensionData_Bit3);
 
                 NSBXXMaterial::ExtensionData_Bit13* extData = (NSBXXMaterial::ExtensionData_Bit13*)bit13addr;
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x4, (uint32_t*)extData->matrix_, 16);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x4, (uint32_t*)extData->matrix_.entries, 16);
             }
         }
 
@@ -266,34 +266,34 @@ void RenderCommand_13(RenderCommandHandler* handler, int modifier)
         {
             if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_0))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_TranslateMatrix, (uint32_t*)&data_0210a010.objectPosition, 3);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.objectRotation, 9);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
+                SubmitCommandToGeometryFifo(GXFifoCommand_TranslateMatrix, (uint32_t*)&data_0210a010.objectRotationPosition.translation, 3);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)&data_0210a010.objectRotationPosition.rotation.entries, 9);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)&worldView.entries, 12);
             }
             else if (data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_1))
             {
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)&worldView.entries, 12);
             }
             else
             {
-                const fix32_t* invView = RenderConfig::GetInverseViewMatrix();
+                const Matrix4x3* invView = RenderConfig::GetInverseViewMatrix();
                 SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)invView, 12);
-                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)worldView, 12);
+                SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)&worldView.entries, 12);
             }
 
             SendQueuedDataToGeometryFifo();
             GXFIFO_MATRIX_MODE = 0; // projection
             GXFIFO_MATRIX_PUSH = 0;
             GXFIFO_MATRIX_IDENTITY = 0;
-            fix32_t worldViewAgain[16];
-            while (func_020c54fc(worldViewAgain) != 0) {}
+            Matrix4x4 worldViewAgain;
+            while (func_020c54fc(&worldViewAgain) != 0) {}
             GXFIFO_MATRIX_POP = 1;
             GXFIFO_MATRIX_MODE = 3; // texture matrix
-            SubmitCommandToGeometryFifo(GXFifoCommand_LoadMat4x4, (uint32_t*)worldViewAgain, 16);
+            SubmitCommandToGeometryFifo(GXFifoCommand_LoadMat4x4, (uint32_t*)worldViewAgain.entries, 16);
             
             // casting to short then unsigned short is necessary to match assembly
-            uint16_t xCoordIntPart = (short)((unsigned int)(worldViewAgain[12] >> 4) >> 8);
-            uint16_t yCoordIntPart = (short)((unsigned int)(worldViewAgain[13] >> 4) >> 8);
+            uint16_t xCoordIntPart = (short)((unsigned int)(worldViewAgain.entries[12] >> 4) >> 8);
+            uint16_t yCoordIntPart = (short)((unsigned int)(worldViewAgain.entries[13] >> 4) >> 8);
             uint32_t texCoordsPacked = xCoordIntPart | (yCoordIntPart << 16);
             SubmitCommandToGeometryFifo(GXFifoCommand_SetTextureCoords, &texCoordsPacked, 1);
         }

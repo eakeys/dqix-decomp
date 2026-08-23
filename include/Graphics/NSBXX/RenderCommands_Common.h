@@ -85,7 +85,7 @@ extern struct Struct_020f1d08
     // only one of these is not null
     void (*meshDrawFunctions[4])(RenderCommandHandler*, int modifier, NSBXXMesh*, unsigned int idx);
 
-    fix32_t command13Matrix4x4_[16];
+    Matrix4x4 command13Matrix4x4_;
 } data_020f1d08;
 
 // a blob of GXFIFO data used by command 7. The entries are
@@ -105,8 +105,7 @@ struct Struct_020f1d78 {
     // always 2 (position + vector?)
     uint32_t matrixModeParameter;
     // this is always the 3x3 identity, but combined with translation gives a 4x3 matrix
-    fix32_t matrixLinearPart[9];
-    Vector3fix translation;
+    Matrix4x3 rotationTranslation;
 
     Vector3fix scaling;
 } extern data_020f1d78, data_020f1dc0;
@@ -126,12 +125,13 @@ struct Struct_0210b078
 
 struct Struct_0210b678
 {
-    fix32_t mat4x4[16];
-    fix32_t mat3x3[9];
+    Matrix4x4 mat4x4;
+    Matrix3x3 mat3x3;
 } extern data_0210b678[];
 
 extern "C"
 {  
+#if true
     // expand a 3x4 matrix (param 1) into a 4x4 matrix (param 2)
     void func_020c1868(const void*, void*);
     // multiply 4x4 matrices, store in param 3.
@@ -148,6 +148,7 @@ extern "C"
     void func_020c2cf0(fix32_t a, fix32_t b);
     // normalize vector3 (param 1) into vector3 (param 2)
     void func_020c2f18(const void*, void*);
+#endif
     // load the specified matrix into the current matrix (3x4).
     void func_020c5188(const fix32_t*);
     // multiply the current matrix by the specified one (3x4), i.e carry

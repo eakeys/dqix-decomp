@@ -13,11 +13,6 @@ struct Struct_020fdc20
     ZoneFeatures* warp;
 } extern data_020fdc20;
 
-union Matrix4x3
-{
-    fix32_t entries[12];
-};
-
 extern "C"
 {
     // zero memory

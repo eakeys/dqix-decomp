@@ -40,8 +40,8 @@ extern "C"
     // reset various geometry registers
     void func_020c51dc();
 
-    int func_020c54fc(fix32_t*); // try to read clip matrix, -1 on failure
-    int func_020c552c(fix32_t*); // try to read vector result matrix, -1 on failure
+    int func_020c54fc(Matrix4x4*); // try to read clip matrix, -1 on failure
+    int func_020c552c(Matrix3x3*); // try to read vector result matrix, -1 on failure
 
     void func_020ca0a8(int dmaChannel, const void* source, unsigned int length,
         DMACompletionCallback onCompletion, int callbackUserdata);
@@ -153,7 +153,7 @@ extern "C" void SubmitCommandToGeometryFifo(int command, const uint32_t* params,
     func_020ca430(params, &GXFIFO, numParams * 4);
 }
 
-void GetCurrentPositionAndDirectionMatrices(fix32_t* position, fix32_t* direction)
+void GetCurrentPositionAndDirectionMatrices(Matrix4x3* position, Matrix3x3* direction)
 {
     SendQueuedDataToGeometryFifo();
     GXFIFO_MATRIX_MODE = 0; // projection
@@ -162,9 +162,9 @@ void GetCurrentPositionAndDirectionMatrices(fix32_t* position, fix32_t* directio
 
     if (position != NULL)
     {
-        fix32_t clipMatrix4x4[16];
-        while (func_020c54fc(clipMatrix4x4) != 0) {}
-        func_020c2208(clipMatrix4x4, position);
+        Matrix4x4 clipMatrix4x4;
+        while (func_020c54fc(&clipMatrix4x4) != 0) {}
+        Mat4x4_ConvertTo4x3(&clipMatrix4x4, position);
     }
 
     if (direction != NULL)
@@ -177,7 +177,7 @@ void GetCurrentPositionAndDirectionMatrices(fix32_t* position, fix32_t* directio
 }
 
 bool GetModelBonePositionAndDirectionMatrices(ModelRenderContext *context,
-    fix32_t *outPos, fix32_t *outDir, unsigned int boneIndex)
+    Matrix4x3* outPos, Matrix3x3* outDir, unsigned int boneIndex)
 {
     NSBXXInternalModel* model = context->internalModel_;
     NSBXXNameList* boneList = &model->boneList_;
@@ -207,31 +207,31 @@ void Finish3DRendering()
 int ConvertWorldToScreenCoordinates(const Vector3fix *world, int *outX, int *outY)
 {
     int success;
-    fix32_t viewVector[3];
+    Vector3fix viewVector;
 
-    fix32_t* proj = data_0210a010.projectionMatrix;
+    Matrix4x4* proj = &data_0210a010.projectionMatrix;
 
-    func_020c2034((const fix32_t*)world, &data_0210a010.viewMatrix[0], viewVector);
+    Mat4x3_ApplyToVector(world, &data_0210a010.viewMatrix, &viewVector);
 
-    int64_t projectedW = (uint64_t)viewVector[0] * proj[3] +
-        (int64_t)viewVector[1] * proj[7] +
-        (int64_t)viewVector[2] * proj[11];
+    int64_t projectedW = (uint64_t)viewVector.x * proj->entries[3] +
+        (int64_t)viewVector.y * proj->entries[7] +
+        (int64_t)viewVector.z * proj->entries[11];
 
-    func_020c2c94((fix32_t)(projectedW >> 12) + proj[15]);
+    fix32_QueueComputeReciprocal((fix32_t)(projectedW >> 12) + proj->entries[15]);
 
-    int64_t productX = (uint64_t)viewVector[0] * proj[0] +
-        (int64_t)viewVector[1] * proj[4] +
-        (int64_t)viewVector[2] * proj[8];
+    int64_t productX = (uint64_t)viewVector.x * proj->entries[0] +
+        (int64_t)viewVector.y * proj->entries[4] +
+        (int64_t)viewVector.z * proj->entries[8];
 
-    fix32_t reducedX = (fix32_t)(productX >> 12) + proj[12];
+    fix32_t reducedX = (fix32_t)(productX >> 12) + proj->entries[12];
 
-    int64_t productY = (uint64_t)viewVector[0] * proj[1] +
-        (int64_t)viewVector[1] * proj[5] +
-        (int64_t)viewVector[2] * proj[9];
+    int64_t productY = (uint64_t)viewVector.x * proj->entries[1] +
+        (int64_t)viewVector.y * proj->entries[5] +
+        (int64_t)viewVector.z * proj->entries[9];
 
-    fix32_t reducedY = (fix32_t)(productY >> 12) + proj[13];
+    fix32_t reducedY = (fix32_t)(productY >> 12) + proj->entries[13];
 
-    int64_t largeInvW = func_020c2c38();
+    int64_t largeInvW = GetHardwareDividerResult();
 
     // Compute x/w and y/w using a 32-bit right shift, then transform via
     // u -> (1 + u)/2 to adjust the range from (-1, 1) to (0, 1)

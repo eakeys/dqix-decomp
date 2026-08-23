@@ -4,36 +4,11 @@
 
 #pragma optimize_for_size off
 
-#if defined(jpn)
-#define func_020c1180 func_020c2c4c
-#define func_020c1840 func_020c330c
-#define func_020c1948 func_020c3414
-#define func_020c19d4 func_020c34a0
-#define func_020c1d60 func_020c382c
-#define func_020c21dc func_020c3ca8
-
-#endif
-
-extern "C"
-{
-    // write 3x3 identity
-    void func_020c1180(fix32_t*);
-    // write 3x4 identity
-    void func_020c1840(fix32_t*);
-    // sets out = diag(x, y, z) * mat
-    void func_020c1948(const fix32_t* mat, fix32_t* out, fix32_t x, fix32_t y, fix32_t z);
-    // invert 3x4 matrix (returns determinant?)
-    fix32_t func_020c19d4(const fix32_t* in, fix32_t* out);
-    // multiply 3x4 matrices, store a * b in out
-    void func_020c1d60(const fix32_t* a, const fix32_t* b, fix32_t* out);
-    // write 4x4 identity
-    void func_020c21dc(fix32_t*);
-}
-
 #define BUILD_LIGHT_VECTOR(idx, x, y, z) (((unsigned)(idx) << 30) | ((unsigned)(z) << 20) | ((unsigned)(y) << 10) | ((unsigned)(x)))
 #define RGB(r,g,b) (((unsigned)(r)) | ((unsigned)(g) << 5) | ((unsigned)(b) << 10))
 #define BUILD_LIGHT_COLOR(idx, r,g,b) (((unsigned)(idx) << 30) | RGB((r),(g),(b)))
 
+// kind of evil but this prevents invoking Vector3fix::operator=
 static inline void ArrayCopyVec3(void* dst, const void* src)
 {
     struct ArrayVec3 { fix32_t values[3]; };
@@ -79,8 +54,8 @@ void RenderConfig::Reset()
         GXFifoCommand_SetTexImageParams
     );
 
-    func_020c1840(&data_0210a010.viewMatrix[0]);
-    func_020c21dc(&data_0210a010.projectionMatrix[0]);
+    Mat4x3_WriteIdentity(&data_0210a010.viewMatrix);
+    Mat4x4_WriteIdentity(&data_0210a010.projectionMatrix);
 
     uint32_t minusInvSqrt3 = 0x2d8;
     data_0210a010.lightVectors[0] = BUILD_LIGHT_VECTOR(0,
@@ -100,11 +75,11 @@ void RenderConfig::Reset()
     data_0210a010.lightColors[2] = BUILD_LIGHT_COLOR(2, 0, 31, 0);
     data_0210a010.lightColors[3] = BUILD_LIGHT_COLOR(3, 0, 0, 31);
 
-    data_0210a010.objectPosition.x = 0;
-    data_0210a010.objectPosition.y = 0;
-    data_0210a010.objectPosition.z = 0;
+    data_0210a010.objectRotationPosition.translation.x = 0;
+    data_0210a010.objectRotationPosition.translation.y = 0;
+    data_0210a010.objectRotationPosition.translation.z = 0;
 
-    func_020c1180(&data_0210a010.objectRotation[0]);
+    Mat3x3_WriteIdentity(&data_0210a010.objectRotationPosition.rotation);
 
     data_0210a010.objectScale.x = 1 << 12;
     data_0210a010.objectScale.y = 1 << 12;
@@ -142,7 +117,7 @@ void RenderConfig::SetObjectPosition(Vector3fix *pos)
 {
     if (pos != NULL)
     {
-        ArrayCopyVec3(&data_0210a010.objectPosition, pos);
+        ArrayCopyVec3(&data_0210a010.objectRotationPosition.translation, pos);
         data_0210a010.flags &= ~((1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID) | (1 << RENDER_CONFIG_FLAG_5) | (1 << RENDER_CONFIG_FLAG_2));
     }
 }
@@ -182,43 +157,43 @@ void RenderConfig::SetPolygonAttributes(unsigned int lights, unsigned int mode,
         (lights | mode << 4 | culling << 6) | polygonID << 24 | alpha << 16;
 }
 
-const fix32_t *RenderConfig::GetInverseViewMatrix()
+const Matrix4x3* RenderConfig::GetInverseViewMatrix()
 {
     if (!(data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_INVERSE_VIEW_CACHE_VALID)))
     {
-        func_020c19d4(&data_0210a010.viewMatrix[0], &data_0210a010.cachedInverseView[0]);
+        Mat4x3_Invert(&data_0210a010.viewMatrix, &data_0210a010.cachedInverseView);
         data_0210a010.flags |= (1 << RENDER_CONFIG_FLAG_INVERSE_VIEW_CACHE_VALID);
     }
-    return &data_0210a010.cachedInverseView[0];
+    return &data_0210a010.cachedInverseView;
 }
 
 // can be made static later
 void RecalculateWorldViewAndInverse()
 {
-    func_020c1d60(&data_0210a010.objectRotation[0], &data_0210a010.viewMatrix[0], &data_0210a010.cachedWorldView[0]);
-    func_020c1948(&data_0210a010.cachedWorldView[0], &data_0210a010.cachedWorldView[0],
+    Mat4x3_Multiply(&data_0210a010.objectRotationPosition, &data_0210a010.viewMatrix, &data_0210a010.cachedWorldView);
+    Mat4x3_ApplyScale(&data_0210a010.cachedWorldView, &data_0210a010.cachedWorldView,
         data_0210a010.objectScale.x, data_0210a010.objectScale.y, data_0210a010.objectScale.z);
-    func_020c19d4(&data_0210a010.cachedWorldView[0], &data_0210a010.cachedInverseWorldView[0]);
+    Mat4x3_Invert(&data_0210a010.cachedWorldView, &data_0210a010.cachedInverseWorldView);
 }
 
-const fix32_t *RenderConfig::GetCombinedWorldViewMatrix()
+const Matrix4x3* RenderConfig::GetCombinedWorldViewMatrix()
 {
     if (!(data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID)))
     {
         RecalculateWorldViewAndInverse();
         data_0210a010.flags |= (1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID);
     }
-    return &data_0210a010.cachedWorldView[0];
+    return &data_0210a010.cachedWorldView;
 }
 
-const fix32_t *RenderConfig::GetInverseCombinedWorldViewMatrix()
+const Matrix4x3* RenderConfig::GetInverseCombinedWorldViewMatrix()
 {
     if (!(data_0210a010.flags & (1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID)))
     {
         RecalculateWorldViewAndInverse();
         data_0210a010.flags |= (1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID);
     }
-    return &data_0210a010.cachedInverseWorldView[0];
+    return &data_0210a010.cachedInverseWorldView;
 }
 
 void RenderConfig::GetViewport(int *left, int *top, int *right, int *bottom)

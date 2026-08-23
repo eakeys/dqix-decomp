@@ -3,22 +3,12 @@
 #pragma optimize_for_size off
 
 #if defined(jpn)
-#define func_020c2bf4 func_020c46c0
-#define func_020c2e34 func_020c4900
-#define func_020c2f18 func_020c49e4
 #define func_020ca408 func_020cbed4
 #define func_020ca458 func_020cbf24
 #endif
 
 extern "C"
 {
-    // fix32_t division
-    fix32_t func_020c2bf4(fix32_t num, fix32_t denom);
-    // calculate fixed point cross product of vectors
-    void func_020c2e34(const fix32_t* u, const fix32_t* v, fix32_t* out);
-    // normalize Vector3fix
-    void func_020c2f18(const fix32_t* in, fix32_t* out);
-
     void func_020ca408(const void* src, void* dst, unsigned len);
     void func_020ca458(int value, void* data, unsigned len);
 }
@@ -134,11 +124,11 @@ bool ProcessJointAnimationsOnBoneMatrix(BoneMatrixRenderData* bone, AnimationDat
             anim->callback_(&tempData, anim, anim->entries_[boneIdx] & 0xff);
             if (numAnimsProcessed == 0)
             {
-                func_020ca408(&tempData.rotationMatrix_[0], &rootRotationTopRow, sizeof(Vector3fix));
-                func_020ca408(&tempData.rotationMatrix_[6], &rootRotationBottomRow, sizeof(Vector3fix));
+                func_020ca408(&tempData.rotationMatrix_.rows[0], &rootRotationTopRow, sizeof(Vector3fix));
+                func_020ca408(&tempData.rotationMatrix_.rows[2], &rootRotationBottomRow, sizeof(Vector3fix));
             }
 
-            fix32_t thisIntensity = (totalWeight == 0x1000) ? anim->weight_ : func_020c2bf4(anim->weight_, totalWeight);
+            fix32_t thisIntensity = (totalWeight == 0x1000) ? anim->weight_ : fix32_Divide(anim->weight_, totalWeight);
             AccumulateScaleVector(&bone->scale_v0_, &tempData.scale_v0_, thisIntensity, tempData.flags_ & 1);
             AccumulateScaleVector(&bone->scale_v1_, &tempData.scale_v1_, thisIntensity, tempData.flags_ & 8);
             AccumulateScaleVector(&bone->scale_v2_, &tempData.scale_v2_, thisIntensity, tempData.flags_ & 0x10);
@@ -154,18 +144,18 @@ bool ProcessJointAnimationsOnBoneMatrix(BoneMatrixRenderData* bone, AnimationDat
             {
                 // Only accumulate the top two rows, we'll compute the third row (and
                 // apply small corrections) later to ensure we get an orthogonal matrix
-                bone->rotationMatrix_[0] += ((thisIntensity * tempData.rotationMatrix_[0]) >> 12);
-                bone->rotationMatrix_[1] += ((thisIntensity * tempData.rotationMatrix_[1]) >> 12);
-                bone->rotationMatrix_[2] += ((thisIntensity * tempData.rotationMatrix_[2]) >> 12);
-                bone->rotationMatrix_[3] += ((thisIntensity * tempData.rotationMatrix_[3]) >> 12);
-                bone->rotationMatrix_[4] += ((thisIntensity * tempData.rotationMatrix_[4]) >> 12);
-                bone->rotationMatrix_[5] += ((thisIntensity * tempData.rotationMatrix_[5]) >> 12);
+                bone->rotationMatrix_.entries[0] += ((thisIntensity * tempData.rotationMatrix_.entries[0]) >> 12);
+                bone->rotationMatrix_.entries[1] += ((thisIntensity * tempData.rotationMatrix_.entries[1]) >> 12);
+                bone->rotationMatrix_.entries[2] += ((thisIntensity * tempData.rotationMatrix_.entries[2]) >> 12);
+                bone->rotationMatrix_.entries[3] += ((thisIntensity * tempData.rotationMatrix_.entries[3]) >> 12);
+                bone->rotationMatrix_.entries[4] += ((thisIntensity * tempData.rotationMatrix_.entries[4]) >> 12);
+                bone->rotationMatrix_.entries[5] += ((thisIntensity * tempData.rotationMatrix_.entries[5]) >> 12);
             }
             else
             {
                 // add scaled multiple of identity matrix
-                bone->rotationMatrix_[0] += thisIntensity;
-                bone->rotationMatrix_[4] += thisIntensity;
+                bone->rotationMatrix_.entries[0] += thisIntensity;
+                bone->rotationMatrix_.entries[4] += thisIntensity;
             }
             // recall that set bits mean 'does not have feature': in order to not have
             // a feature, we need to not have had it previously and not have picked it 
@@ -175,30 +165,30 @@ bool ProcessJointAnimationsOnBoneMatrix(BoneMatrixRenderData* bone, AnimationDat
         anim = anim->pNext_;
         numAnimsProcessed++;
     } while (anim != NULL);
-    func_020c2e34(&bone->rotationMatrix_[0], &bone->rotationMatrix_[3], &bone->rotationMatrix_[6]);
+    Vector3fix_CrossProduct(&bone->rotationMatrix_.rows[0], &bone->rotationMatrix_.rows[1], &bone->rotationMatrix_.rows[2]);
 
-    if (bone->rotationMatrix_[0] == 0 && bone->rotationMatrix_[1] == 0 && bone->rotationMatrix_[2] == 0)
+    if (bone->rotationMatrix_.rows[0].x == 0 && bone->rotationMatrix_.rows[0].y == 0 && bone->rotationMatrix_.rows[0].z == 0)
     {
-        func_020ca408(&rootRotationTopRow, &bone->rotationMatrix_[0], sizeof(Vector3fix));
+        func_020ca408(&rootRotationTopRow, &bone->rotationMatrix_.rows[0], sizeof(Vector3fix));
     }
     else
     {
-        func_020c2f18(&bone->rotationMatrix_[0], &bone->rotationMatrix_[0]);
+        Vector3fix_Normalize(&bone->rotationMatrix_.rows[0], &bone->rotationMatrix_.rows[0]);
     }
 
-    if (bone->rotationMatrix_[6] == 0 && bone->rotationMatrix_[7] == 0 && bone->rotationMatrix_[8] == 0)
+    if (bone->rotationMatrix_.rows[2].x == 0 && bone->rotationMatrix_.rows[2].y == 0 && bone->rotationMatrix_.rows[2].z == 0)
     {
-        func_020ca408(&rootRotationBottomRow, &bone->rotationMatrix_[6], sizeof(Vector3fix));
+        func_020ca408(&rootRotationBottomRow, &bone->rotationMatrix_.rows[2], sizeof(Vector3fix));
     }
     else
     {
-        func_020c2f18(&bone->rotationMatrix_[6], &bone->rotationMatrix_[6]);
+        Vector3fix_Normalize(&bone->rotationMatrix_.rows[2], &bone->rotationMatrix_.rows[2]);
     }
 
     // set row2 = (row3) x (row1). Previously we set row3 = (row1) x (row2), so
     // that row3 and row1 are orthogonal to each other, then normalized both.
     // This way we guarantee the resulting matrix is orthogonal
-    func_020c2e34(&bone->rotationMatrix_[6], &bone->rotationMatrix_[0], &bone->rotationMatrix_[3]);
+    Vector3fix_CrossProduct(&bone->rotationMatrix_.rows[2], &bone->rotationMatrix_.rows[0], &bone->rotationMatrix_.rows[1]);
 
     return true;
 }

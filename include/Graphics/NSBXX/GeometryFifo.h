@@ -143,8 +143,8 @@ struct NSBXXInternalModel;
 
 // these don't really fit here but are a bit too random to have their own TU...
 
-void GetCurrentPositionAndDirectionMatrices(fix32_t* position, fix32_t* direction);
-bool GetModelBonePositionAndDirectionMatrices(ModelRenderContext* context, fix32_t* outPos, fix32_t* outDir, unsigned int boneIndex);
+void GetCurrentPositionAndDirectionMatrices(Matrix4x3* position, Matrix3x3* direction);
+bool GetModelBonePositionAndDirectionMatrices(ModelRenderContext* context, Matrix4x3* outPos, Matrix3x3* outDir, unsigned int boneIndex);
 void Finish3DRendering();
 // returns 0 if point is visible and -1 if not
 int ConvertWorldToScreenCoordinates(const Vector3fix* world, int* outX, int* outY);

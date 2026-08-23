@@ -15,7 +15,7 @@ struct RenderConfig
     // holds 0 (parameter to set matrix mode, switches to projection mode)
     uint32_t magicParam_4;
     
-    fix32_t projectionMatrix[16];
+    Matrix4x4 projectionMatrix;
 
     // holds 2 (parameter to set matrix mode, switches to position+direction mode)
     uint32_t magicParam_48;
@@ -24,7 +24,7 @@ struct RenderConfig
     // transforms world coordinates into coordinates local to the camera. When
     // this is the identity, the camera is positioned at the origin and facing
     // in the negative z-direction
-    fix32_t viewMatrix[12];
+    Matrix4x3 viewMatrix;
 
     // holds 0x32323232 (4x set light vector)
     uint32_t magicCommands_7c;
@@ -59,8 +59,7 @@ struct RenderConfig
     uint32_t magicCommands_b8;
 
     // you can safely combine these into a 4x3 matrix representing rotation->translation
-    fix32_t objectRotation[9];
-    Vector3fix objectPosition;
+    Matrix4x3 objectRotationPosition;
 
     Vector3fix objectScale;
 
@@ -71,17 +70,17 @@ struct RenderConfig
     // inverse of the camera's view matrix, i.e. the world matrix of the camera.
     // Cached to minimize matrix inversion calls. Bit 3 of flags is a dirty flag
     // for this matrix, when *clear* the matrix needs to be recalculated
-    fix32_t cachedInverseView[12];
+    Matrix4x3 cachedInverseView;
 
     // holds the combined object world matrix and view matrix.
     // Cached to minimize function calls. Bit 7 of flags is a dirty flag for 
     // this matrix, when *clear* the matrix needs to be recalculated
-    fix32_t cachedWorldView[12];
+    Matrix4x3 cachedWorldView;
 
     // holds the inverse of the combined world+view matrix.
     // Cached to minimize function calls, and recomputed alongside 
     // cachedWorldView (with bit 7 of flags being the dirty flag again)
-    fix32_t cachedInverseWorldView[12];
+    Matrix4x3 cachedInverseWorldView;
 
     char unk_190[0xb0];
 
@@ -110,13 +109,13 @@ struct RenderConfig
         unsigned int culling, unsigned int polygonID, unsigned int alpha,
         unsigned int miscFlags);
 
-    static const fix32_t* GetInverseViewMatrix();
+    static const Matrix4x3* GetInverseViewMatrix();
 
     // note: matrix does not account for object scale
-    static const fix32_t* GetCombinedWorldViewMatrix();
+    static const Matrix4x3* GetCombinedWorldViewMatrix();
 
     // note: matrix does not account for object scale
-    static const fix32_t* GetInverseCombinedWorldViewMatrix();
+    static const Matrix4x3* GetInverseCombinedWorldViewMatrix();
 
     static void GetViewport(int* left, int* top, int* right, int* bottom);
 };

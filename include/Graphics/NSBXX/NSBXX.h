@@ -426,7 +426,7 @@ struct NSBXXMaterial
     
     struct ExtensionData_Bit13
     {
-        fix32_t matrix_[16];
+        Matrix4x4 matrix_;
     };
 };
 
@@ -484,8 +484,8 @@ struct NSBXXMesh
 
 struct NSBXXInvBindMatrix
 {
-    fix32_t mat3x4[12];
-    fix32_t mat3x3[9];
+    Matrix4x3 mat4x3;
+    Matrix3x3 mat3x3;
 };
 
 struct NSBXXInternalModel

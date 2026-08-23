@@ -28,9 +28,9 @@ extern "C"
     // get some kind of deltaTime
     int func_02010220(BattleStruct*);
     // update world matrix rotation
-    void func_02016d8c(const fix32_t* rotation);
+    void func_02016d8c(const Matrix3x3* rotation);
 
-    const fix32_t* func_0202ed74(void*);
+    const Matrix3x3* func_0202ed74(void*);
 
     fix32_t func_02030c68(fix32_t); // sin(x) from lookup table, 0 <= x <= 2*pi
     fix32_t func_02030c9c(fix32_t); // cos(x) from lookup table, 0 <= x <= 2*pi
@@ -46,26 +46,8 @@ extern "C"
     // based on testing, this is responsible for playing sound effects
     void func_0203ac40(void*, int, int, int);
 
-    // write 3x3 identity
-    void func_020c1180(fix32_t*);
-    // write 3x3 x-rotation matrix, y-rotation matrix, z-rotation matrix
-    void func_020c1264(fix32_t*, fix32_t sine, fix32_t cosine);
-    void func_020c1280(fix32_t*, fix32_t sine, fix32_t cosine);
-    void func_020c129c(fix32_t*, fix32_t sine, fix32_t cosine);
-
-    // multiply 3x3 matrices a*b
-    void func_020c15a4(const fix32_t* a, const fix32_t* b, fix32_t* out);
-    // set 4x3 matrix to identity
-    void func_020c1840(fix32_t* mat);
-    // multiply 4x3 matrices a*b
-    void func_020c1d60(const fix32_t* a, const fix32_t* b, fix32_t* out);
-    // synchronous fix32 division
-    fix32_t func_020c2bf4(fix32_t num, fix32_t denom);
-    // add vector3 a+b, store in 3rd argument
-    void func_020c2d90(const Vector3fix*, const Vector3fix*, Vector3fix* out);
-
     // copy 3x3 matrix
-    void func_020ca528(const fix32_t*, fix32_t*);
+    void func_020ca528(const void*, void*);
 
     // compute a checksum for a string
     void func_020d1d1c(unsigned short* out, const void* data, unsigned int length);
@@ -128,8 +110,8 @@ struct Struct_020efaa8
     char textureAnimExtension[6];
     char jointAnimExtension[6];
 
-    void (*rotationFunctionsRelative[3])(fix32_t*, fix32_t, fix32_t);
-    void (*rotationFunctionsAbsolute[3])(fix32_t*, fix32_t, fix32_t);
+    void (*rotationFunctionsRelative[3])(Matrix3x3*, fix32_t, fix32_t);
+    void (*rotationFunctionsAbsolute[3])(Matrix3x3*, fix32_t, fix32_t);
 } extern data_020efaa8;
 
 // Extremely bizarre setup for dynamic dispatch in animation advancing
@@ -152,7 +134,7 @@ struct Struct_02104b18
 {
     char unk_0[0x14];
     Object3D::TrackedBoneMatrix* boneMatrixList;
-    fix32_t boneMatrixWithView[12];
+    Matrix4x3 boneMatrixWithView;
 } extern data_02104b18;
 
 extern char data_02108760[];
@@ -248,7 +230,7 @@ void Object3D::AdvanceEffects()
             // subtracting deltaTime and then dividing by the new value, isn't
             // this a bug? we divide by 0 in the last frame
             animationPlaybackSpeedTransitionRemainingTicks_ -= deltaTimeTicks;
-            fix32_t rateOfChange = func_020c2bf4(
+            fix32_t rateOfChange = fix32_Divide(
                 targetAnimationPlaybackSpeed_ - animationPlaybackSpeed_,
                 animationPlaybackSpeedTransitionRemainingTicks_ << 12);
             animationPlaybackSpeed_ += deltaTimeTicks * rateOfChange;
@@ -335,7 +317,7 @@ void Object3D::AdvanceAnimations_v0()
             }
         }
         prevFrameNormalizedAnimationTime_ = normalizedAnimationTime_;
-        normalizedAnimationTime_ = func_020c2bf4(
+        normalizedAnimationTime_ = fix32_Divide(
             timer - record->startTime,
             record->endTime - record->startTime
         );
@@ -450,7 +432,7 @@ void Object3D::AdvanceAnimations_v1()
             }
             fix32_t duration = GetAnimationFrameCountFix32(anim3D->GetBasicAnimationData()) - 0x1000;
             prevFrameNormalizedAnimationTime_ = normalizedAnimationTime_;
-            normalizedAnimationTime_ = func_020c2bf4(timer, duration);
+            normalizedAnimationTime_ = fix32_Divide(timer, duration);
             animationTime_ = timer;
         }
         else
@@ -543,28 +525,28 @@ void Object3D::ApplyTextures()
     }
 }
 
-void CreateRotationX(fix32_t* out, fix32_t s, fix32_t c)
+void CreateRotationX(Matrix3x3* out, fix32_t s, fix32_t c)
 {
-    func_020c1264(out, s, c);
+    Mat3x3_WriteRotationX(out, s, c);
 }
 
-void CreateRotationY(fix32_t* out, fix32_t s, fix32_t c)
+void CreateRotationY(Matrix3x3* out, fix32_t s, fix32_t c)
 {
-    func_020c1280(out, s, c);
+    Mat3x3_WriteRotationY(out, s, c);
 }
 
-void CreateRotationZ(fix32_t* out, fix32_t s, fix32_t c)
+void CreateRotationZ(Matrix3x3* out, fix32_t s, fix32_t c)
 {
-    func_020c129c(out, s, c);
+    Mat3x3_WriteRotationZ(out, s, c);
 }
 
 void Object3D::PopulateRenderConfigWorld()
 {
     if (pPrevChild_ ? 1 : 0)
     {
-        fix32_t worldRotation[9];
-        func_020ca528(&data_0210a010.objectRotation[0], &worldRotation[0]);
-        fix32_t axisRotation[9];
+        Matrix3x3 worldRotation;
+        func_020ca528(&data_0210a010.objectRotationPosition, &worldRotation);
+        Matrix3x3 axisRotation;
         fix32_t rotationComponents[3];
         rotationComponents[0] = rotation_.z;
         rotationComponents[1] = rotation_.y;
@@ -584,11 +566,11 @@ void Object3D::PopulateRenderConfigWorld()
             {
                 fix32_t sine = func_02030c68(amount);
                 fix32_t cosine = func_02030c9c(amount);
-                data_020efaa8.rotationFunctionsRelative[i](&axisRotation[0], sine, cosine);
-                func_020c15a4(&worldRotation[0], &axisRotation[0], &worldRotation[0]);
+                data_020efaa8.rotationFunctionsRelative[i](&axisRotation, sine, cosine);
+                Mat3x3_Multiply(&worldRotation, &axisRotation, &worldRotation);
             }
         }
-        func_02016d8c(&worldRotation[0]);
+        func_02016d8c(&worldRotation);
         Vector3fix multipliedScale;
         Vector3fix ownScale;
         ownScale.x = scale_[0];
@@ -598,7 +580,7 @@ void Object3D::PopulateRenderConfigWorld()
         RenderConfig::SetObjectScale(&multipliedScale);
         Vector3fix multipliedPosition;
         func_02030e88(&position_, &multipliedScale, &multipliedPosition);
-        func_020c2d90(&data_0210a010.objectPosition, &multipliedPosition, &multipliedPosition);
+        Vector3fix_Add(&data_0210a010.objectRotationPosition.translation, &multipliedPosition, &multipliedPosition);
         RenderConfig::SetObjectPosition(&multipliedPosition);
     }
     else
@@ -606,15 +588,15 @@ void Object3D::PopulateRenderConfigWorld()
         RenderConfig::SetObjectPosition(&position_);
         if (flags_6c_ & (1 << OBJECT3D_FLAG_19))
         {
-            const fix32_t* rotation = func_0202ed74(func_020100bc(GetBattleStruct()));
-            func_020ca528(&rotation[0], &data_0210a010.objectRotation[0]);
+            const Matrix3x3* rotation = func_0202ed74(func_020100bc(GetBattleStruct()));
+            func_020ca528(rotation, &data_0210a010.objectRotationPosition.rotation);
             data_0210a010.flags &= ~((1 << RENDER_CONFIG_FLAG_WORLDVIEW_CACHE_VALID) | (1 << RENDER_CONFIG_FLAG_5) | (1 << RENDER_CONFIG_FLAG_2));
         }
         else
         {
-            fix32_t axisRotation[9];
-            fix32_t totalRotation[9];
-            func_020c1180(&totalRotation[0]);
+            Matrix3x3 axisRotation;
+            Matrix3x3 totalRotation;
+            Mat3x3_WriteIdentity(&totalRotation);
             fix32_t rotationComponents[3];
             rotationComponents[0] = rotation_.z;
             rotationComponents[1] = rotation_.y;
@@ -634,11 +616,11 @@ void Object3D::PopulateRenderConfigWorld()
                 {
                     fix32_t sine = func_02030c68(amount);
                     fix32_t cosine = func_02030c9c(amount);
-                    data_020efaa8.rotationFunctionsAbsolute[i](&axisRotation[0], sine, cosine);
-                    func_020c15a4(&totalRotation[0], &axisRotation[0], &totalRotation[0]);
+                    data_020efaa8.rotationFunctionsAbsolute[i](&axisRotation, sine, cosine);
+                    Mat3x3_Multiply(&totalRotation, &axisRotation, &totalRotation);
                 }
             }
-            func_02016d8c(&totalRotation[0]);
+            func_02016d8c(&totalRotation);
         }
         Vector3fix scaling;
         scaling.x = scale_[0];
@@ -860,9 +842,9 @@ void Object3D::MaybeUpdateBonePositions()
     fix32_t cosine = func_02030c9c(rotation_.y);
     fix32_t sine = func_02030c68(rotation_.y);
 
-    fix32_t rotationMatrix[9];
-    func_020c1280(&rotationMatrix[0], sine, cosine);
-    func_02016d8c(&rotationMatrix[0]);
+    Matrix3x3 rotationMatrix;
+    Mat3x3_WriteRotationY(&rotationMatrix, sine, cosine);
+    func_02016d8c(&rotationMatrix);
     Vector3fix scale = data_020e7800;
     RenderConfig::SetObjectScale(&scale);
     RenderConfig::SubmitToFifo();
@@ -1812,14 +1794,15 @@ void Object3D::ComputeShadowPosition()
     {
         if (GetModelBonePositionAndDirectionMatrices(context, NULL, NULL, shadowBoneIndex_))
         {
-            fix32_t boneWorldTransform4x3[12];
-            func_020c1840(&boneWorldTransform4x3[0]);
-            const fix32_t* inverseView = RenderConfig::GetInverseViewMatrix();
-            GetCurrentPositionAndDirectionMatrices(&boneWorldTransform4x3[0], NULL);
-            func_020c1d60(boneWorldTransform4x3, inverseView, boneWorldTransform4x3);
-            fix32_t z = boneWorldTransform4x3[11];
-            fix32_t y = boneWorldTransform4x3[10];
-            fix32_t x = boneWorldTransform4x3[9];
+            Matrix4x3 boneWorldTransform;
+            Mat4x3_WriteIdentity(&boneWorldTransform);
+            const Matrix4x3* inverseView = RenderConfig::GetInverseViewMatrix();
+            // fix this cast later
+            GetCurrentPositionAndDirectionMatrices(&boneWorldTransform, NULL);
+            Mat4x3_Multiply(&boneWorldTransform, inverseView, &boneWorldTransform);
+            fix32_t z = boneWorldTransform.translation.z;
+            fix32_t y = boneWorldTransform.translation.y;
+            fix32_t x = boneWorldTransform.translation.x;
             maybeShadowPosition_.x = x;
             maybeShadowPosition_.y = y;
             maybeShadowPosition_.z = z;
@@ -1950,11 +1933,11 @@ void Object3D::DrawChildren(Object3D *topLevelObject)
         bool drawDone = false;
         if (topLevelObject->pModel_ != NULL)
         {
-            fix32_t positionMatrix[12];
-            fix32_t directionMatrix[9];
+            Matrix4x3 positionMatrix;
+            Matrix3x3 directionMatrix;
             ModelRenderContext* context = GetModel3DContext(topLevelObject->pModel_);
             if (context != NULL && GetModelBonePositionAndDirectionMatrices(context,
-                positionMatrix, directionMatrix, pNextChild_->attachmentBoneIndex_))
+                &positionMatrix, &directionMatrix, pNextChild_->attachmentBoneIndex_))
             {
                 // bug? flags is 32-bit, we lose upper 16 bits...
                 unsigned short oldFlags = pNextChild_->flags_6c_;
@@ -2001,7 +1984,7 @@ unsigned char Object3D::GetField9e() const { return unknown_9e_; }
 void Object3D::TrackBone(TrackedBoneMatrix *trackingEntry)
 {
     trackingEntry->pNext = NULL;
-    func_020c1840(&trackingEntry->matrix[0]);
+    Mat4x3_WriteIdentity(&trackingEntry->matrix);
     if (trackedBoneMatrixList_ != NULL)
     {
         TrackedBoneMatrix* listEnd = trackedBoneMatrixList_;
@@ -2063,9 +2046,10 @@ void BoneTrackingRenderCommandHook(RenderCommandHandler* handler)
         if (!(handler->flags_ & (1 << RCH_FLAG_4)) || handler->currentBoneMatrix_ != tracker->boneIndex)
             continue;
         
-        GetCurrentPositionAndDirectionMatrices(&tracker->matrix[0], NULL);
-        COPY_ARRAY(data_02104b18.boneMatrixWithView, tracker->matrix);
-        func_020c1d60(&tracker->matrix[0], RenderConfig::GetInverseViewMatrix(), &tracker->matrix[0]);
+        // fix this cast alter
+        GetCurrentPositionAndDirectionMatrices(&tracker->matrix, NULL);
+        data_02104b18.boneMatrixWithView = tracker->matrix;
+        Mat4x3_Multiply(&tracker->matrix, RenderConfig::GetInverseViewMatrix(), &tracker->matrix);
     }
 }
 
@@ -2079,6 +2063,6 @@ Vector3fix Object3D::GetPointInFront(fix32_t distance) const
     forward.z = func_02030c9c(ownRot.y);
     Vector3fix output;
     func_02030e2c(&forward, distance, &output);
-    func_020c2d90(&output, &ownPos, &output);
+    Vector3fix_Add(&output, &ownPos, &output);
     return output;
 }

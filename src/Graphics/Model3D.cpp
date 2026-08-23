@@ -16,7 +16,6 @@
 #define data_020f1ef4 data_020f2060
 
 #define func_0200f374 func_0200f238
-#define func_020c2eb8 func_020c4984
 #define func_020c56b0 func_020c717c
 #endif
 
@@ -24,8 +23,6 @@ extern "C"
 {
     // zero memory
     void func_0200f374(void*, unsigned);
-
-    int32_t func_020c2eb8(Vector3i*);
 
     int func_020c56b0(int*);
 }
@@ -282,7 +279,7 @@ found_a_model:
         func_0200f374(&span, sizeof(Vector3fix));
         span.x = scaledXSize;
         span.z = scaledZSize;
-        maybeApproxRadius_ = func_020c2eb8(&span) / 2;
+        maybeApproxRadius_ = Vector3fix_Length(&span) / 2;
     }
     unknown_flags_a8_0_ = true;
 }

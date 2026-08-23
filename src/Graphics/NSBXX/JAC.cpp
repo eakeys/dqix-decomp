@@ -24,22 +24,22 @@ void CalculateTranslationAmountSmooth(fix32_t* out, fix32_t time, NSBXXAnimation
 void CalculateScalingAmountFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac);
 void CalculateScalingAmountSmooth(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac);
 
-void CalculateRotationFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac);
-void CalculateRotationSmooth(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac);
-bool GetMatrixFromIndex(fix32_t* out, intptr_t pivotList, intptr_t basisList, int index);
+void CalculateRotationFrameAligned(Matrix3x3* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac);
+void CalculateRotationSmooth(Matrix3x3* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac);
+bool GetMatrixFromIndex(Matrix3x3* out, intptr_t pivotList, intptr_t basisList, int index);
 
-static inline void CalculateThirdRowByCrossProduct(fix32_t* mat)
+static inline void CalculateThirdRowByCrossProduct(Matrix3x3* mat)
 {
-    fix32_t m23 = mat[5]; // yes, this order is actually important
-    fix32_t m11 = mat[0];
-    fix32_t m21 = mat[3];
-    fix32_t m13 = mat[2];
-    fix32_t m12 = mat[1];
-    fix32_t m22 = mat[4];
+    fix32_t m23 = mat->entries[5]; // yes, this order is actually important
+    fix32_t m11 = mat->entries[0];
+    fix32_t m21 = mat->entries[3];
+    fix32_t m13 = mat->entries[2];
+    fix32_t m12 = mat->entries[1];
+    fix32_t m22 = mat->entries[4];
 
-    mat[6] = (m12 * m23 - m13 * m22) >> 12;
-    mat[7] = (m13 * m21 - m11 * m23) >> 12;
-    mat[8] = (m11 * m22 - m12 * m21) >> 12;
+    mat->entries[6] = (m12 * m23 - m13 * m22) >> 12;
+    mat->entries[7] = (m13 * m21 - m11 * m23) >> 12;
+    mat->entries[8] = (m11 * m22 - m12 * m21) >> 12;
 }
 
 // processing callback for J.AC animations
@@ -138,36 +138,36 @@ void ApplyBindPoseRotation(BoneMatrixRenderData* bmrd)
             fix32_t entryA = pivot->a;
             fix32_t entryB = pivot->b;
 
-            func_020ca7d0(&bmrd->rotationMatrix_[0]);
+            func_020ca7d0(&bmrd->rotationMatrix_);
             fix32_t unit = (boneMatrix->flags_ & 0x100) ? -1 << 12 : 1 << 12;
 
             int indexA = data_020e9284[pivotForm].a;
             int indexB = data_020e9284[pivotForm].b;
             
-            bmrd->rotationMatrix_[pivotForm] = unit;
-            bmrd->rotationMatrix_[indexA] = entryA;
-            bmrd->rotationMatrix_[indexB] = entryB;
+            bmrd->rotationMatrix_.entries[pivotForm] = unit;
+            bmrd->rotationMatrix_.entries[indexA] = entryA;
+            bmrd->rotationMatrix_.entries[indexB] = entryB;
 
             fix32_t entryC = (boneMatrix->flags_ & 0x200) ? -entryB : entryB;
             int indexC = data_020e9284[pivotForm].c;
-            bmrd->rotationMatrix_[data_020e9284[pivotForm].c] = entryC;
+            bmrd->rotationMatrix_.entries[data_020e9284[pivotForm].c] = entryC;
 
             fix32_t entryD = (boneMatrix->flags_ & 0x400) ? -entryA : entryA;
             int indexD = data_020e9284[pivotForm].d;
-            bmrd->rotationMatrix_[indexD] = entryD;
+            bmrd->rotationMatrix_.entries[indexD] = entryD;
         }
         else // generic 3x3 matrix format
         {
-            bmrd->rotationMatrix_[0] = boneMatrix->m_11;
+            bmrd->rotationMatrix_.entries[0] = boneMatrix->m_11;
             NSBXXBoneMatrix::RotationMatrixData* rot = (NSBXXBoneMatrix::RotationMatrixData*)addrRotation;
-            bmrd->rotationMatrix_[1] = rot->entries[0];
-            bmrd->rotationMatrix_[2] = rot->entries[1];
-            bmrd->rotationMatrix_[3] = rot->entries[2];
-            bmrd->rotationMatrix_[4] = rot->entries[3];
-            bmrd->rotationMatrix_[5] = rot->entries[4];
-            bmrd->rotationMatrix_[6] = rot->entries[5];
-            bmrd->rotationMatrix_[7] = rot->entries[6];
-            bmrd->rotationMatrix_[8] = rot->entries[7];
+            bmrd->rotationMatrix_.entries[1] = rot->entries[0];
+            bmrd->rotationMatrix_.entries[2] = rot->entries[1];
+            bmrd->rotationMatrix_.entries[3] = rot->entries[2];
+            bmrd->rotationMatrix_.entries[4] = rot->entries[3];
+            bmrd->rotationMatrix_.entries[5] = rot->entries[4];
+            bmrd->rotationMatrix_.entries[6] = rot->entries[5];
+            bmrd->rotationMatrix_.entries[7] = rot->entries[6];
+            bmrd->rotationMatrix_.entries[8] = rot->entries[7];
         }
     }
     else // no rotation data
@@ -255,28 +255,28 @@ void CalculateBoneMatrixRenderDataFromJAC(NSBXXAnimationJAC* jac, int arg, fix32
             if (!(trackFlags & 0x100))
             {
                 if (smooth)
-                    CalculateRotationSmooth(&bmrd->rotationMatrix_[0], time, (NSBXXAnimationJAC::Track::ChannelNonConst*)channelAddr, jac);
+                    CalculateRotationSmooth(&bmrd->rotationMatrix_, time, (NSBXXAnimationJAC::Track::ChannelNonConst*)channelAddr, jac);
                 else
-                    CalculateRotationFrameAligned(&bmrd->rotationMatrix_[0], time, (NSBXXAnimationJAC::Track::ChannelNonConst*)channelAddr, jac);
+                    CalculateRotationFrameAligned(&bmrd->rotationMatrix_, time, (NSBXXAnimationJAC::Track::ChannelNonConst*)channelAddr, jac);
                 channelAddr += sizeof(NSBXXAnimationJAC::Track::ChannelNonConst);
             }
             else // rotation channel constant
             {
-                if (GetMatrixFromIndex(&bmrd->rotationMatrix_[0], (intptr_t)jac->GetPivotMatrices(), (intptr_t)jac->GetBasisMatrices(), *(uint32_t*)(channelAddr)))
+                if (GetMatrixFromIndex(&bmrd->rotationMatrix_, (intptr_t)jac->GetPivotMatrices(), (intptr_t)jac->GetBasisMatrices(), *(uint32_t*)(channelAddr)))
                 {
-                    fix32_t m23 = bmrd->rotationMatrix_[5];
-                    fix32_t m11 = bmrd->rotationMatrix_[0];
-                    fix32_t m21 = bmrd->rotationMatrix_[3];
-                    fix32_t m13 = bmrd->rotationMatrix_[2];
-                    fix32_t m12 = bmrd->rotationMatrix_[1];
-                    fix32_t m22 = bmrd->rotationMatrix_[4];
+                    fix32_t m23 = bmrd->rotationMatrix_.entries[5];
+                    fix32_t m11 = bmrd->rotationMatrix_.entries[0];
+                    fix32_t m21 = bmrd->rotationMatrix_.entries[3];
+                    fix32_t m13 = bmrd->rotationMatrix_.entries[2];
+                    fix32_t m12 = bmrd->rotationMatrix_.entries[1];
+                    fix32_t m22 = bmrd->rotationMatrix_.entries[4];
 
                     fix32_t m31 = (m12 * m23 - m13 * m22) >> 12;
                     fix32_t m32 = (m13 * m21 - m11 * m23) >> 12;
                     fix32_t m33 = (m11 * m22 - m12 * m21) >> 12;
-                    bmrd->rotationMatrix_[6] = m31;
-                    bmrd->rotationMatrix_[7] = m32;
-                    bmrd->rotationMatrix_[8] = m33;
+                    bmrd->rotationMatrix_.entries[6] = m31;
+                    bmrd->rotationMatrix_.entries[7] = m32;
+                    bmrd->rotationMatrix_.entries[8] = m33;
                 }
                 channelAddr += sizeof(uint32_t);
             }
@@ -569,7 +569,6 @@ skip_default_values:
     *out = (lerp0 * preMultiply + ((time * (lerp1 - lerp0)) >> 12)) >> rightShift;
 }
 
-// Not quite a match, some register nonsense
 void CalculateScalingAmountFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)
 {
     unsigned int metadata;   
@@ -814,7 +813,7 @@ skip_default_values:
     out[1] = (secondaryLerp0 * preMultiply + ((time * (secondaryLerp1 - secondaryLerp0)) >> 12)) >> rightShift;
 }
 
-void CalculateRotationFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)
+void CalculateRotationFrameAligned(Matrix3x3* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)
 {
     unsigned int flags = channel->metadata_;
     unsigned int frameIdx = time >> 12;
@@ -880,24 +879,24 @@ void CalculateRotationFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC
                 
                 anyBasisMatrix |= GetMatrixFromIndex(out, (intptr_t)jac + pivotOffset,
                     (intptr_t)jac + basisOffset, samples[highWeightFrame]);
-                fix32_t tempMatrix[9];
-                anyBasisMatrix |= GetMatrixFromIndex(tempMatrix, (intptr_t)jac + pivotOffset,
+                Matrix3x3 tempMatrix;
+                anyBasisMatrix |= GetMatrixFromIndex(&tempMatrix, (intptr_t)jac + pivotOffset,
                     (intptr_t)jac + basisOffset, samples[lowWeightFrame]);
 
-                out[0] = tempMatrix[0] + out[0] * 3;
-                out[1] = tempMatrix[1] + out[1] * 3;
-                out[2] = tempMatrix[2] + out[2] * 3;
-                out[3] = tempMatrix[3] + out[3] * 3;
-                out[4] = tempMatrix[4] + out[4] * 3;
-                out[5] = tempMatrix[5] + out[5] * 3;
-                func_020c2f18(&out[0], &out[0]);
-                func_020c2f18(&out[3], &out[3]);
+                out->entries[0] = tempMatrix.entries[0] + out->entries[0] * 3;
+                out->entries[1] = tempMatrix.entries[1] + out->entries[1] * 3;
+                out->entries[2] = tempMatrix.entries[2] + out->entries[2] * 3;
+                out->entries[3] = tempMatrix.entries[3] + out->entries[3] * 3;
+                out->entries[4] = tempMatrix.entries[4] + out->entries[4] * 3;
+                out->entries[5] = tempMatrix.entries[5] + out->entries[5] * 3;
+                Vector3fix_Normalize(&out->rows[0], &out->rows[0]);
+                Vector3fix_Normalize(&out->rows[1], &out->rows[1]);
                 if (!anyBasisMatrix)
                 {
-                    out[6] = tempMatrix[6] + out[6] * 3;
-                    out[7] = tempMatrix[7] + out[7] * 3;
-                    out[8] = tempMatrix[8] + out[8] * 3;
-                    func_020c2f18(&out[6], &out[6]);
+                    out->entries[6] = tempMatrix.entries[6] + out->entries[6] * 3;
+                    out->entries[7] = tempMatrix.entries[7] + out->entries[7] * 3;
+                    out->entries[8] = tempMatrix.entries[8] + out->entries[8] * 3;
+                    Vector3fix_Normalize(&out->rows[2], &out->rows[2]);
                 }
                 else
                     CalculateThirdRowByCrossProduct(out);
@@ -919,28 +918,28 @@ void CalculateRotationFrameAligned(fix32_t* out, fix32_t time, NSBXXAnimationJAC
 
 calculate_by_average:
 {
-    fix32_t tempMatrix[9];
+    Matrix3x3 tempMatrix;
     int anyBasisMatrix = 0;
     anyBasisMatrix |= GetMatrixFromIndex(out, (intptr_t)jac + pivotOffset,
         (intptr_t)jac + basisOffset, (samples + averageIdx)[0]);
-    anyBasisMatrix |= GetMatrixFromIndex(tempMatrix, (intptr_t)jac + pivotOffset,
+    anyBasisMatrix |= GetMatrixFromIndex(&tempMatrix, (intptr_t)jac + pivotOffset,
         (intptr_t)jac + basisOffset, (samples + averageIdx)[1]);
 
-    out[0] += tempMatrix[0];
-    out[1] += tempMatrix[1];
-    out[2] += tempMatrix[2];
-    out[3] += tempMatrix[3];
-    out[4] += tempMatrix[4];
-    out[5] += tempMatrix[5];
-    func_020c2f18(&out[0], &out[0]);
-    func_020c2f18(&out[3], &out[3]);
+    out->entries[0] += tempMatrix.entries[0];
+    out->entries[1] += tempMatrix.entries[1];
+    out->entries[2] += tempMatrix.entries[2];
+    out->entries[3] += tempMatrix.entries[3];
+    out->entries[4] += tempMatrix.entries[4];
+    out->entries[5] += tempMatrix.entries[5];
+    Vector3fix_Normalize(&out->rows[0], &out->rows[0]);
+    Vector3fix_Normalize(&out->rows[1], &out->rows[1]);
 
     if (!anyBasisMatrix) // both pivot matrices
     {
-        out[6] += tempMatrix[6];
-        out[7] += tempMatrix[7];
-        out[8] += tempMatrix[8];
-        func_020c2f18(&out[6], &out[6]);
+        out->entries[6] += tempMatrix.entries[6];
+        out->entries[7] += tempMatrix.entries[7];
+        out->entries[8] += tempMatrix.entries[8];
+        Vector3fix_Normalize(&out->rows[2], &out->rows[2]);
     }
     else
         CalculateThirdRowByCrossProduct(out);
@@ -954,11 +953,11 @@ calculate_exact_frame:
     if (isBasis)
         CalculateThirdRowByCrossProduct(out);
     else
-        func_020c2f18(&out[6], &out[6]);
+        Vector3fix_Normalize(&out->rows[2], &out->rows[2]);
 }
 }
 
-void CalculateRotationSmooth(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)
+void CalculateRotationSmooth(Matrix3x3* out, fix32_t time, NSBXXAnimationJAC::Track::ChannelNonConst* channel, NSBXXAnimationJAC* jac)
 {
     unsigned int basisOffset, pivotOffset;
     pivotOffset = jac->pivotDataOffset_;
@@ -997,7 +996,7 @@ void CalculateRotationSmooth(fix32_t* out, fix32_t time, NSBXXAnimationJAC::Trac
             if (isBasis)
                 CalculateThirdRowByCrossProduct(out);
             else
-                func_020c2f18(&out[6], &out[6]);
+                Vector3fix_Normalize(&out->rows[2], &out->rows[2]);
             return;    
         }
     }
@@ -1047,55 +1046,55 @@ default_values:
     preMultiply = 1;
 skip_default_values:
     int anyBasisMatrices = 0;
-    fix32_t matrixA[9];
-    fix32_t matrixB[9];
+    Matrix3x3 matrixA;
+    Matrix3x3 matrixB;
 
-    anyBasisMatrices |= GetMatrixFromIndex(matrixA, (intptr_t)jac + pivotOffset,
+    anyBasisMatrices |= GetMatrixFromIndex(&matrixA, (intptr_t)jac + pivotOffset,
         (intptr_t)jac + basisOffset, samples[frameAIdx]);
-    anyBasisMatrices |= GetMatrixFromIndex(matrixB, (intptr_t)jac + pivotOffset,
+    anyBasisMatrices |= GetMatrixFromIndex(&matrixB, (intptr_t)jac + pivotOffset,
         (intptr_t)jac + basisOffset, samples[frameBIdx]);
 
-    out[0] = matrixA[0] * preMultiply + ((reducedTime * (matrixB[0] - matrixA[0])) >> 12);
-    out[1] = matrixA[1] * preMultiply + ((reducedTime * (matrixB[1] - matrixA[1])) >> 12);
-    out[2] = matrixA[2] * preMultiply + ((reducedTime * (matrixB[2] - matrixA[2])) >> 12);
-    out[3] = matrixA[3] * preMultiply + ((reducedTime * (matrixB[3] - matrixA[3])) >> 12);
-    out[4] = matrixA[4] * preMultiply + ((reducedTime * (matrixB[4] - matrixA[4])) >> 12);
-    out[5] = matrixA[5] * preMultiply + ((reducedTime * (matrixB[5] - matrixA[5])) >> 12);
-    func_020c2f18(&out[0], &out[0]);
-    func_020c2f18(&out[3], &out[3]);
+    out->entries[0] = matrixA.entries[0] * preMultiply + ((reducedTime * (matrixB.entries[0] - matrixA.entries[0])) >> 12);
+    out->entries[1] = matrixA.entries[1] * preMultiply + ((reducedTime * (matrixB.entries[1] - matrixA.entries[1])) >> 12);
+    out->entries[2] = matrixA.entries[2] * preMultiply + ((reducedTime * (matrixB.entries[2] - matrixA.entries[2])) >> 12);
+    out->entries[3] = matrixA.entries[3] * preMultiply + ((reducedTime * (matrixB.entries[3] - matrixA.entries[3])) >> 12);
+    out->entries[4] = matrixA.entries[4] * preMultiply + ((reducedTime * (matrixB.entries[4] - matrixA.entries[4])) >> 12);
+    out->entries[5] = matrixA.entries[5] * preMultiply + ((reducedTime * (matrixB.entries[5] - matrixA.entries[5])) >> 12);
+    Vector3fix_Normalize(&out->rows[0], &out->rows[0]);
+    Vector3fix_Normalize(&out->rows[1], &out->rows[1]);
     if (!anyBasisMatrices)
     {
-        out[6] = matrixA[6] * preMultiply + ((reducedTime * (matrixB[6] - matrixA[6])) >> 12);
-        out[7] = matrixA[7] * preMultiply + ((reducedTime * (matrixB[7] - matrixA[7])) >> 12);
-        out[8] = matrixA[8] * preMultiply + ((reducedTime * (matrixB[8] - matrixA[8])) >> 12);
-        func_020c2f18(&out[6], &out[6]);
+        out->entries[6] = matrixA.entries[6] * preMultiply + ((reducedTime * (matrixB.entries[6] - matrixA.entries[6])) >> 12);
+        out->entries[7] = matrixA.entries[7] * preMultiply + ((reducedTime * (matrixB.entries[7] - matrixA.entries[7])) >> 12);
+        out->entries[8] = matrixA.entries[8] * preMultiply + ((reducedTime * (matrixB.entries[8] - matrixA.entries[8])) >> 12);
+        Vector3fix_Normalize(&out->rows[2], &out->rows[2]);
     }
     else
         CalculateThirdRowByCrossProduct(out);
 }
 
-bool GetMatrixFromIndex(fix32_t* out, intptr_t pivotList, intptr_t basisList, int index)
+bool GetMatrixFromIndex(Matrix3x3* out, intptr_t pivotList, intptr_t basisList, int index)
 {
     if (index & 0x8000) // pivot matrix
     {
-        out[0] = out[1] = out[2] =
-        out[3] = out[4] = out[5] = 
-        out[6] = out[7] = out[8] = 0;
+        out->entries[0] = out->entries[1] = out->entries[2] =
+        out->entries[3] = out->entries[4] = out->entries[5] = 
+        out->entries[6] = out->entries[7] = out->entries[8] = 0;
         NSBXXAnimationJAC::PivotMatrix* pivot = (NSBXXAnimationJAC::PivotMatrix*)(pivotList + (((index & 0x7fff) * 3) << 1));
         fix32_t entryA = pivot->a;
         fix32_t entryB = pivot->b;
         
         int form = pivot->flags & 0xf;
-        out[form] = (pivot->flags & 0x10) ? -1 << 12 : 1 << 12;
+        out->entries[form] = (pivot->flags & 0x10) ? -1 << 12 : 1 << 12;
 
-        out[data_020e9284[form].a] = entryA;
-        out[data_020e9284[form].b] = entryB;
+        out->entries[data_020e9284[form].a] = entryA;
+        out->entries[data_020e9284[form].b] = entryB;
 
         fix32_t entryC = (pivot->flags & 0x20) ? -entryB : entryB;
-        out[data_020e9284[form].c] = entryC;
+        out->entries[data_020e9284[form].c] = entryC;
         
         fix32_t entryD = (pivot->flags & 0x40) ? -entryA : entryA;
-        out[data_020e9284[form].d] = entryD;
+        out->entries[data_020e9284[form].d] = entryD;
 
         return false;
     }
@@ -1105,26 +1104,26 @@ bool GetMatrixFromIndex(fix32_t* out, intptr_t pivotList, intptr_t basisList, in
         short accumulation = 0;
 
         int d4 = basis->data[4];
-        out[4] = d4 >> 3;
+        out->entries[4] = d4 >> 3;
         accumulation = (accumulation << 3) | (d4 & 7);
 
         int d0 = basis->data[0];
-        out[0] = d0 >> 3;
+        out->entries[0] = d0 >> 3;
         accumulation = (accumulation << 3) | (d0 & 7);
 
         int d1 = basis->data[1];
-        out[1] = d1 >> 3;
+        out->entries[1] = d1 >> 3;
         accumulation = (accumulation << 3) | (d1 & 7);
 
         int d2 = basis->data[2];
-        out[2] = d2 >> 3;
+        out->entries[2] = d2 >> 3;
         accumulation = (accumulation << 3) | (d2 & 7);
 
         int d3 = basis->data[3];
-        out[3] = d3 >> 3;
+        out->entries[3] = d3 >> 3;
         accumulation = (accumulation << 3) | (d3 & 7);
         
-        out[5] = (accumulation << 19) >> 19; // limit to 13 bits
+        out->entries[5] = (accumulation << 19) >> 19; // limit to 13 bits
 
         return true;
     }

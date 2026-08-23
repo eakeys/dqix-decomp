@@ -5,16 +5,6 @@
 
 #pragma optimize_for_size off
 
-#if defined(jpn)
-#define func_020c2bf4 func_020c46c0
-#endif
-
-extern "C"
-{
-    // fixed point division
-    fix32_t func_020c2bf4(fix32_t a, fix32_t b);
-}
-
 int NSBXX_Tex_GetBlock1Length(NSBXXTex* tex)
 {
     return (tex != NULL) ? tex->block1NumEightBytes_ << 3 : 0;
@@ -123,12 +113,12 @@ extern "C" void AttachTextureImageToModelMaterials(
             if (trueTextureWidth == material->width_)
                 material->xScale_ = 1 << 12;
             else
-                material->xScale_ = func_020c2bf4(trueTextureWidth << 12, material->width_ << 12);
+                material->xScale_ = fix32_Divide(trueTextureWidth << 12, material->width_ << 12);
 
             if (trueTextureHeight == material->height_)
                 material->yScale_ = 1 << 12;
             else
-                material->yScale_ = func_020c2bf4(trueTextureHeight << 12, material->height_ << 12);
+                material->yScale_ = fix32_Divide(trueTextureHeight << 12, material->height_ << 12);
 
             pairedMaterialCounter++;
         } while (pairedMaterialCounter < pairing->arraySize_);

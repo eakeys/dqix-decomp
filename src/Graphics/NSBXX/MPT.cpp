@@ -5,16 +5,12 @@
 #pragma optimize_for_size off
 
 #if defined(jpn)
-#define func_020c2bf4 func_020c46c0
 #define func_020ca390 func_020cbe5c
 #define data_020f1c7c data_020f1de8
 #endif
 
 extern "C"
 {
-    // synchronous fixed point division using hardware
-    fix32_t func_020c2bf4(fix32_t num, fix32_t denom);
-
     // memset
     void func_020ca390(int, void*, unsigned);
 }
@@ -83,10 +79,10 @@ void SetMaterialTextureForRender(NSBXXTex* tex, const char* textureName, Materia
     int newHeight = (innerTexture->unk_4 & 0x3ff800) >> 11;
 
     // wtf is the point of this? you just set it to these values...
-    fix32_t rescaleX = (newWidth == renderData->materialWidth_) ? 0x1000 : func_020c2bf4(newWidth << 12, renderData->materialWidth_ << 12);
+    fix32_t rescaleX = (newWidth == renderData->materialWidth_) ? 0x1000 : fix32_Divide(newWidth << 12, renderData->materialWidth_ << 12);
     renderData->materialxScale_ = rescaleX;
 
-    fix32_t rescaleY = (newHeight == renderData->materialHeight_) ? 0x1000 : func_020c2bf4(newHeight << 12, renderData->materialHeight_ << 12);
+    fix32_t rescaleY = (newHeight == renderData->materialHeight_) ? 0x1000 : fix32_Divide(newHeight << 12, renderData->materialHeight_ << 12);
     renderData->materialyScale_ = rescaleY;
 }
 

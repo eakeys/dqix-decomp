@@ -24,7 +24,7 @@ struct BoneMatrixRenderData
     Scale scale_v0_;
     Scale scale_v1_;
     Scale scale_v2_;
-    fix32_t rotationMatrix_[9]; // probably a struct
+    Matrix3x3 rotationMatrix_; // probably a struct
     Vector3fix translate_;
 };
 

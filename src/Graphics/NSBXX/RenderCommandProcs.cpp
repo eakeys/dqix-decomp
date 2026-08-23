@@ -69,9 +69,9 @@
 
 #pragma optimize_for_size off
 
-extern void (*data_020f1e88[8])(fix32_t*, MaterialRenderData*);
-extern void (*data_020f1ea8[8])(fix32_t*, MaterialRenderData*);
-extern void (*data_020f1ec8[8])(fix32_t*, MaterialRenderData*);
+extern void (*data_020f1e88[8])(Matrix4x4*, MaterialRenderData*);
+extern void (*data_020f1ea8[8])(Matrix4x4*, MaterialRenderData*);
+extern void (*data_020f1ec8[8])(Matrix4x4*, MaterialRenderData*);
 
 void BoneMatrixDataSubmissionProc_Type0(BoneMatrixRenderData* renderData)
 {
@@ -80,7 +80,7 @@ void BoneMatrixDataSubmissionProc_Type0(BoneMatrixRenderData* renderData)
         if (!(renderData->flags_ & 2))
         {
             // Combine rotation matrix with translation part
-            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)renderData->rotationMatrix_, 12);
+            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)renderData->rotationMatrix_.entries, 12);
         }
         else
         {
@@ -89,7 +89,7 @@ void BoneMatrixDataSubmissionProc_Type0(BoneMatrixRenderData* renderData)
     }
     else if (!(renderData->flags_ & 2))
     {
-        SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)renderData->rotationMatrix_, 9);
+        SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)renderData->rotationMatrix_.entries, 9);
     }
 
     if (!(renderData->flags_ & 1))
@@ -134,11 +134,11 @@ void BoneMatrixDataSubmissionProc_Type1(BoneMatrixRenderData* renderData)
         if (needSubmitTranslateCommand)
         {
             // this 4x3 matrix represents rotating first, then translating
-            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)renderData->rotationMatrix_, 12);
+            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)renderData->rotationMatrix_.entries, 12);
             needSubmitTranslateCommand = false; // unused
         }
         else
-            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)renderData->rotationMatrix_, 9);
+            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)renderData->rotationMatrix_.entries, 9);
     }
     else if (needSubmitTranslateCommand)
     {
@@ -196,125 +196,125 @@ void BoneMatrixScaleCalculationProc_Type1(BoneMatrixRenderData* renderData, NSBX
     renderData->flags_ |= 0x10;
 }
 
-extern "C" void CreateTextureMatrix_v0_RotateTranslateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_RotateTranslateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
     fix32_t scaleXsin = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationSine_) >> 12;
     fix32_t scaleXcos = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationCosine_) >> 12;
     fix32_t scaleYsin = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationSine_) >> 12;
     fix32_t scaleYcos = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationCosine_) >> 12;
     
-    matrix[0] = scaleXcos;
-    matrix[5] = scaleYcos;
+    matrix->entries[0] = scaleXcos;
+    matrix->entries[5] = scaleYcos;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (-scaleYsin * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (-scaleYsin * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
     // As a real number, this is
     // m_41 = 8w * s_x(1 - sin(u) - cos(u)) - 16w * s_x * t_x
-    matrix[12] = renderData->materialWidth_ * (renderData->extensionScaleX_ - (scaleXsin + scaleXcos)) * 8
+    matrix->entries[12] = renderData->materialWidth_ * (renderData->extensionScaleX_ - (scaleXsin + scaleXcos)) * 8
         - renderData->materialWidth_ * (int)(((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->translateX_) >> 8);
 
     // As a real number this is
     // m_42 = 8h(2 + s_x(sin(u) - cos(u) - 1)) + 16h * s_y * t_y
-    matrix[13] = renderData->materialHeight_ * (scaleYsin - scaleYcos - renderData->extensionScaleY_ + (2 << 12)) * 8 + 
+    matrix->entries[13] = renderData->materialHeight_ * (scaleYsin - scaleYcos - renderData->extensionScaleY_ + (2 << 12)) * 8 + 
         + renderData->materialHeight_ * (int)(((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->translateY_) >> 8);
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (scaleXsin * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (scaleXsin * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v0_RotateTranslate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_RotateTranslate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
-    matrix[0] = renderData->rotationCosine_;
-    matrix[5] = renderData->rotationCosine_;
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (-renderData->rotationSine_ * aspectRatio) >> 12;
+    fix32_QueueComputeQuotient(matHeight, matWidth);
+    matrix->entries[0] = renderData->rotationCosine_;
+    matrix->entries[5] = renderData->rotationCosine_;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (-renderData->rotationSine_ * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
     fix32_t negsum = (renderData->rotationSine_ + renderData->rotationCosine_);
     negsum = -negsum;
-    matrix[12] = renderData->materialWidth_ * (negsum + (1 << 12)) * 8
+    matrix->entries[12] = renderData->materialWidth_ * (negsum + (1 << 12)) * 8
         - renderData->translateX_ * renderData->materialWidth_ * 16;
 
-    matrix[13] = renderData->materialHeight_ * (renderData->rotationSine_ - renderData->rotationCosine_ + (1 << 12)) * 8
+    matrix->entries[13] = renderData->materialHeight_ * (renderData->rotationSine_ - renderData->rotationCosine_ + (1 << 12)) * 8
         + renderData->translateY_ * renderData->materialHeight_ * 16;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (renderData->rotationSine_ * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (renderData->rotationSine_ * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v0_TranslateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_TranslateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = renderData->extensionScaleX_;
-    matrix[5] = renderData->extensionScaleY_;
-    matrix[1] = 0;
+    matrix->entries[0] = renderData->extensionScaleX_;
+    matrix->entries[5] = renderData->extensionScaleY_;
+    matrix->entries[1] = 0;
 
-    matrix[12] = renderData->materialWidth_ * -(fix32_t)(((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->translateX_) >> 8);
+    matrix->entries[12] = renderData->materialWidth_ * -(fix32_t)(((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->translateX_) >> 8);
 
-    matrix[13] = 
+    matrix->entries[13] = 
         renderData->materialHeight_ * ((-2 * renderData->extensionScaleY_) + (2 << 12)) * 8 +
         renderData->materialHeight_ * (fix32_t)(((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->translateY_) >> 8);
 
-    matrix[4] = 0;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v0_Translate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_Translate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = 1 << 12;
-    matrix[5] = 1 << 12;
-    matrix[1] = 0;
-    matrix[12] = -(renderData->translateX_ * renderData->materialWidth_) * 16;
-    matrix[13] = (renderData->translateY_ * renderData->materialHeight_) * 16;
-    matrix[4] = 0;
+    matrix->entries[0] = 1 << 12;
+    matrix->entries[5] = 1 << 12;
+    matrix->entries[1] = 0;
+    matrix->entries[12] = -(renderData->translateX_ * renderData->materialWidth_) * 16;
+    matrix->entries[13] = (renderData->translateY_ * renderData->materialHeight_) * 16;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v0_RotateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_RotateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
     fix32_t scaleXsin = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationSine_) >> 12;
     fix32_t scaleXcos = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationCosine_) >> 12;
     fix32_t scaleYsin = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationSine_) >> 12;
     fix32_t scaleYcos = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationCosine_) >> 12;
 
-    matrix[0] = scaleXcos;
-    matrix[5] = scaleYcos;
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (-scaleYsin * aspectRatio) >> 12;
+    matrix->entries[0] = scaleXcos;
+    matrix->entries[5] = scaleYcos;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (-scaleYsin * aspectRatio) >> 12;
     
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
-    matrix[12] = renderData->materialWidth_ * (renderData->extensionScaleX_ - (scaleXsin + scaleXcos)) * 8;
-    matrix[13] = renderData->materialHeight_ * ((scaleYsin - scaleYcos) - renderData->extensionScaleY_ + (2 << 12)) * 8;
+    matrix->entries[12] = renderData->materialWidth_ * (renderData->extensionScaleX_ - (scaleXsin + scaleXcos)) * 8;
+    matrix->entries[13] = renderData->materialHeight_ * ((scaleYsin - scaleYcos) - renderData->extensionScaleY_ + (2 << 12)) * 8;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (scaleXsin * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (scaleXsin * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v0_Rotate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_Rotate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
-    matrix[0] = renderData->rotationCosine_;
-    matrix[5] = renderData->rotationCosine_;
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (-renderData->rotationSine_ * aspectRatio) >> 12;
+    matrix->entries[0] = renderData->rotationCosine_;
+    matrix->entries[5] = renderData->rotationCosine_;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (-renderData->rotationSine_ * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
     
     // stupid way to write forces correct assembly, as a real number this
     // is m_41 = 8w(1 - sin(u) - cos(u))
@@ -322,34 +322,34 @@ extern "C" void CreateTextureMatrix_v0_Rotate(fix32_t* matrix, MaterialRenderDat
     fix32_t negsum = -(renderData->rotationSine_ + renderData->rotationCosine_);
     negsum += (1 << 12);
     foo = foo * negsum * 8;
-    matrix[12] = foo;
+    matrix->entries[12] = foo;
     // as a real number this is m_42 = 8h(1 + sin(u) - cos(u))
-    matrix[13] = renderData->materialHeight_ * ((renderData->rotationSine_ - renderData->rotationCosine_) + (1 << 12)) * 8;
+    matrix->entries[13] = renderData->materialHeight_ * ((renderData->rotationSine_ - renderData->rotationCosine_) + (1 << 12)) * 8;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (renderData->rotationSine_ * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (renderData->rotationSine_ * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v0_Scale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_Scale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = renderData->extensionScaleX_;
-    matrix[5] = renderData->extensionScaleY_;
-    matrix[1] = 0;
+    matrix->entries[0] = renderData->extensionScaleX_;
+    matrix->entries[5] = renderData->extensionScaleY_;
+    matrix->entries[1] = 0;
     
-    matrix[12] = 0;
-    matrix[13] = renderData->materialHeight_ * ((-2 * renderData->extensionScaleY_) + (2 << 12)) * 8;
+    matrix->entries[12] = 0;
+    matrix->entries[13] = renderData->materialHeight_ * ((-2 * renderData->extensionScaleY_) + (2 << 12)) * 8;
 
-    matrix[4] = 0;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v0_NoExtensions(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v0_NoExtensions(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = 1 << 12;
-    matrix[1] = 0;
-    matrix[4] = 0;
-    matrix[5] = 1 << 12;
-    matrix[12] = 0;
-    matrix[13] = 0;
+    matrix->entries[0] = 1 << 12;
+    matrix->entries[1] = 0;
+    matrix->entries[4] = 0;
+    matrix->entries[5] = 1 << 12;
+    matrix->entries[12] = 0;
+    matrix->entries[13] = 0;
 }
 
 void MaterialTextureMatrixLoadProc_Type0(MaterialRenderData* renderData)
@@ -357,7 +357,7 @@ void MaterialTextureMatrixLoadProc_Type0(MaterialRenderData* renderData)
     struct {
         uint32_t commands;
         uint32_t initialMatrixMode;
-        fix32_t matrix[16];
+        Matrix4x4 matrix;
         uint32_t finalMatrixMode;
     } fifoData;
 
@@ -370,26 +370,26 @@ void MaterialTextureMatrixLoadProc_Type0(MaterialRenderData* renderData)
     fifoData.finalMatrixMode = 2; // return to position+vector mode
 
     // initialize the 9+1 trivial entries
-    fifoData.matrix[2] = fifoData.matrix[3] = fifoData.matrix[6] = fifoData.matrix[7] =
-        fifoData.matrix[8] = fifoData.matrix[9] = fifoData.matrix[10] = fifoData.matrix[11] =
-        fifoData.matrix[14] = 0;
-    fifoData.matrix[15] = 1 << 12;
+    fifoData.matrix.entries[2] = fifoData.matrix.entries[3] = fifoData.matrix.entries[6] 
+        = fifoData.matrix.entries[7] = fifoData.matrix.entries[8] = fifoData.matrix.entries[9]
+        = fifoData.matrix.entries[10] = fifoData.matrix.entries[11] = fifoData.matrix.entries[14] = 0;
+    fifoData.matrix.entries[15] = 1 << 12;
     // Build the six nontrivial entries of the matrix by composing rotation,
     // translation and scale in that order (keep only the ones we have data for)
-    data_020f1e88[renderData->flags_ & 7](fifoData.matrix, renderData);
+    data_020f1e88[renderData->flags_ & 7](&fifoData.matrix, renderData);
     
     if (renderData->materialxScale_ != 1 << 12)
     {
-        fifoData.matrix[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[0]) >> 12;
-        fifoData.matrix[1] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[1]) >> 12;
-        fifoData.matrix[12] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[12]) >> 12;
+        fifoData.matrix.entries[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[0]) >> 12;
+        fifoData.matrix.entries[1] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[1]) >> 12;
+        fifoData.matrix.entries[12] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[12]) >> 12;
     }
 
     if (renderData->materialyScale_ != 1 << 12)
     {
-        fifoData.matrix[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[4]) >> 12;
-        fifoData.matrix[5] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[5]) >> 12;
-        fifoData.matrix[13] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[13]) >> 12;
+        fifoData.matrix.entries[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[4]) >> 12;
+        fifoData.matrix.entries[5] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[5]) >> 12;
+        fifoData.matrix.entries[13] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[13]) >> 12;
     }
 
     SubmitCommandToGeometryFifo(fifoData.commands, (uint32_t*)&fifoData + 1, 18);
@@ -420,9 +420,9 @@ void BoneMatrixDataSubmissionProc_Type2(BoneMatrixRenderData* renderData)
     if (!(renderData->flags_ & 2)) // has rotation
     {
         if (bVar2) // do rotation then translation
-            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)renderData->rotationMatrix_, 12);
+            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat4x3, (uint32_t*)renderData->rotationMatrix_.entries, 12);
         else
-            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)renderData->rotationMatrix_, 9);
+            SubmitCommandToGeometryFifo(GXFifoCommand_MultiplyMat3x3, (uint32_t*)renderData->rotationMatrix_.entries, 9);
     }
     else if (bVar2)
     {
@@ -486,7 +486,7 @@ void MaterialTextureMatrixLoadProc_Type1(MaterialRenderData* renderData)
     struct {
         uint32_t commands;
         uint32_t initialMatrixMode;
-        fix32_t matrix[12]; // local_38
+        Matrix4x3 matrix; // local_38
         uint32_t finalMatrixMode;
     } fifoData;
 
@@ -497,24 +497,24 @@ void MaterialTextureMatrixLoadProc_Type1(MaterialRenderData* renderData)
     fifoData.initialMatrixMode = 3; // switch to texture matrix mode
     fifoData.finalMatrixMode = 2; // back to position+vector
 
-    fifoData.matrix[1] = fifoData.matrix[2] = fifoData.matrix[3] = fifoData.matrix[5]
-        = fifoData.matrix[6] = fifoData.matrix[7] = fifoData.matrix[8] = fifoData.matrix[11] = 0;
+    fifoData.matrix.entries[1] = fifoData.matrix.entries[2] = fifoData.matrix.entries[3] = fifoData.matrix.entries[5]
+        = fifoData.matrix.entries[6] = fifoData.matrix.entries[7] = fifoData.matrix.entries[8] = fifoData.matrix.entries[11] = 0;
     
     // This version only does translation and scaling, translation is negated and
     // applies before scaling.
     if (renderData->flags_ & 4) // no translation data
     {
-        fifoData.matrix[9] = 0;
-        fifoData.matrix[10] = 0;
+        fifoData.matrix.entries[9] = 0;
+        fifoData.matrix.entries[10] = 0;
         if (renderData->flags_ & 1) // no scaling data
         {
-            fifoData.matrix[0] = 1 << 12;
-            fifoData.matrix[4] = 1 << 12;
+            fifoData.matrix.entries[0] = 1 << 12;
+            fifoData.matrix.entries[4] = 1 << 12;
         }
         else
         {
-            fifoData.matrix[0] = renderData->extensionScaleX_;
-            fifoData.matrix[4] = renderData->extensionScaleY_;
+            fifoData.matrix.entries[0] = renderData->extensionScaleX_;
+            fifoData.matrix.entries[4] = renderData->extensionScaleY_;
         }
     }
     else // has translation data
@@ -522,86 +522,86 @@ void MaterialTextureMatrixLoadProc_Type1(MaterialRenderData* renderData)
         if (renderData->flags_ & 1) // no scaling data
         {
             fix32_t tx = -(renderData->translateX_ * 16);
-            fifoData.matrix[9] = tx * renderData->materialWidth_;
+            fifoData.matrix.entries[9] = tx * renderData->materialWidth_;
             fix32_t ty = -(renderData->translateY_ * 16);
-            fifoData.matrix[10] = ty * renderData->materialHeight_;
-            fifoData.matrix[0] = 1 << 12;
-            fifoData.matrix[4] = 1 << 12;
+            fifoData.matrix.entries[10] = ty * renderData->materialHeight_;
+            fifoData.matrix.entries[0] = 1 << 12;
+            fifoData.matrix.entries[4] = 1 << 12;
         }
         else
         {
-            fifoData.matrix[9] = renderData->materialWidth_ * -(fix32_t)(((int64_t)renderData->extensionScaleX_ * renderData->translateX_) >> 8);
-            fifoData.matrix[10] = renderData->materialHeight_ * -(fix32_t)(((int64_t)renderData->extensionScaleY_ * renderData->translateY_) >> 8);
-            fifoData.matrix[0] = renderData->extensionScaleX_;
-            fifoData.matrix[4] = renderData->extensionScaleY_;
+            fifoData.matrix.entries[9] = renderData->materialWidth_ * -(fix32_t)(((int64_t)renderData->extensionScaleX_ * renderData->translateX_) >> 8);
+            fifoData.matrix.entries[10] = renderData->materialHeight_ * -(fix32_t)(((int64_t)renderData->extensionScaleY_ * renderData->translateY_) >> 8);
+            fifoData.matrix.entries[0] = renderData->extensionScaleX_;
+            fifoData.matrix.entries[4] = renderData->extensionScaleY_;
         }
     }
 
     if (renderData->materialxScale_ != (1 << 12))
     {
-        fifoData.matrix[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[0]) >> 12;
-        fifoData.matrix[9] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[9]) >> 12;
+        fifoData.matrix.entries[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[0]) >> 12;
+        fifoData.matrix.entries[9] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[9]) >> 12;
     }
 
     if (renderData->materialyScale_ != (1 << 12))
     {
-        fifoData.matrix[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[4]) >> 12;
-        fifoData.matrix[10] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[10]) >> 12;
+        fifoData.matrix.entries[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[4]) >> 12;
+        fifoData.matrix.entries[10] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[10]) >> 12;
     }
 
     SubmitCommandToGeometryFifo(fifoData.commands, (uint32_t*)&fifoData + 1, 14);
 }
 
-extern "C" void CreateTextureMatrix_v2_TranslateRotateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_TranslateRotateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
     
     fix32_t scaleXcos = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationCosine_) >> 12;
     fix32_t scaleXsin = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationSine_) >> 12;
     fix32_t scaleYcos = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationCosine_) >> 12;
     fix32_t scaleYsin = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationSine_) >> 12;
     
-    matrix[0] = scaleXcos;
-    matrix[5] = scaleYcos;
+    matrix->entries[0] = scaleXcos;
+    matrix->entries[5] = scaleYcos;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (scaleYsin * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (scaleYsin * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
     int shiftedTx = -renderData->materialWidth_ * (1 << 11);
     int shiftedTy = -renderData->materialHeight_ * (1 << 11) + renderData->translateY_ * renderData->materialHeight_;
     shiftedTx -= renderData->translateX_ * renderData->materialWidth_;
 
-    matrix[12] = (fix32_t)((((int64_t)scaleXcos * shiftedTx) 
+    matrix->entries[12] = (fix32_t)((((int64_t)scaleXcos * shiftedTx) 
         - ((int64_t)scaleXsin * shiftedTy)) >> 8)
         + renderData->materialWidth_ * (8 << 12);
 
-    matrix[13] = (fix32_t)((((int64_t)scaleYsin * shiftedTx)
+    matrix->entries[13] = (fix32_t)((((int64_t)scaleYsin * shiftedTx)
         + ((int64_t)scaleYcos * shiftedTy)) >> 8)
         + renderData->materialHeight_ * (8 << 12);
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-scaleXsin * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-scaleXsin * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v2_TranslateRotate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_TranslateRotate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
-    matrix[0] = renderData->rotationCosine_;
-    matrix[5] = renderData->rotationCosine_;
+    matrix->entries[0] = renderData->rotationCosine_;
+    matrix->entries[5] = renderData->rotationCosine_;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
     // these hold (-w/2 - w * t_x) and (-h/2 + h * t_y) respectively
     fix32_t shiftedTx = -renderData->materialWidth_ * (1 << 11);
@@ -609,132 +609,132 @@ extern "C" void CreateTextureMatrix_v2_TranslateRotate(fix32_t* matrix, Material
     shiftedTx -= renderData->translateX_ * renderData->materialWidth_;
 
 
-    matrix[12] = (fix32_t)((((int64_t)renderData->rotationCosine_ * shiftedTx) 
+    matrix->entries[12] = (fix32_t)((((int64_t)renderData->rotationCosine_ * shiftedTx) 
         - ((int64_t)renderData->rotationSine_ * shiftedTy)) >> 8)
         + renderData->materialWidth_ * (8 << 12);
-    matrix[13] = (fix32_t)((((int64_t)renderData->rotationSine_ * shiftedTx) 
+    matrix->entries[13] = (fix32_t)((((int64_t)renderData->rotationSine_ * shiftedTx) 
         + ((int64_t)renderData->rotationCosine_ * shiftedTy)) >> 8)
         + renderData->materialHeight_ * (8 << 12);
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v2_TranslateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_TranslateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = renderData->extensionScaleX_;
-    matrix[5] = renderData->extensionScaleY_;
+    matrix->entries[0] = renderData->extensionScaleX_;
+    matrix->entries[5] = renderData->extensionScaleY_;
 
-    matrix[1] = 0;
+    matrix->entries[1] = 0;
 
     int tx = (-renderData->materialWidth_ * 0x800 - renderData->translateX_ * renderData->materialWidth_);
     int ty = (-renderData->materialHeight_ * 0x800 + renderData->translateY_ * renderData->materialHeight_);
 
-    matrix[12] = (fix32_t)(((int64_t)renderData->extensionScaleX_ * tx) >> 8) + renderData->materialWidth_ * (8 << 12);
-    matrix[13] = (fix32_t)(((int64_t)renderData->extensionScaleY_ * ty) >> 8) + renderData->materialHeight_ * (8 << 12);
+    matrix->entries[12] = (fix32_t)(((int64_t)renderData->extensionScaleX_ * tx) >> 8) + renderData->materialWidth_ * (8 << 12);
+    matrix->entries[13] = (fix32_t)(((int64_t)renderData->extensionScaleY_ * ty) >> 8) + renderData->materialHeight_ * (8 << 12);
 
-    matrix[4] = 0;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v2_Translate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_Translate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = 1 << 12;
-    matrix[5] = 1 << 12;
-    matrix[1] = 0;
-    matrix[12] = -renderData->translateX_ * renderData->materialWidth_ * 16;
-    matrix[13] = renderData->translateY_ * renderData->materialHeight_ * 16;
-    matrix[4] = 0;
+    matrix->entries[0] = 1 << 12;
+    matrix->entries[5] = 1 << 12;
+    matrix->entries[1] = 0;
+    matrix->entries[12] = -renderData->translateX_ * renderData->materialWidth_ * 16;
+    matrix->entries[13] = renderData->translateY_ * renderData->materialHeight_ * 16;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v2_RotateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_RotateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
     
     fix32_t scaleXcos = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationCosine_) >> 12;
     fix32_t scaleXsin = ((int64_t)renderData->extensionScaleX_ * (int64_t)renderData->rotationSine_) >> 12;
     fix32_t scaleYcos = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationCosine_) >> 12;
     fix32_t scaleYsin = ((int64_t)renderData->extensionScaleY_ * (int64_t)renderData->rotationSine_) >> 12;
     
-    matrix[0] = scaleXcos;
-    matrix[5] = scaleYcos;
+    matrix->entries[0] = scaleXcos;
+    matrix->entries[5] = scaleYcos;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (scaleYsin * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (scaleYsin * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
     int shiftedTx = renderData->materialWidth_;
     int shiftedTy = renderData->materialHeight_;
     shiftedTy = -shiftedTy * ((1 << 12) >> 1);
     shiftedTx = -shiftedTx * ((1 << 12) >> 1);
 
-    matrix[12] = (fix32_t)((((int64_t)scaleXcos * shiftedTx) 
+    matrix->entries[12] = (fix32_t)((((int64_t)scaleXcos * shiftedTx) 
         - ((int64_t)scaleXsin * shiftedTy)) >> 8)
         + renderData->materialWidth_ * (8 << 12);
 
-    matrix[13] = (fix32_t)((((int64_t)scaleYsin * shiftedTx)
+    matrix->entries[13] = (fix32_t)((((int64_t)scaleYsin * shiftedTx)
         + ((int64_t)scaleYcos * shiftedTy)) >> 8)
         + renderData->materialHeight_ * (8 << 12);
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-scaleXsin * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-scaleXsin * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v2_Rotate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_Rotate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
-    matrix[0] = renderData->rotationCosine_;
-    matrix[5] = renderData->rotationCosine_;
+    matrix->entries[0] = renderData->rotationCosine_;
+    matrix->entries[5] = renderData->rotationCosine_;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
     fix32_t shiftedTx = renderData->materialWidth_;
     fix32_t shiftedTy = renderData->materialHeight_;
     shiftedTy = -shiftedTy * ((1 << 12) >> 1); // holds -height/2 as fix32
     shiftedTx = -shiftedTx * ((1 << 12) >> 1); // holds -width/2 as fix32
 
-    matrix[12] = (fix32_t)((((int64_t)renderData->rotationCosine_ * shiftedTx) 
+    matrix->entries[12] = (fix32_t)((((int64_t)renderData->rotationCosine_ * shiftedTx) 
         - ((int64_t)renderData->rotationSine_ * shiftedTy)) >> 8)
         + renderData->materialWidth_ * (8 << 12);
-    matrix[13] = (fix32_t)((((int64_t)renderData->rotationSine_ * shiftedTx) 
+    matrix->entries[13] = (fix32_t)((((int64_t)renderData->rotationSine_ * shiftedTx) 
         + ((int64_t)renderData->rotationCosine_ * shiftedTy)) >> 8)
         + renderData->materialHeight_ * (8 << 12);
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v2_Scale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_Scale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = renderData->extensionScaleX_;
-    matrix[5] = renderData->extensionScaleY_;
+    matrix->entries[0] = renderData->extensionScaleX_;
+    matrix->entries[5] = renderData->extensionScaleY_;
 
-    matrix[1] = 0;
+    matrix->entries[1] = 0;
 
-    matrix[12] = ((1 << 12) - renderData->extensionScaleX_) * renderData->materialWidth_ * 8;
-    matrix[13] = ((1 << 12) - renderData->extensionScaleY_) * renderData->materialHeight_ * 8;
+    matrix->entries[12] = ((1 << 12) - renderData->extensionScaleX_) * renderData->materialWidth_ * 8;
+    matrix->entries[13] = ((1 << 12) - renderData->extensionScaleY_) * renderData->materialHeight_ * 8;
 
-    matrix[4] = 0;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v2_NoExtensions(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v2_NoExtensions(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = 1 << 12;
-    matrix[1] = 0;
-    matrix[4] = 0;
-    matrix[5] = 1 << 12;
-    matrix[12] = 0;
-    matrix[13] = 0;
+    matrix->entries[0] = 1 << 12;
+    matrix->entries[1] = 0;
+    matrix->entries[4] = 0;
+    matrix->entries[5] = 1 << 12;
+    matrix->entries[12] = 0;
+    matrix->entries[13] = 0;
 }
 
 void MaterialTextureMatrixLoadProc_Type2(MaterialRenderData* renderData)
@@ -742,7 +742,7 @@ void MaterialTextureMatrixLoadProc_Type2(MaterialRenderData* renderData)
     struct {
         uint32_t commands;
         uint32_t initialMatrixMode;
-        fix32_t matrix[16];
+        Matrix4x4 matrix;
         uint32_t finalMatrixMode;
     } fifoData;
 
@@ -754,39 +754,39 @@ void MaterialTextureMatrixLoadProc_Type2(MaterialRenderData* renderData)
     fifoData.initialMatrixMode = 3; // load/adjust texture matrix
     fifoData.finalMatrixMode = 2; // return to position+vector mode after
 
-    fifoData.matrix[2] = fifoData.matrix[3] = fifoData.matrix[6] = fifoData.matrix[7]
-        = fifoData.matrix[8] = fifoData.matrix[9] = fifoData.matrix[10]
-        = fifoData.matrix[11] = fifoData.matrix[14] = 0;
-    fifoData.matrix[15] = 1 << 12;
+    fifoData.matrix.entries[2] = fifoData.matrix.entries[3] = fifoData.matrix.entries[6]
+        = fifoData.matrix.entries[7] = fifoData.matrix.entries[8] = fifoData.matrix.entries[9]
+        = fifoData.matrix.entries[10] = fifoData.matrix.entries[11] = fifoData.matrix.entries[14] = 0;
+    fifoData.matrix.entries[15] = 1 << 12;
 
     // apply whichever of translation, rotation, scale are available.
     // Note that this time, translation happens first. Also rotation is stupid,
     // the center of rotation is not (8w, 8h) like in v0.
-    data_020f1ea8[renderData->flags_ & 7](fifoData.matrix, renderData);
+    data_020f1ea8[renderData->flags_ & 7](&fifoData.matrix, renderData);
 
     if (renderData->materialxScale_ != (1 << 12))
     {
-        fifoData.matrix[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[0]) >> 12;
-        fifoData.matrix[1] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[1]) >> 12;
-        fifoData.matrix[12] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[12]) >> 12;
+        fifoData.matrix.entries[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[0]) >> 12;
+        fifoData.matrix.entries[1] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[1]) >> 12;
+        fifoData.matrix.entries[12] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[12]) >> 12;
     }
 
     if (renderData->materialyScale_ != (1 << 12))
     {
-        fifoData.matrix[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[4]) >> 12;
-        fifoData.matrix[5] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[5]) >> 12;
-        fifoData.matrix[13] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[13]) >> 12;
+        fifoData.matrix.entries[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[4]) >> 12;
+        fifoData.matrix.entries[5] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[5]) >> 12;
+        fifoData.matrix.entries[13] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[13]) >> 12;
     }
 
     SubmitCommandToGeometryFifo(fifoData.commands, (uint32_t*)&fifoData + 1, 18);
 }
 
-extern "C" void CreateTextureMatrix_v3_ScaleTranslateRotate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_ScaleTranslateRotate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
     fix32_t cosine = renderData->rotationCosine_;
     fix32_t sine = renderData->rotationSine_;
@@ -795,18 +795,18 @@ extern "C" void CreateTextureMatrix_v3_ScaleTranslateRotate(fix32_t* matrix, Mat
 
     fix32_t scaleXcos = ((int64_t)scaleX * cosine) >> 12;
     
-    matrix[0] = scaleXcos;
+    matrix->entries[0] = scaleXcos;
 
     fix32_t scaleXsin = ((int64_t)scaleX * sine) >> 12;
     fix32_t scaleYcos = ((int64_t)scaleY * cosine) >> 12;
     fix32_t scaleYsin = ((int64_t)scaleY * sine) >> 12;    
 
-    matrix[5] = scaleYcos;
+    matrix->entries[5] = scaleYcos;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (scaleYsin * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (scaleYsin * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
     
     int64_t txsin = (int64_t)renderData->translateX_ * renderData->rotationSine_;
     int64_t tysin = (int64_t)renderData->translateY_ * renderData->rotationSine_;
@@ -822,25 +822,25 @@ extern "C" void CreateTextureMatrix_v3_ScaleTranslateRotate(fix32_t* matrix, Mat
     fix32_t scaledrotatedtx = (rotatedtx * renderData->extensionScaleX_) >> 12;
     fix32_t m41prescaled = scaleXsin - scaledrotatedtx;
     
-    matrix[12] = renderData->materialWidth_ * m41prescaled * 16;
-    matrix[13] = -renderData->materialHeight_ * m42prescaled * 16;
+    matrix->entries[12] = renderData->materialWidth_ * m41prescaled * 16;
+    matrix->entries[13] = -renderData->materialHeight_ * m42prescaled * 16;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-scaleXsin * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-scaleXsin * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v3_TranslateRotate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_TranslateRotate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
-    matrix[0] = renderData->rotationCosine_;
-    matrix[5] = renderData->rotationCosine_;
+    fix32_QueueComputeQuotient(matHeight, matWidth);
+    matrix->entries[0] = renderData->rotationCosine_;
+    matrix->entries[5] = renderData->rotationCosine_;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
-    func_020c2cf0(matWidth, matHeight);
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
     int64_t sine = renderData->rotationSine_;
     int64_t cosine = renderData->rotationCosine_;
@@ -857,49 +857,49 @@ extern "C" void CreateTextureMatrix_v3_TranslateRotate(fix32_t* matrix, Material
     
     int32_t ty = (xsin - ycos) >> 12;
     
-    matrix[12] = renderData->materialWidth_ * (renderData->rotationSine_ - tx) * 16;
-    matrix[13] = -renderData->materialHeight_ * (renderData->rotationCosine_ + ty - 0x1000) * 16;
+    matrix->entries[12] = renderData->materialWidth_ * (renderData->rotationSine_ - tx) * 16;
+    matrix->entries[13] = -renderData->materialHeight_ * (renderData->rotationCosine_ + ty - 0x1000) * 16;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v3_TranslateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_TranslateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = renderData->extensionScaleX_;
-    matrix[5] = renderData->extensionScaleY_;
-    matrix[1] = 0;
+    matrix->entries[0] = renderData->extensionScaleX_;
+    matrix->entries[5] = renderData->extensionScaleY_;
+    matrix->entries[1] = 0;
 
     
     fix32_t scaledTx = ((int64_t)renderData->translateX_ * renderData->extensionScaleX_) >> 12;
     fix32_t scaledTy = ((int64_t)-renderData->translateY_ * renderData->extensionScaleY_) >> 12;
 
-    matrix[12] = renderData->materialWidth_ * -scaledTx * 16;
-    matrix[13] = -renderData->materialHeight_ * (renderData->extensionScaleY_ + scaledTy - 0x1000) * 16;
+    matrix->entries[12] = renderData->materialWidth_ * -scaledTx * 16;
+    matrix->entries[13] = -renderData->materialHeight_ * (renderData->extensionScaleY_ + scaledTy - 0x1000) * 16;
 
-    matrix[4] = 0;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v3_Translate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_Translate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = 1 << 12;
-    matrix[5] = 1 << 12;
-    matrix[1] = 0;
+    matrix->entries[0] = 1 << 12;
+    matrix->entries[5] = 1 << 12;
+    matrix->entries[1] = 0;
 
     fix32_t tx = -renderData->translateX_;
     fix32_t ty = -renderData->translateY_;
 
-    matrix[12] = renderData->materialWidth_ * tx * 16;
-    matrix[13] = -renderData->materialHeight_ * ty * 16;
-    matrix[4] = 0;
+    matrix->entries[12] = renderData->materialWidth_ * tx * 16;
+    matrix->entries[13] = -renderData->materialHeight_ * ty * 16;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v3_RotateScale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_RotateScale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
     fix32_t sine = renderData->rotationSine_;
     fix32_t cosine = renderData->rotationCosine_;
@@ -911,62 +911,62 @@ extern "C" void CreateTextureMatrix_v3_RotateScale(fix32_t* matrix, MaterialRend
 
     fix32_t ycos = ((int64_t)scaleY * cosine) >> 12;
 
-    matrix[0] = xcos;
-    matrix[5] = ycos;
+    matrix->entries[0] = xcos;
+    matrix->entries[5] = ycos;
 
-    fix32_t aspectRatio = func_020c2c5c();
+    fix32_t aspectRatio = fix32_GetDivisionResult();
 
     fix32_t ysine = ((int64_t)scaleY * sine) >> 12;
-    matrix[1] = (ysine * aspectRatio) >> 12;
+    matrix->entries[1] = (ysine * aspectRatio) >> 12;
 
-    func_020c2cf0(matWidth, matHeight);
-    matrix[12] = renderData->materialWidth_ * xsin * 16;
-    matrix[13] = -renderData->materialHeight_ * (ycos - 0x1000) * 16;
+    fix32_QueueComputeQuotient(matWidth, matHeight);
+    matrix->entries[12] = renderData->materialWidth_ * xsin * 16;
+    matrix->entries[13] = -renderData->materialHeight_ * (ycos - 0x1000) * 16;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-xsin * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-xsin * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v3_Rotate(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_Rotate(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
     fix32_t matWidth = renderData->materialWidth_ << 12;
     fix32_t matHeight = renderData->materialHeight_ << 12;
 
-    func_020c2cf0(matHeight, matWidth);
+    fix32_QueueComputeQuotient(matHeight, matWidth);
 
-    matrix[0] = renderData->rotationCosine_;
-    matrix[5] = renderData->rotationCosine_;
+    matrix->entries[0] = renderData->rotationCosine_;
+    matrix->entries[5] = renderData->rotationCosine_;
 
-    fix32_t aspectRatio = func_020c2c5c();
-    matrix[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
+    fix32_t aspectRatio = fix32_GetDivisionResult();
+    matrix->entries[1] = (renderData->rotationSine_ * aspectRatio) >> 12;
     
-    func_020c2cf0(matWidth, matHeight);
+    fix32_QueueComputeQuotient(matWidth, matHeight);
 
-    matrix[12] = renderData->materialWidth_ * renderData->rotationSine_ * 16;
-    matrix[13] = -renderData->materialHeight_ * (renderData->rotationCosine_ - (1 << 12)) * 16;
+    matrix->entries[12] = renderData->materialWidth_ * renderData->rotationSine_ * 16;
+    matrix->entries[13] = -renderData->materialHeight_ * (renderData->rotationCosine_ - (1 << 12)) * 16;
 
-    fix32_t invAspectRatio = func_020c2c5c();
-    matrix[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
+    fix32_t invAspectRatio = fix32_GetDivisionResult();
+    matrix->entries[4] = (-renderData->rotationSine_ * invAspectRatio) >> 12;
 }
 
-extern "C" void CreateTextureMatrix_v3_Scale(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_Scale(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = renderData->extensionScaleX_;
-    matrix[5] = renderData->extensionScaleY_;
-    matrix[1] = 0;
-    matrix[12] = 0;
-    matrix[13] = -renderData->materialHeight_ * (renderData->extensionScaleY_ - (1 << 12)) * 16;
-    matrix[4] = 0;
+    matrix->entries[0] = renderData->extensionScaleX_;
+    matrix->entries[5] = renderData->extensionScaleY_;
+    matrix->entries[1] = 0;
+    matrix->entries[12] = 0;
+    matrix->entries[13] = -renderData->materialHeight_ * (renderData->extensionScaleY_ - (1 << 12)) * 16;
+    matrix->entries[4] = 0;
 }
 
-extern "C" void CreateTextureMatrix_v3_NoExtensions(fix32_t* matrix, MaterialRenderData* renderData)
+extern "C" void CreateTextureMatrix_v3_NoExtensions(Matrix4x4* matrix, MaterialRenderData* renderData)
 {
-    matrix[0] = 1 << 12;
-    matrix[1] = 0;
-    matrix[4] = 0;
-    matrix[5] = 1 << 12;
-    matrix[12] = 0;
-    matrix[13] = 0;
+    matrix->entries[0] = 1 << 12;
+    matrix->entries[1] = 0;
+    matrix->entries[4] = 0;
+    matrix->entries[5] = 1 << 12;
+    matrix->entries[12] = 0;
+    matrix->entries[13] = 0;
 }
 
 void MaterialTextureMatrixLoadProc_Type3(MaterialRenderData* renderData)
@@ -974,7 +974,7 @@ void MaterialTextureMatrixLoadProc_Type3(MaterialRenderData* renderData)
     struct {
         uint32_t commands;
         uint32_t initialMatrixMode;
-        fix32_t matrix[16];
+        Matrix4x4 matrix;
         uint32_t finalMatrixMode;
     } fifoData;
 
@@ -986,10 +986,10 @@ void MaterialTextureMatrixLoadProc_Type3(MaterialRenderData* renderData)
     fifoData.initialMatrixMode = 3; // load/adjust texture matrix
     fifoData.finalMatrixMode = 2; // return to position+vector mode after
 
-    fifoData.matrix[2] = fifoData.matrix[3] = fifoData.matrix[6] = fifoData.matrix[7]
-        = fifoData.matrix[8] = fifoData.matrix[9] = fifoData.matrix[10]
-        = fifoData.matrix[11] = fifoData.matrix[14] = 0;
-    fifoData.matrix[15] = 1 << 12;
+    fifoData.matrix.entries[2] = fifoData.matrix.entries[3] = fifoData.matrix.entries[6]
+        = fifoData.matrix.entries[7] = fifoData.matrix.entries[8] = fifoData.matrix.entries[9]
+        = fifoData.matrix.entries[10] = fifoData.matrix.entries[11] = fifoData.matrix.entries[14] = 0;
+    fifoData.matrix.entries[15] = 1 << 12;
 
     if (renderData->flags_ & 1)
     {
@@ -1007,20 +1007,20 @@ void MaterialTextureMatrixLoadProc_Type3(MaterialRenderData* renderData)
         renderData->translateX_ = renderData->translateY_ = 0;
     }
 
-    data_020f1ec8[renderData->flags_ & 7](fifoData.matrix, renderData);
+    data_020f1ec8[renderData->flags_ & 7](&fifoData.matrix, renderData);
 
     if (renderData->materialxScale_ != (1 << 12))
     {
-        fifoData.matrix[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[0]) >> 12;
-        fifoData.matrix[1] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[1]) >> 12;
-        fifoData.matrix[12] = ((int64_t)renderData->materialxScale_ * fifoData.matrix[12]) >> 12;
+        fifoData.matrix.entries[0] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[0]) >> 12;
+        fifoData.matrix.entries[1] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[1]) >> 12;
+        fifoData.matrix.entries[12] = ((int64_t)renderData->materialxScale_ * fifoData.matrix.entries[12]) >> 12;
     }
 
     if (renderData->materialyScale_ != (1 << 12))
     {
-        fifoData.matrix[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[4]) >> 12;
-        fifoData.matrix[5] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[5]) >> 12;
-        fifoData.matrix[13] = ((int64_t)renderData->materialyScale_ * fifoData.matrix[13]) >> 12;
+        fifoData.matrix.entries[4] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[4]) >> 12;
+        fifoData.matrix.entries[5] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[5]) >> 12;
+        fifoData.matrix.entries[13] = ((int64_t)renderData->materialyScale_ * fifoData.matrix.entries[13]) >> 12;
     }
 
     SubmitCommandToGeometryFifo(fifoData.commands, (uint32_t*)&fifoData + 1, 18);

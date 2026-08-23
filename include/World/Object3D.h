@@ -155,7 +155,7 @@ public:
     struct TrackedBoneMatrix
     {
         unsigned short boneIndex;
-        fix32_t matrix[12];
+        Matrix4x3 matrix;
         TrackedBoneMatrix* pNext;
     } *trackedBoneMatrixList_;
 

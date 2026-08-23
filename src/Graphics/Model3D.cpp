@@ -15,15 +15,11 @@
 #define data_020f1ef0 data_020f205c
 #define data_020f1ef4 data_020f2060
 
-#define func_0200f374 func_0200f238
 #define func_020c56b0 func_020c717c
 #endif
 
 extern "C"
 {
-    // zero memory
-    void func_0200f374(void*, unsigned);
-
     int func_020c56b0(int*);
 }
 
@@ -275,8 +271,7 @@ found_a_model:
         zMiddle_ = scaledZMin + (scaledZSize / 2);
         copyOfHeight_ = scaledYSize;
 
-        Vector3fix span;
-        func_0200f374(&span, sizeof(Vector3fix));
+        Vector3fix span = { 0, 0, 0 };
         span.x = scaledXSize;
         span.z = scaledZSize;
         maybeApproxRadius_ = Vector3fix_Length(&span) / 2;

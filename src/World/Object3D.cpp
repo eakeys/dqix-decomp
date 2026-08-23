@@ -16,9 +16,6 @@ void AnimationPackageListInsert(AnimationPackage** pListStart, AnimationPackage*
 
 extern "C"
 {
-    // zero memory
-    void func_0200f374(void*, unsigned);
-
     void* func_020100bc(BattleStruct*);
 
     // deltaTime for animation blending
@@ -836,8 +833,7 @@ void Object3D::MaybeUpdateBonePositions()
     AdvanceEffects();
     flags_6c_ |= (1 << OBJECT3D_FLAG_5);
     ApplyAnimations(NULL);
-    Vector3fix position /*= { 0, 0, 0 } */;
-    func_0200f374(&position, sizeof(Vector3fix));
+    Vector3fix position = { 0, 0, 0 };
     RenderConfig::SetObjectPosition(&position);
     fix32_t cosine = func_02030c9c(rotation_.y);
     fix32_t sine = func_02030c68(rotation_.y);
@@ -2057,8 +2053,7 @@ Vector3fix Object3D::GetPointInFront(fix32_t distance) const
 {
     Vector3fix ownPos = position_;
     Vector3fix ownRot = rotation_;
-    Vector3fix forward /* = { 0, 0, 0 }*/;
-    func_0200f374(&forward, sizeof(Vector3fix));
+    Vector3fix forward = { 0, 0, 0 };
     forward.x = func_02030c68(ownRot.y);
     forward.z = func_02030c9c(ownRot.y);
     Vector3fix output;

@@ -15,9 +15,6 @@ struct Struct_020fdc20
 
 extern "C"
 {
-    // zero memory
-    void func_0200f374(void*, unsigned);
-
     void* func_02011584(BattleStruct*);
     void func_0201ce10(void*);
 
@@ -380,8 +377,7 @@ int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
             fix32_t distance = func_020c2eb8(&difference.vec3.vec);
             func_020c2f18(&difference.vec3.vec, &difference.vec3.vec);
             difference.w = func_020c2df8(&difference.vec3.vec, &vecB);
-            Vector3fix vecC /* = { 0, 0, 0 } */;
-            func_0200f374(&vecC, sizeof(Vector3fix));
+            Vector3fix vecC  = { 0, 0, 0 };
             if (entry.unk_2c.type4.unk_0 == 4)
             {
                 vecC.x = 4096.0f * (params++)->ToFloat();
@@ -603,8 +599,7 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
         fix32_t distance = func_020c2eb8(&vector4.vec3.vec);
         func_020c2f18(&vector4.vec3.vec, &vector4.vec3.vec);
         vector4.w = func_020c2df8(&vector4.vec3.vec, &vecA);
-        Vector3fix vecC /* = { 0, 0, 0 } */;
-        func_0200f374(&vecC, sizeof(Vector3fix));
+        Vector3fix vecC = { 0, 0, 0 };
         if (data_020fdc20.currentEntry->unk_2c.type4.unk_0 == 4)
         {
             params = params->ToVec3fix(&vecC);
@@ -743,8 +738,7 @@ int WarpScript_Opcode_7c(Script::Parameter* params, int numParams)
     fix32_t phalfz = entry.vector_c.vec.z / 2;
     
 
-    Vector3fix vertices[4] /* = { 0 } */;
-    func_0200f374(vertices, sizeof(vertices));
+    Vector3fix vertices[4] = { 0 };
 
     vertices[0].x = mhalfx;
     vertices[0].z = mhalfz;

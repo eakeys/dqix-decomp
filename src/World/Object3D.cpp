@@ -171,7 +171,7 @@ struct Struct_02104b18
     char unk_0[0x14];
     Object3D::TrackedBoneMatrix* boneMatrixList;
     Matrix4x3 boneMatrixWithView;
-} extern data_02104b18;
+} data_02104b18;
 
 extern char data_02108760[];
 

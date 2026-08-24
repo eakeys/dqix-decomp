@@ -63,6 +63,7 @@ src/World/Object3D.cpp:
     .text start:0x02034bc4 end:0x02037d10
     .rodata start:0x020e7800 end:0x020e780c
     .data start:0x020efaa8 end:0x020efb44
+    .bss start:0x02104b18 end:0x02104b60
 
 src/Util/Random.cpp:
 	complete

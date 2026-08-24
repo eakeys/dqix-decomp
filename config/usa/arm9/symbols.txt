@@ -7604,7 +7604,6 @@ data_02104300 kind:bss addr:0x02104300
 safeAllocatorLiveCount kind:bss addr:0x02104b0c
 data_02104b10 kind:bss addr:0x02104b10
 data_02104b18 kind:bss addr:0x02104b18
-data_02104b30 kind:bss addr:0x02104b30
 data_02104b60 kind:bss addr:0x02104b60
 data_02104b6c kind:bss addr:0x02104b6c
 data_02105244 kind:bss addr:0x02105244

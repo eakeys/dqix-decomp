@@ -6390,7 +6390,7 @@ from:0x02037c34 kind:arm_call to:0x020b6bb0 module:main
 from:0x02037c54 kind:arm_call to:0x020b3950 module:main
 from:0x02037c64 kind:arm_call to:0x020c1d60 module:main
 from:0x02037c78 kind:load to:0x02104b18 module:main
-from:0x02037c7c kind:load to:0x02104b30 module:main
+from:0x02037c7c kind:load to:0x02104b18 add:0x18 module:main
 from:0x02037cbc kind:arm_call to:0x0200f374 module:main
 from:0x02037cc8 kind:arm_call to:0x02030c68 module:main
 from:0x02037cd4 kind:arm_call to:0x02030c9c module:main

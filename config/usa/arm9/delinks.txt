@@ -39,8 +39,8 @@ src/Grotto/Main/TileFeatures.cpp:
 
 src/Filesystem/BackgroundLoader.cpp:
     complete
-    .bss start:0x02104304 end:0x02104b0c
     .text start:0x0202f700 end:0x02030634
+    .bss start:0x02104304 end:0x02104b0c
 
 src/Resource/Script.cpp:
     complete
@@ -53,6 +53,8 @@ src/Memory/SafeAllocator.cpp:
 src/Resource/BCFG.cpp:
     complete
     .text start:0x020343a0 end:0x020349c8
+    .data start:0x020efa48 end:0x020efaa8
+    .bss start:0x02104b10 end:0x02104b18
 
 src/Graphics/AlphaTween.cpp:
     complete

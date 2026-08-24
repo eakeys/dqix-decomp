@@ -1,25 +1,18 @@
 #include "Resource/BCFG.h"
 #include "Resource/Script.h"
 
-#if defined(jpn)
-#define data_02104b10 data_02104850
-#define data_020efa48 data_020ef938
-#define data_020efaa0 data_020ef990
-#endif
+#pragma pool_strings on
+#pragma dont_reuse_strings off
 
 struct Struct_02104b10
 {
     SafeAllocator* allocator;
     BCFG* pBCFG;
-} extern data_02104b10;
-
-extern Script::OpcodeLookupEntry data_020efa48[];
-extern char data_020efaa0[]; // "waist"
-
+} currentBCFGScriptData;
 
 int BCFGScript_Opcode_64(Script::Parameter* params, int paramCount)
 {
-    data_02104b10.pBCFG->AllocateAnimationEntries(data_02104b10.allocator, params[0].ToInt());
+    currentBCFGScriptData.pBCFG->AllocateAnimationEntries(currentBCFGScriptData.allocator, params[0].ToInt());
     return 1;
 }
 
@@ -43,7 +36,7 @@ int BCFGScript_Opcode_66(Script::Parameter* params, int paramCount)
         entry.frameRate = 4096 * params[3].ToFloat();
         entry.firstSizeC = NULL;
         entry.firstAlt = 0;
-        data_02104b10.pBCFG->InsertAnimationRecord(&entry);
+        currentBCFGScriptData.pBCFG->InsertAnimationRecord(&entry);
         success = true;
     }
     return success;
@@ -51,7 +44,7 @@ int BCFGScript_Opcode_66(Script::Parameter* params, int paramCount)
 
 int BCFGScript_Opcode_6a(Script::Parameter* params, int paramCount)
 {
-    data_02104b10.pBCFG->AllocateSizeCEntries(data_02104b10.allocator, params[0].ToInt());
+    currentBCFGScriptData.pBCFG->AllocateSizeCEntries(currentBCFGScriptData.allocator, params[0].ToInt());
     return 1;
 }
 
@@ -66,16 +59,16 @@ int BCFGScript_Opcode_6c(Script::Parameter* params, int paramCount)
 {
     BCFG::SizeCEntry entry;
 
-    entry.animationIndex = data_02104b10.pBCFG->SearchAnimationByName(params[0].ToString());
+    entry.animationIndex = currentBCFGScriptData.pBCFG->SearchAnimationByName(params[0].ToString());
     entry.unk_4 = 4096 * params[1].ToFloat();
     entry.unk_0 = params[2].ToInt();
-    data_02104b10.pBCFG->InsertSizeCEntry(&entry);
+    currentBCFGScriptData.pBCFG->InsertSizeCEntry(&entry);
     return 1;
 }
 
 int BCFGScript_Opcode_6d(Script::Parameter* params, int paramCount)
 {
-    data_02104b10.pBCFG->AllocateAltSizeCEntries(data_02104b10.allocator, params[0].ToInt());
+    currentBCFGScriptData.pBCFG->AllocateAltSizeCEntries(currentBCFGScriptData.allocator, params[0].ToInt());
     return 1;
 }
 
@@ -88,18 +81,32 @@ int BCFGScript_Opcode_6f(Script::Parameter* params, int paramCount)
 {
     BCFG::AltSizeCEntry entry;
 
-    entry.animationIndex = data_02104b10.pBCFG->SearchAnimationByName(params[0].ToString());
+    entry.animationIndex = currentBCFGScriptData.pBCFG->SearchAnimationByName(params[0].ToString());
     entry.triggerTime = 4096 * params[1].ToFloat();
     entry.maybeSoundEffect = params[2].ToInt();
-    data_02104b10.pBCFG->InsertAltSizeCEntry(&entry);
+    currentBCFGScriptData.pBCFG->InsertAltSizeCEntry(&entry);
     return 1;
 }
 
 int BCFGScript_Opcode_71(Script::Parameter* params, int paramCount)
 {
-    data_02104b10.pBCFG->MaybeSetRootBoneName(data_02104b10.allocator, params[0].ToString());
+    currentBCFGScriptData.pBCFG->MaybeSetRootBoneName(currentBCFGScriptData.allocator, params[0].ToString());
     return 1;
 }
+
+Script::OpcodeLookupEntry bcfgScriptOpcodes[] = {
+    { 0x64, &BCFGScript_Opcode_64 },
+    { 0x65, &BCFGScript_Opcode_65 },
+    { 0x66, &BCFGScript_Opcode_66 },
+    { 0x6a, &BCFGScript_Opcode_6a },
+    { 0x6b, &BCFGScript_Opcode_6b },
+    { 0x6c, &BCFGScript_Opcode_6c },
+    { 0x6d, &BCFGScript_Opcode_6d },
+    { 0x6e, &BCFGScript_Opcode_6e },
+    { 0x6f, &BCFGScript_Opcode_6f },
+    { 0x71, &BCFGScript_Opcode_71 },
+    { 0 }
+};
 
 void BCFG::Reset()
 {
@@ -120,17 +127,17 @@ void BCFG::LoadFromScript(SafeAllocator* alloc, const void *data, unsigned int l
 {
     if (length != 0 && data != NULL)
     {
-        data_02104b10.pBCFG = this;
-        data_02104b10.allocator = alloc;
+        currentBCFGScriptData.pBCFG = this;
+        currentBCFGScriptData.allocator = alloc;
         Script script;           
         script.Initialize();
-        script.SetOpcodeLookup(data_020efa48);
+        script.SetOpcodeLookup(bcfgScriptOpcodes);
         script.Load(data, length);
         script.Execute();
-        if (data_02104b10.pBCFG->maybeRootBoneName_ == NULL)
-            data_02104b10.pBCFG->MaybeSetRootBoneName(alloc, data_020efaa0);
-        data_02104b10.pBCFG = NULL;
-        data_02104b10.allocator = NULL;
+        if (currentBCFGScriptData.pBCFG->maybeRootBoneName_ == NULL)
+            currentBCFGScriptData.pBCFG->MaybeSetRootBoneName(alloc, "waist");
+        currentBCFGScriptData.pBCFG = NULL;
+        currentBCFGScriptData.allocator = NULL;
     }
 }
 

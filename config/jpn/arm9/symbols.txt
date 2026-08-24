@@ -6583,8 +6583,8 @@ data_020ef8b4 kind:data(any) addr:0x020ef8b4
 data_020ef8c0 kind:data(any) addr:0x020ef8c0
 data_020ef92c kind:data(any) addr:0x020ef92c
 data_020ef930 kind:data(any) addr:0x020ef930
-data_020ef938 kind:data(any) addr:0x020ef938
-data_020ef990 kind:data(any) addr:0x020ef990
+bcfgScriptOpcodes kind:data(any) addr:0x020ef938
+@stringBase0 kind:data(byte[6]) addr:0x020ef990 local
 object3DsData kind:data(any) addr:0x020ef998
 @stringBase0 kind:data(any) addr:0x020ef9f8 local
 data_020efa34 kind:data(any) addr:0x020efa34
@@ -7445,7 +7445,7 @@ data_02102920 kind:bss addr:0x02102920
 data_02103140 kind:bss addr:0x02103140
 data_02104040 kind:bss addr:0x02104040
 safeAllocatorLiveCount kind:bss addr:0x0210484c
-data_02104850 kind:bss addr:0x02104850
+currentBCFGScriptData kind:bss addr:0x02104850
 boneTracking kind:bss addr:0x02104858
 data_021048a0 kind:bss addr:0x021048a0
 data_021048ac kind:bss addr:0x021048ac

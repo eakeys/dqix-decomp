@@ -6110,7 +6110,7 @@ data_020e7e70 kind:data(any) addr:0x020e7e70
 data_020e80f4 kind:data(any) addr:0x020e80f4
 data_020e8100 kind:data(any) addr:0x020e8100
 data_020e8110 kind:data(any) addr:0x020e8110
-data_020e8144 kind:data(any) addr:0x020e8144
+@1774 kind:data(any) addr:0x020e8144 local
 data_020e8150 kind:data(any) addr:0x020e8150
 data_020e8174 kind:data(any) addr:0x020e8174
 data_020e8188 kind:data(any) addr:0x020e8188
@@ -6586,23 +6586,7 @@ data_020ef930 kind:data(any) addr:0x020ef930
 data_020ef938 kind:data(any) addr:0x020ef938
 data_020ef990 kind:data(any) addr:0x020ef990
 data_020ef998 kind:data(any) addr:0x020ef998
-data_020ef9a8 kind:data(any) addr:0x020ef9a8
-data_020ef9ae kind:data(any) addr:0x020ef9ae
-data_020ef9b4 kind:data(any) addr:0x020ef9b4
-data_020ef9ba kind:data(any) addr:0x020ef9ba
-data_020ef9c0 kind:data(any) addr:0x020ef9c0
-data_020ef9cc kind:data(any) addr:0x020ef9cc
-data_020ef9d8 kind:data(any) addr:0x020ef9d8
-data_020ef9e8 kind:data(any) addr:0x020ef9e8
-data_020ef9f8 kind:data(any) addr:0x020ef9f8
-data_020ef9ff kind:data(any) addr:0x020ef9ff
-data_020efa03 kind:data(any) addr:0x020efa03
-data_020efa0a kind:data(any) addr:0x020efa0a
-data_020efa11 kind:data(any) addr:0x020efa11
-data_020efa18 kind:data(any) addr:0x020efa18
-data_020efa1f kind:data(any) addr:0x020efa1f
-data_020efa26 kind:data(any) addr:0x020efa26
-data_020efa2c kind:data(any) addr:0x020efa2c
+@stringBase0 kind:data(any) addr:0x020ef9f8 local
 data_020efa34 kind:data(any) addr:0x020efa34
 data_020efa3e kind:data(any) addr:0x020efa3e
 data_020efa4a kind:data(any) addr:0x020efa4a

@@ -11,6 +11,9 @@
 #include "Resource/ResourceMutex.h"
 #include "Graphics/VRAMStaging.h"
 
+#pragma pool_strings on
+#pragma dont_reuse_strings off
+
 #if defined(jpn)
 #define func_020100bc func_0200ff18
 #define func_02010208 func_02010064
@@ -51,6 +54,10 @@
 
 ModelRenderContext* GetModel3DContext(Model3D* model);
 void AnimationPackageListInsert(AnimationPackage** pListStart, AnimationPackage* entry);
+
+void CreateRotationX(Matrix3x3* out, fix32_t s, fix32_t c);
+void CreateRotationY(Matrix3x3* out, fix32_t s, fix32_t c);
+void CreateRotationZ(Matrix3x3* out, fix32_t s, fix32_t c);
 
 extern "C"
 {
@@ -135,8 +142,6 @@ extern "C"
 #define OBJECT3D_FLAG_30 30
 #define OBJECT3D_FLAG_31 31
 
-extern Vector3fix data_020e7800;
-
 struct Struct_020efaa8
 {
     float unk_0[4]; // holds 30.0f, 30.0f, 180.0f, 180.0f
@@ -147,23 +152,19 @@ struct Struct_020efaa8
 
     void (*rotationFunctionsRelative[3])(Matrix3x3*, fix32_t, fix32_t);
     void (*rotationFunctionsAbsolute[3])(Matrix3x3*, fix32_t, fix32_t);
-} extern data_020efaa8;
 
-// Extremely bizarre setup for dynamic dispatch in animation advancing
-extern Object3D::AnimationAdvanceProc data_020efae8[2];
+    Object3D::AnimationAdvanceProc advanceProcs[2];
+    const char* extensionLookup[4];
 
-// points to the four extension names in the above struct
-extern const char* data_020efaf8[4];
-
-extern char data_020efb08[]; // "damage"
-extern char data_020efb0f[]; // "ARC"
-extern char data_020efb13[]; // ".nsbmd"
-extern char data_020efb1a[]; // ".nsbca"
-extern char data_020efb21[]; // ".nsbma"
-extern char data_020efb28[]; // ".nsbta"
-extern char data_020efb2f[]; // ".nsbtp"
-extern char data_020efb36[]; // ".bcfg"
-extern char data_020efb3c[]; // "%s.%s"
+} data_020efaa8 = {
+    { 30.0f, 30.0f, 180.0f, 180.0f },
+    "nsbma", "nsbtp", "nsbta", "nsbca",
+    { &CreateRotationZ, &CreateRotationY, &CreateRotationX },
+    { &CreateRotationZ, &CreateRotationY, &CreateRotationX },
+    { &Object3D::AdvanceAnimations_v0, &Object3D::AdvanceAnimations_v1 },
+    { data_020efaa8.jointAnimExtension, data_020efaa8.materialAnimExtension, 
+      data_020efaa8.paletteAnimExtension, data_020efaa8.textureAnimExtension }
+};
 
 struct Struct_02104b18
 {
@@ -285,7 +286,7 @@ void Object3D::AdvanceAnimations()
     (void)func_02010220(GetBattleStruct());
     if (activeAnimationPackage_ == NULL)
         return;
-    (this->*data_020efae8[activeAnimationPackage_->animationType])();
+    (this->*data_020efaa8.advanceProcs[activeAnimationPackage_->animationType])();
 }
 
 void Object3D::AdvanceAnimations_v0()
@@ -302,7 +303,7 @@ void Object3D::AdvanceAnimations_v0()
         return;
     bool shouldAdvanceTimer = true;
     if ((flags_6c_ & (1 << OBJECT3D_FLAG_18)) && (activeAnimationRecord_ == NULL ||
-        strcmp(activeAnimationRecord_->name, data_020efb08) != 0))
+        strcmp(activeAnimationRecord_->name, "damage") != 0))
         shouldAdvanceTimer = false;
 
     fix32_t timer = animationTime_;
@@ -422,7 +423,7 @@ void Object3D::AdvanceAnimations_v1()
         fix32_t timer = animationTime_;
         bool shouldAdvanceTimer = true;
         if ((flags_6c_ & (1 << OBJECT3D_FLAG_18)) && (activeAnimationRecord_ == NULL ||
-            strcmp(activeAnimationRecord_->name, data_020efb08) != 0))
+            strcmp(activeAnimationRecord_->name, "damage") != 0))
             shouldAdvanceTimer = false;
         prevFrameAnimationTime_ = timer;
         if (!unknown_40_bit_1_)
@@ -871,7 +872,7 @@ void Object3D::MaybeUpdateBonePositions()
     AdvanceEffects();
     flags_6c_ |= (1 << OBJECT3D_FLAG_5);
     ApplyAnimations(NULL);
-    Vector3fix position = { 0, 0, 0 };
+    Vector3fix position = { 0 };
     RenderConfig::SetObjectPosition(&position);
     fix32_t cosine = func_02030c9c(rotation_.y);
     fix32_t sine = func_02030c68(rotation_.y);
@@ -879,7 +880,7 @@ void Object3D::MaybeUpdateBonePositions()
     Matrix3x3 rotationMatrix;
     Mat3x3_WriteRotationY(&rotationMatrix, sine, cosine);
     func_02016d8c(&rotationMatrix);
-    Vector3fix scale = data_020e7800;
+    Vector3fix scale = { 0x1000, 0x1000, 0x1000 };
     RenderConfig::SetObjectScale(&scale);
     RenderConfig::SubmitToFifo();
 
@@ -1063,7 +1064,7 @@ bool Object3D::InternalLoadFromCHRArchive(ObjectArchiveLoadInfo* loadInfo)
     if (loadInfo->fileData == NULL)
         return false;
     NarcHandle narc;
-    if (!narc.Initialize(data_020efb0f, (const unsigned char*)loadInfo->fileData))
+    if (!narc.Initialize("ARC", (const unsigned char*)loadInfo->fileData))
         return false;
     NitroVM machine;
     SafeAllocator* allocator = loadInfo->allocator;
@@ -1074,7 +1075,7 @@ bool Object3D::InternalLoadFromCHRArchive(ObjectArchiveLoadInfo* loadInfo)
     {
         char filename[80];
         NitroVM_WriteOutFilePath(&machine, filename, sizeof(filename));
-        if (strstr(filename, data_020efb13))
+        if (strstr(filename, ".nsbmd"))
         {
             unsigned int allocSize;
             const void* fileBytes = narc.GetFileByIndex(fileID);
@@ -1128,13 +1129,13 @@ bool Object3D::InternalLoadFromCHRArchive(ObjectArchiveLoadInfo* loadInfo)
         
         int fileType = -1;
         // check for various animation file types
-        if (strstr(filename, data_020efb1a))
+        if (strstr(filename, ".nsbca"))
             fileType = 0;
-        else if (strstr(filename, data_020efb21))
+        else if (strstr(filename, ".nsbma"))
             fileType = 1;
-        else if (strstr(filename, data_020efb28))
+        else if (strstr(filename, ".nsbta"))
             fileType = 3;
-        else if (strstr(filename, data_020efb2f))
+        else if (strstr(filename, ".nsbtp"))
             fileType = 2;
         
         if (fileType != -1)
@@ -1171,7 +1172,7 @@ bool Object3D::InternalLoadFromCHRArchive(ObjectArchiveLoadInfo* loadInfo)
                 return false;
             }
         }
-        else if (strstr(filename, data_020efb36))
+        else if (strstr(filename, ".bcfg"))
         {
             const void* scriptData = narc.GetFileByIndex(fileID);
             unsigned int fileLength = machine.regbase_abc.c.u32 - machine.regbase_abc.b.u32;
@@ -1191,7 +1192,7 @@ bool Object3D::LoadFromCCHROrCMOTArchive(ObjectArchiveLoadInfo *loadInfo, int (*
     
     unsigned int fileLength;
     const void* fileBytes;
-    if (FindFilesInNarcBySubstring(loadInfo->fileData, data_020efb13, &fileBytes, &fileLength, 1) != 0)
+    if (FindFilesInNarcBySubstring(loadInfo->fileData, ".nsbmd", &fileBytes, &fileLength, 1) != 0)
     {
         if (loadInfo->unk_10 != 0)
         {
@@ -1217,7 +1218,7 @@ bool Object3D::LoadFromCCHROrCMOTArchive(ObjectArchiveLoadInfo *loadInfo, int (*
     package->Reset();
     package->animationType = 1;
     package->packageID = loadInfo->packageID;
-    if (FindFilesInNarcBySubstring(loadInfo->fileData, data_020efb36, &fileBytes, &fileLength, 1) != 0)
+    if (FindFilesInNarcBySubstring(loadInfo->fileData, ".bcfg", &fileBytes, &fileLength, 1) != 0)
     {
         package->bcfgData.Reset();
         package->bcfgData.LoadFromScript(allocator, fileBytes, fileLength);
@@ -1239,7 +1240,7 @@ bool Object3D::LoadFromCCHROrCMOTArchive(ObjectArchiveLoadInfo *loadInfo, int (*
     char filename[80];
     NitroVM machine;
     NarcHandle narc;
-    if (narc.Initialize(data_020efb0f, (const unsigned char*)narcBuffer))
+    if (narc.Initialize("ARC", (const unsigned char*)narcBuffer))
     {
         NitroVM_Initialize(&machine);
         lookup.valid = true;
@@ -1289,7 +1290,7 @@ bool Object3D::LoadFromCCHROrCMOTArchive(ObjectArchiveLoadInfo *loadInfo, int (*
         void* rawAnimFilePointers[4];
         for (int j = 0; j < 4; j++)
         {
-            sprintf(candidateName, data_020efb3c, record->name, data_020efaf8[j]);
+            sprintf(candidateName, "%s.%s", record->name, data_020efaa8.extensionLookup[j]);
             bool foundInLookup = false;
             const void* archiveData;
             bool foundInLookup_inner;
@@ -1320,7 +1321,7 @@ bool Object3D::LoadFromCCHROrCMOTArchive(ObjectArchiveLoadInfo *loadInfo, int (*
                         char filename[80];
                         NitroVM machine;
                         NarcHandle narc;
-                        if (narc.Initialize(data_020efb0f, (const unsigned char*)archiveData))
+                        if (narc.Initialize("ARC", (const unsigned char*)archiveData))
                         {
                             NitroVM_Initialize(&machine);
                             PrepareReadFileInNARCByID(&machine, &narc, k);

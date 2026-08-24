@@ -115,7 +115,7 @@ public:
     char padding_62[2];
     fix32_t radius_;
     fix32_t height_;
-    unsigned int flags_6c_;
+    unsigned int flags_;
     AlphaTween alphaTransition_;
 
     unsigned short unknown_78_;

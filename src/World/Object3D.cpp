@@ -84,47 +84,52 @@ extern "C"
 
 // if set, drawing doesn't take place. Also does something with
 // collision detection against monsters
-#define OBJECT3D_FLAG_0 0
-#define OBJECT3D_FLAG_1 1
+#define OBJECT3D_FLAG_HIDDEN 0
+#define OBJECT3D_FLAG_UNUSED_1 1
 // has a shadow?
-#define OBJECT3D_FLAG_2 2
+#define OBJECT3D_FLAG_HAS_SHADOW 2
 #define OBJECT3D_FLAG_3 3
 #define OBJECT3D_FLAG_4 4
 #define OBJECT3D_FLAG_5 5
+// maybe 'no sound effects on animations'
 #define OBJECT3D_FLAG_6 6
-#define OBJECT3D_FLAG_7 7
-#define OBJECT3D_FLAG_8 8
-#define OBJECT3D_FLAG_9 9
-#define OBJECT3D_FLAG_10 10
+#define OBJECT3D_FLAG_UNUSED_7 7
+#define OBJECT3D_FLAG_UNUSED_8 8
+#define OBJECT3D_FLAG_UNUSED_9 9
+#define OBJECT3D_FLAG_UNUSED_10 10
 // never clip this object
-#define OBJECT3D_FLAG_11 11
+#define OBJECT3D_FLAG_NEVER_CLIP 11
+// if set, animations won't advance - paused?
 #define OBJECT3D_FLAG_12 12
 // if set, drawing is more basic: no animations applied and use DrawMeshWithMaterial
 // with material 0 and mesh 0
 #define OBJECT3D_FLAG_13 13
-// if set, then we bypass the RenderConfig (i.e. no view matrix)
-#define OBJECT3D_FLAG_14 14
+// if set, then we compose our translation/rotation/scaling with whatever
+// the fifo has stored in its worldview matrix
+#define OBJECT3D_FLAG_COMPOSE_TRANSFORM 14
 // if set, then the fifo is up to date
-#define OBJECT3D_FLAG_15 15
+#define OBJECT3D_FLAG_DONT_UPDATE_TRANSFORM 15
 #define OBJECT3D_FLAG_16 16
-#define OBJECT3D_FLAG_17 17
+#define OBJECT3D_FLAG_HIDE_CHILDREN 17
 #define OBJECT3D_FLAG_18 18
 #define OBJECT3D_FLAG_19 19
 // flickering effect
-#define OBJECT3D_FLAG_20 20
+#define OBJECT3D_FLAG_FLICKER 20
 // if flickering is enabled, this flips every frame
-#define OBJECT3D_FLAG_21 21
+#define OBJECT3D_FLAG_FLICKER_PARITY 21
+// if set, you can't apply type 1 animations
 #define OBJECT3D_FLAG_22 22
-#define OBJECT3D_FLAG_23 23
-#define OBJECT3D_FLAG_24 24
-#define OBJECT3D_FLAG_25 25
-#define OBJECT3D_FLAG_26 26
-#define OBJECT3D_FLAG_27 27
+#define OBJECT3D_FLAG_UNUSED_23 23
+#define OBJECT3D_FLAG_UNUSED_24 24
+// if set, rotations are applied x->y->z instead of z->y->x
+// but a bug means this applies everywhere on all models afterward.
+// in practice this flag is never used
+#define OBJECT3D_FLAG_REVERSE_ROTATION_ORDER 25
+#define OBJECT3D_FLAG_UNUSED_26 26
+#define OBJECT3D_FLAG_UNUSED_27 27
 #define OBJECT3D_FLAG_28 28
 // don't use own alpha, just stick with model's intrinsic/pre-set value
 #define OBJECT3D_FLAG_29 29
-#define OBJECT3D_FLAG_30 30
-#define OBJECT3D_FLAG_31 31
 
 struct Object3DStaticData
 {
@@ -175,7 +180,7 @@ void Object3D::Initialize()
     inheritedAlpha_ = 31;
     ownAlpha_ = 31;
     noTextureTimer_ = 0;
-    flags_6c_ = 0;
+    flags_ = 0;
     memset(&alphaTransition_, 0, sizeof(AlphaTween));
     radius_ = 1 << 12;
     height_ = 1 << 12;
@@ -224,7 +229,7 @@ void Object3D::AnimationBlend::Clear()
 
 void Object3D::AdvanceEffects()
 {
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_5))
+    if (flags_ & (1 << OBJECT3D_FLAG_5))
         return;
 
     int deltaTimeTicks = func_02010208(GetBattleStruct());
@@ -235,7 +240,7 @@ void Object3D::AdvanceEffects()
         inheritedAlpha_ = (char)alphaTransition_.Advance(deltaTimeTicks);
     }
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_3))
+    if (flags_ & (1 << OBJECT3D_FLAG_3))
     {
         if (deltaTimeTicks < noTextureTimer_)
             noTextureTimer_ -= deltaTimeTicks;
@@ -277,7 +282,7 @@ void Object3D::AdvanceAnimations_v0()
 {
     fix16_t deltaTime = func_02010218(GetBattleStruct());
     BCFG* activeBCFG = &activeAnimationPackage_->bcfgData;
-    if (activeBCFG == NULL || activeAnimationIndex_ < 0 || (flags_6c_ & (1 << OBJECT3D_FLAG_12)))
+    if (activeBCFG == NULL || activeAnimationIndex_ < 0 || (flags_ & (1 << OBJECT3D_FLAG_12)))
         return;
 
     animationEnded_ = false;
@@ -286,7 +291,7 @@ void Object3D::AdvanceAnimations_v0()
     if (record == NULL)
         return;
     bool shouldAdvanceTimer = true;
-    if ((flags_6c_ & (1 << OBJECT3D_FLAG_18)) && (activeAnimationRecord_ == NULL ||
+    if ((flags_ & (1 << OBJECT3D_FLAG_18)) && (activeAnimationRecord_ == NULL ||
         strcmp(activeAnimationRecord_->name, "damage") != 0))
         shouldAdvanceTimer = false;
 
@@ -346,7 +351,7 @@ void Object3D::AdvanceAnimations_v0()
     else
         unknown_40_bit_1_ = false;
 
-    if ((flags_6c_ & (1 << OBJECT3D_FLAG_6)) || unknown_78_ == 0xffff)
+    if ((flags_ & (1 << OBJECT3D_FLAG_6)) || unknown_78_ == 0xffff)
         return;
     
     for (BCFG::AltSizeCEntry* loopEntry = record->firstAlt; loopEntry != NULL; loopEntry = loopEntry->pNext)
@@ -374,7 +379,7 @@ void Object3D::AdvanceAnimations_v1()
         || activeAnimationPackage_->pAnim3Ds[activeAnimationIndex_].data == NULL)
         return;
     Animation3D* anim3D = activeAnimationPackage_->pAnim3Ds[activeAnimationIndex_].data;
-    if (anim3D->GetBasicAnimationData() == NULL || (flags_6c_ & (1 << OBJECT3D_FLAG_12)))
+    if (anim3D->GetBasicAnimationData() == NULL || (flags_ & (1 << OBJECT3D_FLAG_12)))
         return;
     
     BCFG::AnimationRecord* record = activeAnimationPackage_->bcfgData.GetAnimationRecord(activeAnimationIndex_);
@@ -406,7 +411,7 @@ void Object3D::AdvanceAnimations_v1()
         animationReachedEnd_ = false;
         fix32_t timer = animationTime_;
         bool shouldAdvanceTimer = true;
-        if ((flags_6c_ & (1 << OBJECT3D_FLAG_18)) && (activeAnimationRecord_ == NULL ||
+        if ((flags_ & (1 << OBJECT3D_FLAG_18)) && (activeAnimationRecord_ == NULL ||
             strcmp(activeAnimationRecord_->name, "damage") != 0))
             shouldAdvanceTimer = false;
         prevFrameAnimationTime_ = timer;
@@ -458,7 +463,7 @@ void Object3D::AdvanceAnimations_v1()
         else
             unknown_40_bit_1_ = false;
 
-        if ((flags_6c_ & (1 << OBJECT3D_FLAG_6)) || unknown_78_ == 0xffff)
+        if ((flags_ & (1 << OBJECT3D_FLAG_6)) || unknown_78_ == 0xffff)
             return;
         
         for (BCFG::AltSizeCEntry* loopEntry = record->firstAlt; loopEntry != NULL; loopEntry = loopEntry->pNext)
@@ -536,7 +541,7 @@ void Object3D::ApplyAnimations(Object3D* otherObj)
 
 void Object3D::ApplyTextures()
 {
-    if ((flags_6c_ & (1 << OBJECT3D_FLAG_3)) && pModel_ != NULL)
+    if ((flags_ & (1 << OBJECT3D_FLAG_3)) && pModel_ != NULL)
     {
         if (noTextureTimer_ == 0)
             pModel_->ApplyTexturesFromModel(pModel_);
@@ -571,7 +576,7 @@ void Object3D::PopulateRenderConfigWorld()
         rotationComponents[0] = rotation_.z;
         rotationComponents[1] = rotation_.y;
         rotationComponents[2] = rotation_.x;
-        if (flags_6c_ & (1 << OBJECT3D_FLAG_25))
+        if (flags_ & (1 << OBJECT3D_FLAG_REVERSE_ROTATION_ORDER))
         {
             object3DsData.rotationFunctionsRelative[0] = &CreateRotationX;
             fix32_t foo = rotationComponents[0];
@@ -606,7 +611,7 @@ void Object3D::PopulateRenderConfigWorld()
     else
     {
         RenderConfig::SetObjectPosition(&position_);
-        if (flags_6c_ & (1 << OBJECT3D_FLAG_19))
+        if (flags_ & (1 << OBJECT3D_FLAG_19))
         {
             const Matrix3x3* rotation = func_0202ed74(func_020100bc(GetBattleStruct()));
             func_020ca528(rotation, &data_0210a010.objectRotationPosition.rotation);
@@ -621,7 +626,7 @@ void Object3D::PopulateRenderConfigWorld()
             rotationComponents[0] = rotation_.z;
             rotationComponents[1] = rotation_.y;
             rotationComponents[2] = rotation_.x;
-            if (flags_6c_ & (1 << OBJECT3D_FLAG_25))
+            if (flags_ & (1 << OBJECT3D_FLAG_REVERSE_ROTATION_ORDER))
             {
                 object3DsData.rotationFunctionsAbsolute[0] = &CreateRotationX;
                 fix32_t foo = rotationComponents[0];
@@ -659,18 +664,18 @@ bool Object3D::IsVisibleAndAdjustFlags()
     if (alpha == 0)
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_0))
+    if (flags_ & (1 << OBJECT3D_FLAG_HIDDEN))
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_20))
+    if (flags_ & (1 << OBJECT3D_FLAG_FLICKER))
     {
-        if (flags_6c_ & (1 << OBJECT3D_FLAG_21))
+        if (flags_ & (1 << OBJECT3D_FLAG_FLICKER_PARITY))
         {
-            flags_6c_ &= ~(1 << OBJECT3D_FLAG_21);
+            flags_ &= ~(1 << OBJECT3D_FLAG_FLICKER_PARITY);
             return false;
         }
         else
-            flags_6c_ |= (1 << OBJECT3D_FLAG_21);
+            flags_ |= (1 << OBJECT3D_FLAG_FLICKER_PARITY);
     }
     return true;
 }
@@ -678,26 +683,26 @@ bool Object3D::IsVisibleAndAdjustFlags()
 bool Object3D::Draw(bool applyClipping)
 {
     drawSuccessful_ = false;
-    flags_6c_ &= ~(1 << OBJECT3D_FLAG_28);
+    flags_ &= ~(1 << OBJECT3D_FLAG_28);
 
     if (!IsVisibleAndAdjustFlags())
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_11))
+    if (flags_ & (1 << OBJECT3D_FLAG_NEVER_CLIP))
         applyClipping = false;
 
-    if (!(flags_6c_ & (1 << OBJECT3D_FLAG_13)))
+    if (!(flags_ & (1 << OBJECT3D_FLAG_13)))
         ApplyAnimations(NULL);
 
     int prior = GetCombinedAlpha();
     int blendedAlpha = (alphaScaleFactor_ / 4096.0f) * prior;
-    if (blendedAlpha != pModel_->GetAlpha() && !(flags_6c_ & (1 << OBJECT3D_FLAG_29)))
+    if (blendedAlpha != pModel_->GetAlpha() && !(flags_ & (1 << OBJECT3D_FLAG_29)))
         pModel_->SetAlpha(blendedAlpha);
 
     ApplyTextures();
-    if (!(flags_6c_ & (1 << OBJECT3D_FLAG_15)))
+    if (!(flags_ & (1 << OBJECT3D_FLAG_DONT_UPDATE_TRANSFORM)))
     {
-        if (flags_6c_ & (1 << OBJECT3D_FLAG_14))
+        if (flags_ & (1 << OBJECT3D_FLAG_COMPOSE_TRANSFORM))
         {
             SendTranslationToFifo();
             SendRotationToFifo();
@@ -722,7 +727,7 @@ bool Object3D::Draw(bool applyClipping)
     }
 
     bool success;
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_13))
+    if (flags_ & (1 << OBJECT3D_FLAG_13))
         success = pModel_->DrawMeshWithMaterial(applyClipping, 0, 0, true);
     else
         success = pModel_->Draw(applyClipping);
@@ -730,16 +735,19 @@ bool Object3D::Draw(bool applyClipping)
     drawSuccessful_ = (int)success;
     if (success)
     {
-        if (flags_6c_ & (1 << OBJECT3D_FLAG_2))
+        if (flags_ & (1 << OBJECT3D_FLAG_HAS_SHADOW))
             ComputeShadowPosition();
-        if (!(flags_6c_ & (1 << OBJECT3D_FLAG_17)) && IsParent())
+        if (!(flags_ & (1 << OBJECT3D_FLAG_HIDE_CHILDREN)) && IsParent())
             DrawChildren(this);
-        flags_6c_ |= (1 << OBJECT3D_FLAG_28);
+        flags_ |= (1 << OBJECT3D_FLAG_28);
     }
-    else if (flags_6c_ & (1 << OBJECT3D_FLAG_2))
+    else
     {
-        maybeShadowPosition_ = position_;
-        maybeShadowPosition_.y = position_.y + (height_ / 2);
+        if (flags_ & (1 << OBJECT3D_FLAG_HAS_SHADOW))
+        {
+            maybeShadowPosition_ = position_;
+            maybeShadowPosition_.y = position_.y + (height_ / 2);
+        }
     }
     return success;
 }
@@ -751,7 +759,7 @@ bool Object3D::DrawSimple(bool applyClipping)
     if (!IsVisibleAndAdjustFlags())
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_11))
+    if (flags_ & (1 << OBJECT3D_FLAG_NEVER_CLIP))
         applyClipping = false;
 
     ApplyAnimations(NULL);
@@ -767,12 +775,12 @@ bool Object3D::DrawSimple(bool applyClipping)
 
     if (success)
     {
-        if (flags_6c_ & (1 << OBJECT3D_FLAG_2))
+        if (flags_ & (1 << OBJECT3D_FLAG_HAS_SHADOW))
             ComputeShadowPosition();
         if (IsParent())
             DrawChildren(this);
     }
-    else if (flags_6c_ & (1 << OBJECT3D_FLAG_2))
+    else if (flags_ & (1 << OBJECT3D_FLAG_HAS_SHADOW))
     {
         maybeShadowPosition_ = position_;
         maybeShadowPosition_.y = position_.y + (height_ / 2);
@@ -785,7 +793,7 @@ bool Object3D::DrawSimple2(bool applyClipping)
     if (!IsVisibleAndAdjustFlags())
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_11))
+    if (flags_ & (1 << OBJECT3D_FLAG_NEVER_CLIP))
         applyClipping = false;
 
     ApplyAnimations(NULL);
@@ -802,7 +810,7 @@ bool Object3D::DrawMeshWithMaterial(bool applyClipping, int material, int mesh, 
     if (!IsVisibleAndAdjustFlags())
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_11))
+    if (flags_ & (1 << OBJECT3D_FLAG_NEVER_CLIP))
         applyClipping = false;
 
     ApplyTextures();
@@ -816,7 +824,7 @@ bool Object3D::DrawMeshWithMaterialSimple(bool applyClipping, int material, int 
     if (!IsVisibleAndAdjustFlags())
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_11))
+    if (flags_ & (1 << OBJECT3D_FLAG_NEVER_CLIP))
         applyClipping = false;
 
     ApplyTextures();
@@ -832,10 +840,10 @@ bool Object3D::DrawSimple3(bool applyClipping)
     if (ownAlpha == 0)
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_0))
+    if (flags_ & (1 << OBJECT3D_FLAG_HIDDEN))
         return false;
 
-    if (flags_6c_ & (1 << OBJECT3D_FLAG_11))
+    if (flags_ & (1 << OBJECT3D_FLAG_NEVER_CLIP))
         applyClipping = false;
 
     ApplyAnimations(NULL);
@@ -852,9 +860,9 @@ void Object3D::MaybeUpdateBonePositions()
 {
     if (pModel_ == NULL)
         return;
-    flags_6c_ &= ~(1 << OBJECT3D_FLAG_5);
+    flags_ &= ~(1 << OBJECT3D_FLAG_5);
     AdvanceEffects();
-    flags_6c_ |= (1 << OBJECT3D_FLAG_5);
+    flags_ |= (1 << OBJECT3D_FLAG_5);
     ApplyAnimations(NULL);
     Vector3fix position = { 0 };
     RenderConfig::SetObjectPosition(&position);
@@ -1396,7 +1404,7 @@ void Object3D::ShallowCloneModelAndAnimationsTo(Object3D *out)
 
 bool Object3D::MaybeSetRegularAnimation(const char *animName, int flags)
 {
-    if (pModel_ == NULL || animName == NULL || (flags_6c_ & (1 << OBJECT3D_FLAG_22)) || animName[0] == '\0')
+    if (pModel_ == NULL || animName == NULL || (flags_ & (1 << OBJECT3D_FLAG_22)) || animName[0] == '\0')
         return false;
     
     AnimationPackage* package;
@@ -1489,7 +1497,7 @@ bool Object3D::MaybeSetRegularAnimation(const char *animName, int flags)
             priorAnimationBlend_.Clear();
     }
 
-    flags_6c_ &= ~(1 << OBJECT3D_FLAG_18);
+    flags_ &= ~(1 << OBJECT3D_FLAG_18);
     return true;
 }
 
@@ -1519,7 +1527,7 @@ bool Object3D::MaybeSetBCFGAnimation(int index, int flags)
     unknown_40_bit_1_ = true;
     activeAnimationRecord_ = record;
     activeAnimationPackage_ = loadedAnimationPackageList_;
-    flags_6c_ &= ~(1 << OBJECT3D_FLAG_18);
+    flags_ &= ~(1 << OBJECT3D_FLAG_18);
 
     return true;
 }
@@ -1601,8 +1609,8 @@ void Object3D::TransitionInheritedAlpha(int alpha, int duration)
     alphaTransition_.ConfigureTween(alpha, duration);
 }
 
-void Object3D::SetFlag16() { flags_6c_ |= (1 << OBJECT3D_FLAG_16); }
-void Object3D::ClearFlag16() { flags_6c_ &= ~(1 << OBJECT3D_FLAG_16); }
+void Object3D::SetFlag16() { flags_ |= (1 << OBJECT3D_FLAG_16); }
+void Object3D::ClearFlag16() { flags_ &= ~(1 << OBJECT3D_FLAG_16); }
 
 void Object3D::Destroy()
 {
@@ -1645,23 +1653,23 @@ void Object3D::RemoveAllAnimationPackages()
 
 bool Object3D::IsVisible() const
 {
-    return !(flags_6c_ & (1 << OBJECT3D_FLAG_0));
+    return !(flags_ & (1 << OBJECT3D_FLAG_HIDDEN));
 }
 
 void Object3D::MakeVisible()
 {
-    flags_6c_ &= ~(1 << OBJECT3D_FLAG_0);
+    flags_ &= ~(1 << OBJECT3D_FLAG_HIDDEN);
 }
 
 void Object3D::MakeHidden()
 {
-    flags_6c_ |= (1 << OBJECT3D_FLAG_0);
+    flags_ |= (1 << OBJECT3D_FLAG_HIDDEN);
 }
 
 void Object3D::SetInheritedAlpha(int alpha)
 {
     inheritedAlpha_ = alpha;
-    if (pModel_ != NULL && !(flags_6c_ & (1 << OBJECT3D_FLAG_29)))
+    if (pModel_ != NULL && !(flags_ & (1 << OBJECT3D_FLAG_29)))
     {
         unsigned char combined = GetCombinedAlpha();
         pModel_->SetAlpha(combined);
@@ -1959,12 +1967,12 @@ void Object3D::DrawChildren(Object3D *topLevelObject)
                 &positionMatrix, &directionMatrix, pNextChild_->attachmentBoneIndex_))
             {
                 // bug? flags is 32-bit, we lose upper 16 bits...
-                unsigned short oldFlags = pNextChild_->flags_6c_;
-                pNextChild_->flags_6c_ |= (1 << OBJECT3D_FLAG_11) | (1 << OBJECT3D_FLAG_14);
+                unsigned short oldFlags = pNextChild_->flags_;
+                pNextChild_->flags_ |= (1 << OBJECT3D_FLAG_NEVER_CLIP) | (1 << OBJECT3D_FLAG_COMPOSE_TRANSFORM);
                 unsigned char combinedAlpha = (inheritedAlpha_ * ownAlpha_) / 31;
                 pNextChild_->SetInheritedAlpha(combinedAlpha);
                 pNextChild_->Draw(true);
-                pNextChild_->flags_6c_ = oldFlags;
+                pNextChild_->flags_ = oldFlags;
                 pNextChild_->DrawChildren(topLevelObject);
                 drawDone = true;
             }
@@ -1984,10 +1992,10 @@ bool Object3D::IsParent() const
     return pNextChild_ != NULL && pPrevChild_ == NULL;
 }
 
-int Object3D::GetFlag(int mask) const { return flags_6c_ & mask; }
-void Object3D::EnableFlag(int mask) { flags_6c_ |= mask; }
-void Object3D::DisableFlag(int mask) { flags_6c_ &= ~mask; }
-int Object3D::GetFlags() const { return flags_6c_; }
+int Object3D::GetFlag(int mask) const { return flags_ & mask; }
+void Object3D::EnableFlag(int mask) { flags_ |= mask; }
+void Object3D::DisableFlag(int mask) { flags_ &= ~mask; }
+int Object3D::GetFlags() const { return flags_; }
 
 void Object3D::SetNoTextureTimer(int timer) { noTextureTimer_ = timer; }
 

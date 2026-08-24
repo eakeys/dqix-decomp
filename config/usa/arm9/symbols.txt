@@ -6778,7 +6778,7 @@ data_020efa3c kind:data(any) addr:0x020efa3c
 data_020efa40 kind:data(any) addr:0x020efa40
 data_020efa48 kind:data(any) addr:0x020efa48
 data_020efaa0 kind:data(any) addr:0x020efaa0
-data_020efaa8 kind:data(any) addr:0x020efaa8
+object3DsData kind:data(any) addr:0x020efaa8
 @stringBase0 kind:data(any) addr:0x020efb08 local
 data_020efb44 kind:data(any) addr:0x020efb44
 data_020efb4e kind:data(any) addr:0x020efb4e
@@ -7603,7 +7603,7 @@ data_02103400 kind:bss addr:0x02103400
 data_02104300 kind:bss addr:0x02104300
 safeAllocatorLiveCount kind:bss addr:0x02104b0c
 data_02104b10 kind:bss addr:0x02104b10
-data_02104b18 kind:bss addr:0x02104b18
+boneTracking kind:bss addr:0x02104b18
 data_02104b60 kind:bss addr:0x02104b60
 data_02104b6c kind:bss addr:0x02104b6c
 data_02105244 kind:bss addr:0x02105244

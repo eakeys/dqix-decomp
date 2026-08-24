@@ -33,22 +33,6 @@
 #define func_020d8524 func_020d9e88
 #define func_020d1d1c func_020d37e8
 
-#define data_020e7800 data_020e8144
-
-#define data_020efaa8 data_020ef998
-#define data_020efae8 data_020ef9d8
-#define data_020efaf8 data_020ef9e8
-#define data_020efb08 data_020ef9f8
-#define data_020efb0f data_020ef9ff
-#define data_020efb13 data_020efa03
-#define data_020efb1a data_020efa0a
-#define data_020efb21 data_020efa11
-#define data_020efb28 data_020efa18
-#define data_020efb2f data_020efa1f
-#define data_020efb36 data_020efa26
-#define data_020efb3c data_020efa2c
-
-#define data_02104b18 data_02104858
 #define data_02108760 data_021086a4
 #endif
 
@@ -142,7 +126,7 @@ extern "C"
 #define OBJECT3D_FLAG_30 30
 #define OBJECT3D_FLAG_31 31
 
-struct Struct_020efaa8
+struct Object3DStaticData
 {
     float unk_0[4]; // holds 30.0f, 30.0f, 180.0f, 180.0f
     char materialAnimExtension[6];
@@ -156,22 +140,22 @@ struct Struct_020efaa8
     Object3D::AnimationAdvanceProc advanceProcs[2];
     const char* extensionLookup[4];
 
-} data_020efaa8 = {
+} object3DsData = {
     { 30.0f, 30.0f, 180.0f, 180.0f },
     "nsbma", "nsbtp", "nsbta", "nsbca",
     { &CreateRotationZ, &CreateRotationY, &CreateRotationX },
     { &CreateRotationZ, &CreateRotationY, &CreateRotationX },
     { &Object3D::AdvanceAnimations_v0, &Object3D::AdvanceAnimations_v1 },
-    { data_020efaa8.jointAnimExtension, data_020efaa8.materialAnimExtension, 
-      data_020efaa8.paletteAnimExtension, data_020efaa8.textureAnimExtension }
+    { object3DsData.jointAnimExtension, object3DsData.materialAnimExtension, 
+      object3DsData.paletteAnimExtension, object3DsData.textureAnimExtension }
 };
 
 struct Struct_02104b18
 {
-    char unk_0[0x14];
+    float unknown_0[5];
     Object3D::TrackedBoneMatrix* boneMatrixList;
     Matrix4x3 boneMatrixWithView;
-} data_02104b18;
+} boneTracking;
 
 extern char data_02108760[];
 
@@ -286,7 +270,7 @@ void Object3D::AdvanceAnimations()
     (void)func_02010220(GetBattleStruct());
     if (activeAnimationPackage_ == NULL)
         return;
-    (this->*data_020efaa8.advanceProcs[activeAnimationPackage_->animationType])();
+    (this->*object3DsData.advanceProcs[activeAnimationPackage_->animationType])();
 }
 
 void Object3D::AdvanceAnimations_v0()
@@ -589,20 +573,20 @@ void Object3D::PopulateRenderConfigWorld()
         rotationComponents[2] = rotation_.x;
         if (flags_6c_ & (1 << OBJECT3D_FLAG_25))
         {
-            data_020efaa8.rotationFunctionsRelative[0] = &CreateRotationX;
+            object3DsData.rotationFunctionsRelative[0] = &CreateRotationX;
             fix32_t foo = rotationComponents[0];
             rotationComponents[0] = rotationComponents[2];
             rotationComponents[2] = foo;
-            data_020efaa8.rotationFunctionsRelative[2] = &CreateRotationZ;
+            object3DsData.rotationFunctionsRelative[2] = &CreateRotationZ;
         }
         for (int i = 0; i < 3; i++)
         {
-            fix32_t amount = rotationComponents[i];
-            if (amount != 0)
+            fix32_t angle = rotationComponents[i];
+            if (angle != 0)
             {
-                fix32_t sine = func_02030c68(amount);
-                fix32_t cosine = func_02030c9c(amount);
-                data_020efaa8.rotationFunctionsRelative[i](&axisRotation, sine, cosine);
+                fix32_t sine = func_02030c68(angle);
+                fix32_t cosine = func_02030c9c(angle);
+                object3DsData.rotationFunctionsRelative[i](&axisRotation, sine, cosine);
                 Mat3x3_Multiply(&worldRotation, &axisRotation, &worldRotation);
             }
         }
@@ -639,20 +623,20 @@ void Object3D::PopulateRenderConfigWorld()
             rotationComponents[2] = rotation_.x;
             if (flags_6c_ & (1 << OBJECT3D_FLAG_25))
             {
-                data_020efaa8.rotationFunctionsAbsolute[0] = &CreateRotationX;
+                object3DsData.rotationFunctionsAbsolute[0] = &CreateRotationX;
                 fix32_t foo = rotationComponents[0];
                 rotationComponents[0] = rotationComponents[2];
                 rotationComponents[2] = foo;
-                data_020efaa8.rotationFunctionsAbsolute[2] = &CreateRotationZ;
+                object3DsData.rotationFunctionsAbsolute[2] = &CreateRotationZ;
             }
             for (int i = 0; i < 3; i++)
             {
-                fix32_t amount = rotationComponents[i];
-                if (amount != 0)
+                fix32_t angle = rotationComponents[i];
+                if (angle != 0)
                 {
-                    fix32_t sine = func_02030c68(amount);
-                    fix32_t cosine = func_02030c9c(amount);
-                    data_020efaa8.rotationFunctionsAbsolute[i](&axisRotation, sine, cosine);
+                    fix32_t sine = func_02030c68(angle);
+                    fix32_t cosine = func_02030c9c(angle);
+                    object3DsData.rotationFunctionsAbsolute[i](&axisRotation, sine, cosine);
                     Mat3x3_Multiply(&totalRotation, &axisRotation, &totalRotation);
                 }
             }
@@ -884,9 +868,9 @@ void Object3D::MaybeUpdateBonePositions()
     RenderConfig::SetObjectScale(&scale);
     RenderConfig::SubmitToFifo();
 
-    data_02104b18.boneMatrixList = trackedBoneMatrixList_;
+    boneTracking.boneMatrixList = trackedBoneMatrixList_;
     pModel_->Draw(false);
-    data_02104b18.boneMatrixList = NULL;
+    boneTracking.boneMatrixList = NULL;
 }
 
 void Object3D::SendTransformToFifo()
@@ -1290,7 +1274,7 @@ bool Object3D::LoadFromCCHROrCMOTArchive(ObjectArchiveLoadInfo *loadInfo, int (*
         void* rawAnimFilePointers[4];
         for (int j = 0; j < 4; j++)
         {
-            sprintf(candidateName, "%s.%s", record->name, data_020efaa8.extensionLookup[j]);
+            sprintf(candidateName, "%s.%s", record->name, object3DsData.extensionLookup[j]);
             bool foundInLookup = false;
             const void* archiveData;
             bool foundInLookup_inner;
@@ -2075,15 +2059,14 @@ void Object3D::EnableBoneTracking()
 
 void BoneTrackingRenderCommandHook(RenderCommandHandler* handler)
 {
-    for (Object3D::TrackedBoneMatrix* tracker = data_02104b18.boneMatrixList;
+    for (Object3D::TrackedBoneMatrix* tracker = boneTracking.boneMatrixList;
         tracker != NULL; tracker = tracker->pNext)
     {
         if (!(handler->flags_ & (1 << RCH_FLAG_4)) || handler->currentBoneMatrix_ != tracker->boneIndex)
             continue;
         
-        // fix this cast alter
         GetCurrentPositionAndDirectionMatrices(&tracker->matrix, NULL);
-        data_02104b18.boneMatrixWithView = tracker->matrix;
+        boneTracking.boneMatrixWithView = tracker->matrix;
         Mat4x3_Multiply(&tracker->matrix, RenderConfig::GetInverseViewMatrix(), &tracker->matrix);
     }
 }

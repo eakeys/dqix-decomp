@@ -6304,7 +6304,7 @@ from:0x02037690 kind:arm_call to:0x020b867c module:main
 from:0x020376b0 kind:arm_call to:0x020b541c module:main
 from:0x020376c0 kind:arm_call to:0x020c382c module:main
 from:0x020376d4 kind:load to:0x02104858 module:main
-from:0x020376d8 kind:load to:0x02104870 module:main
+from:0x020376d8 kind:load to:0x02104858 add:0x18 module:main
 from:0x02037718 kind:arm_call to:0x0200f238 module:main
 from:0x02037724 kind:arm_call to:0x020307a0 module:main
 from:0x02037730 kind:arm_call to:0x020307d4 module:main

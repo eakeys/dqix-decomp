@@ -49,6 +49,8 @@ src/Resource/Script.cpp:
 src/Memory/SafeAllocator.cpp:
     complete
     .text start:0x0203246c end:0x020328bc
+    .data start:0x020ef91c end:0x020ef920
+    .bss start:0x02104b0c end:0x02104b10
 
 src/Resource/BCFG.cpp:
     complete

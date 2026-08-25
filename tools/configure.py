@@ -23,7 +23,7 @@ args = parser.parse_args()
 
 # Config
 GAME = "dqix"
-DSD_VERSION = 'v0.8.0'
+DSD_VERSION = 'v0.10.2'
 WIBO_VERSION = '0.6.16'
 OBJDIFF_VERSION = 'v2.7.1'
 MWCC_VERSION = "2.0/sp2p2" # minimum version required to match fixed point s64 arithmetic around 0x02030f30 (not sdk code). might need p3 or p4?
@@ -153,7 +153,7 @@ class Project:
         ]
 
     def arm9_lcf(self) -> Path:
-        return self.game_build / "linker_script.lcf"
+        return self.game_build / "arm9.lcf"
 
     def arm9_objects_txt(self) -> Path:
         return self.game_build / "objects.txt"
@@ -217,7 +217,8 @@ def main():
 
         n.rule(
             name="lcf",
-            command=f"{DSD} lcf -c $config_path --lcf-file $lcf_file --objects-file $objects_file"
+           # command=f"{DSD} lcf -c $config_path --lcf-file $lcf_file --objects-file $objects_file"
+            command=f"{DSD} lcf --config-path $config_path"
         )
         n.newline()
 

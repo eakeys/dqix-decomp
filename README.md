@@ -43,7 +43,12 @@ Once everything is set up:
    ```bash
    ninja
    ```
-This will initiate the compilation process.
+This builds the ROM and verifies every module against the original.
+
+Other targets, none of which are built by default: `ninja sha1` verifies the SHA-1 of the
+whole built ROM and needs the ARM7 BIOS dump, `ninja ctx` generates a decomp.me context
+next to every object and needs GCC, and `ninja objdiff` / `ninja report` write the objdiff
+configuration and progress report.
 
 ---
 

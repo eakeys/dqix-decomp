@@ -129,6 +129,31 @@ class Project:
     def dsd_configs(self) -> list[str]:
         return self.delinks_files + self.relocs_files + self.symbols_files
 
+    def check_delinked_sources(self):
+        """Every delinks.txt entry naming a source file needs that file to exist, otherwise
+        the link fails much later with just an unresolved object path from mwldarm."""
+        missing = []
+        for delinks_file in self.delinks_files:
+            for line in open(delinks_file, encoding="utf-8"):
+                line = line.strip()
+                if not line.endswith(":") or line.startswith("//"):
+                    continue
+                source_file = Path(line[:-1])
+                if source_file.suffix not in [".c", ".cpp", ".s"]:
+                    continue
+                if not source_file.is_file():
+                    missing.append((delinks_file, source_file))
+        if missing:
+            print(f"{len(missing)} source file(s) declared in delinks.txt but not on disk:")
+            for delinks_file, source_file in missing:
+                alternatives = [
+                    suffix for suffix in [".c", ".cpp", ".s"]
+                    if source_file.with_suffix(suffix).is_file()
+                ]
+                hint = f" (found {source_file.stem}{alternatives[0]})" if alternatives else ""
+                print(f"  {source_file}{hint}\n    declared in {delinks_file}")
+            exit(1)
+
     def arm9_config_yaml(self) -> Path:
         return self.game_config / "arm9" / "config.yaml"
 
@@ -171,6 +196,7 @@ class Project:
 
 def main():
     project = Project(args.version)
+    project.check_delinked_sources()
 
     with build_ninja_path.open("w") as file:
         n = ninja_syntax.Writer(file)
@@ -267,6 +293,7 @@ def main():
         )
         n.newline()
 
+
         n.rule(
             name="sha1",
             command=f"{PYTHON} tools/sha1.py $in -c $sha1_file"
@@ -280,6 +307,11 @@ def main():
         add_mwld_and_rom_builds(n, project)
         add_check_builds(n, project)
         add_objdiff_builds(n, project)
+
+        # Without this, `ninja` also builds a decomp.me context for every source file,
+        # which makes GCC a prerequisite for producing the ROM. `sha1` is left out
+        # because it needs the optional ARM7 BIOS dump to pass.
+        n.default(["rom", "check"])
 
 
 def add_download_tool_builds(n: ninja_syntax.Writer):
@@ -410,6 +442,7 @@ def add_mwld_and_rom_builds(n: ninja_syntax.Writer, project: Project):
 
 
 def add_mwcc_builds(n: ninja_syntax.Writer, project: Project, mwcc_implicit: list[Path]):
+    ctx_files = []
     for source_file in get_c_cpp_files([src_path, libs_path]):
         src_obj_path = project.game_build / source_file
         cc_flags = []
@@ -431,12 +464,20 @@ def add_mwcc_builds(n: ninja_syntax.Writer, project: Project, mwcc_implicit: lis
 
         extension = source_file.suffix
         ctx_file = str(project.game_build / source_file.with_suffix(f".ctx{extension}"))
+        ctx_files.append(ctx_file)
         n.build(
             inputs=str(source_file),
             rule="m2ctx",
             outputs=ctx_file,
         )
         n.newline()
+
+    n.build(
+        inputs=ctx_files,
+        rule="phony",
+        outputs="ctx",
+    )
+    n.newline()
 
 
 def get_c_cpp_files(dirs: list[Path]):

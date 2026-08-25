@@ -23,7 +23,7 @@ args = parser.parse_args()
 
 # Config
 GAME = "dqix"
-DSD_VERSION = 'v0.6.0'
+DSD_VERSION = 'v0.8.0'
 WIBO_VERSION = '0.6.16'
 OBJDIFF_VERSION = 'v2.7.1'
 MWCC_VERSION = "2.0/sp2p2" # minimum version required to match fixed point s64 arithmetic around 0x02030f30 (not sdk code). might need p3 or p4?
@@ -55,7 +55,8 @@ LD_FLAGS = " ".join([
     "-m Entry",             # Set entry function
     "-map closure,unused",  # Generate map file
     "-msgstyle gcc",        # Use GCC-like messages (some IDEs will make file names clickable)
-    "-nodead",              # allow dead code
+    "-dead",                # Don't allow dead code
+    "-force_active func_ov030_021d8a40"
 ])
 DSD_OBJDIFF_ARGS = " ".join([
     "--scratch",                        # Metadata for creating decomp.me scratches

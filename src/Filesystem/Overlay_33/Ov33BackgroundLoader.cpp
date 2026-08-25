@@ -20,7 +20,7 @@ extern "C"
     void func_020a1ccc(int);
 }
 
-extern Ov33BackgroundLoader data_ov033_022a2a2c;
+Ov33BackgroundLoader data_ov033_022a2a2c;
 
 void PopulateOv33BackgroundLoader(void* fileLoadSpace, unsigned int capacity, int relativePrio)
 {
@@ -338,4 +338,8 @@ end:
         SleepIfResourceMutexNotLocked(5);
     ZeroDestroyGPCPointer(&pGPC);
     return 0;
+}
+
+Ov33BackgroundLoader::Ov33BackgroundLoader()
+{
 }

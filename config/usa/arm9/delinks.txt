@@ -46,6 +46,9 @@ src/Resource/Script.cpp:
     complete
     .text start:0x02030634 end:0x02030c68
 
+src/Graphics/ExtendedVectorMath.cpp:
+    .text start:0x02030c68 end:0x0203246c
+
 src/Memory/SafeAllocator.cpp:
     complete
     .text start:0x0203246c end:0x020328bc
@@ -260,9 +263,9 @@ src/System/ContextList.cpp:
     complete
     .text start:0x020c71a4 end:0x020c745c
 
-src/System/ProcessorContext.cpp:
-    complete
-    .text start:0x020c75b4 end:0x020c7d34
+//src/System/ProcessorContext.cpp:
+//    complete
+//    .text start:0x020c75b4 end:0x020c7d34
 
 src/System/Mutex.cpp:
     complete

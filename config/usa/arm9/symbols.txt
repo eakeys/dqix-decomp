@@ -4903,8 +4903,8 @@ func_020c30ac kind:function(arm,size=0xe8) addr:0x020c30ac
 func_020c3194 kind:function(arm,size=0xcc) addr:0x020c3194
 func_020c3260 kind:function(arm,size=0x98) addr:0x020c3260
 func_020c32f8 kind:function(arm,size=0x94) addr:0x020c32f8
-func_020c338c kind:function(arm,size=0x1b8) addr:0x020c338c
-func_020c3544 kind:function(arm,size=0x1a8) addr:0x020c3544
+fix32_Atan2 kind:function(arm,size=0x1b8) addr:0x020c338c
+fix32_Atan2_Rescaled kind:function(arm,size=0x1a8) addr:0x020c3544
 func_020c36ec kind:function(arm,size=0x4) addr:0x020c36ec
 func_020c36f0 kind:function(arm,size=0x14c) addr:0x020c36f0
 func_020c383c kind:function(arm,size=0x28) addr:0x020c383c
@@ -6283,7 +6283,7 @@ data_020e752c kind:data(any) addr:0x020e752c
 data_020e77b0 kind:data(any) addr:0x020e77b0
 data_020e77bc kind:data(any) addr:0x020e77bc
 data_020e77cc kind:data(any) addr:0x020e77cc
-@1774 kind:data(any) addr:0x020e7800 local
+const_unitScale kind:data(any) addr:0x020e7800 local
 data_020e780c kind:data(any) addr:0x020e780c
 data_020e7830 kind:data(any) addr:0x020e7830
 data_020e7844 kind:data(any) addr:0x020e7844

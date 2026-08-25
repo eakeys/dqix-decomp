@@ -26,8 +26,8 @@ GAME = "dqix"
 DSD_VERSION = 'v0.6.0'
 WIBO_VERSION = '0.6.16'
 OBJDIFF_VERSION = 'v2.7.1'
-MWCC_VERSION = "2.0/sp1p5"
-DECOMP_ME_COMPILER = "mwcc_30_131"
+MWCC_VERSION = "2.0/sp2p2" # minimum version required to match fixed point s64 arithmetic around 0x02030f30 (not sdk code). might need p3 or p4?
+DECOMP_ME_COMPILER = "mwcc_30_137"
 CC_FLAGS = " ".join([
     "-O2",                  # Optimize maximally, omit p: it optimizes out things that the game doesn't normally
     "-enum int",            # Use int-sized enums
@@ -46,6 +46,7 @@ CC_FLAGS = " ".join([
     "-gccinc",              # Interpret #include "..." and #include <...> equally
     "-nolink",              # Do not link
     "-msgstyle gcc",        # Use GCC-like messages (some IDEs will make file names clickable)
+    "-str pool,reuse"       # Pool and reuse strings within translation units
 ])
 LD_FLAGS = " ".join([
     "-proc arm946e",        # Target processor

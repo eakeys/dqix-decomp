@@ -278,6 +278,14 @@ extern "C"
     // 0x020c30ac - 0x020c36ec: functions that compute stuff with a ton of
     // magic constants. Possibly software implementations of trig functions?
     // Will come back to this when the call sites come up
+
+    // usa: func_020c338c
+    fix32_t fix32_Atan2(fix32_t y, fix32_t x);
+    // usa: func_020c3554
+    // works like Atan2 but the range is rescaled so that pi = 0x8000,
+    // so for example (x = 0, y > 0) gives 0x4000 = 4.0
+    fix32_t fix32_Atan2_Rescaled(fix32_t y, fix32_t x);
+
 #ifdef __cplusplus
 }
 #endif

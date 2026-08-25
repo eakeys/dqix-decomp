@@ -131,6 +131,10 @@ extern "C"
 // don't use own alpha, just stick with model's intrinsic/pre-set value
 #define OBJECT3D_FLAG_29 29
 
+// I want to declare this inline but unnamed symbols keep changing their
+// names when headers change and it means the build fails bc of match_symbols
+const Vector3fix const_unitScale = { 0x1000, 0x1000, 0x1000 };
+
 struct Object3DStaticData
 {
     float unk_0[4]; // holds 30.0f, 30.0f, 180.0f, 180.0f
@@ -872,7 +876,7 @@ void Object3D::MaybeUpdateBonePositions()
     Matrix3x3 rotationMatrix;
     Mat3x3_WriteRotationY(&rotationMatrix, sine, cosine);
     func_02016d8c(&rotationMatrix);
-    Vector3fix scale = { 0x1000, 0x1000, 0x1000 };
+    Vector3fix scale = const_unitScale;
     RenderConfig::SetObjectScale(&scale);
     RenderConfig::SubmitToFifo();
 

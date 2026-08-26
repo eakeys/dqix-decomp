@@ -5,8 +5,25 @@
 
 #ifdef jpn
 #define data_020e6f00 data_020e77a4
-#define data_020e6f04 data_020e77a8
+
+#define data_020ef26f data_020ef1ab
+#define data_020ef274 data_020ef1b0
+#define data_020ef279 data_020ef1b5
+#define data_020ef27e data_020ef1ba
+#define data_020ef283 data_020ef1bf
+#define data_020ef288 data_020ef1c4
+#define data_020ef28d data_020ef1c9
 #define data_020ef292 data_020ef1ce
+#define data_020ef297 data_020ef1d3
+#define data_020ef29c data_020ef1d8
+#define data_020ef2a1 data_020ef1dd
+#define data_020ef2a6 data_020ef1e2
+#define data_020ef2ab data_020ef1e7
+#define data_020ef2b0 data_020ef1ec
+#define data_020ef2b5 data_020ef1f1
+
+#define func_020196fc func_0201949c
+#define func_0201e434 func_0201e1c0
 #endif
 
 extern "C"

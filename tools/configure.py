@@ -48,6 +48,9 @@ CC_FLAGS = " ".join([
     "-msgstyle gcc",        # Use GCC-like messages (some IDEs will make file names clickable)
     "-str pool,reuse"       # Pool and reuse strings within translation units
 ])
+active_function_name = "-force_active func_ov030_021d8a40"
+if args.version == "jpn":
+    active_function_name = "-force_active func_ov029_021d9300,func_ov030_021d9300"
 LD_FLAGS = " ".join([
     "-proc arm946e",        # Target processor
     "-nostdlib",            # No C/C++ standard library
@@ -56,7 +59,7 @@ LD_FLAGS = " ".join([
     "-map closure,unused",  # Generate map file
     "-msgstyle gcc",        # Use GCC-like messages (some IDEs will make file names clickable)
     "-dead",                # Don't allow dead code
-    "-force_active func_ov030_021d8a40"
+    active_function_name    # fix issue with overlay 30 being excluded by the previous command
 ])
 DSD_OBJDIFF_ARGS = " ".join([
     "--scratch",                        # Metadata for creating decomp.me scratches

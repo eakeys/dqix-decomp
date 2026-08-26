@@ -18,8 +18,6 @@
 #define func_02010220 func_0201007c
 #define func_02016d8c func_02016b2c
 #define func_0202ed74 func_0202e8e4
-#define fix32sin func_020307a0
-#define fix32cos func_020307d4
 #define func_02030e2c func_02030964
 #define func_02030e88 func_020309c0
 #define func_020311f0 func_02030d28

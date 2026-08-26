@@ -1,5 +1,9 @@
 #include "Graphics/Vector.h"
 
+#if defined(jpn)
+#define data_020e9450 data_020e955c
+#endif
+
 extern const fix16_t data_020e9450[0x10000 * 2];
 
 fix32_t fix32sin(fix32_t x)

@@ -11,9 +11,6 @@
 #include "Resource/ResourceMutex.h"
 #include "Graphics/VRAMStaging.h"
 
-#pragma pool_strings on
-#pragma dont_reuse_strings off
-
 #if defined(jpn)
 #define func_020100bc func_0200ff18
 #define func_02010208 func_02010064
@@ -21,8 +18,8 @@
 #define func_02010220 func_0201007c
 #define func_02016d8c func_02016b2c
 #define func_0202ed74 func_0202e8e4
-#define func_02030c68 func_020307a0
-#define func_02030c9c func_020307d4
+#define fix32sin func_020307a0
+#define fix32cos func_020307d4
 #define func_02030e2c func_02030964
 #define func_02030e88 func_020309c0
 #define func_020311f0 func_02030d28
@@ -57,13 +54,6 @@ extern "C"
     void func_02016d8c(const Matrix3x3* rotation);
 
     const Matrix3x3* func_0202ed74(void*);
-
-    fix32_t func_02030c68(fix32_t); // sin(x) from lookup table, 0 <= x <= 2*pi
-    fix32_t func_02030c9c(fix32_t); // cos(x) from lookup table, 0 <= x <= 2*pi
-    // multiply vector by scalar and store in third argument
-    void func_02030e2c(const Vector3fix*, fix32_t, Vector3fix*);
-    // component-wise multiply vectors and store in 3rd argument
-    void func_02030e88(const Vector3fix*, const Vector3fix*, Vector3fix*);
 
     void func_020311f0(fix32_t); // send x-rotation to fifo
     void func_02031234(fix32_t); // send y-rotation to fifo
@@ -130,10 +120,6 @@ extern "C"
 #define OBJECT3D_FLAG_28 28
 // don't use own alpha, just stick with model's intrinsic/pre-set value
 #define OBJECT3D_FLAG_29 29
-
-// I want to declare this inline but unnamed symbols keep changing their
-// names when headers change and it means the build fails bc of match_symbols
-const Vector3fix const_unitScale = { 0x1000, 0x1000, 0x1000 };
 
 struct Object3DStaticData
 {
@@ -593,8 +579,8 @@ void Object3D::PopulateRenderConfigWorld()
             fix32_t angle = rotationComponents[i];
             if (angle != 0)
             {
-                fix32_t sine = func_02030c68(angle);
-                fix32_t cosine = func_02030c9c(angle);
+                fix32_t sine = fix32sin(angle);
+                fix32_t cosine = fix32cos(angle);
                 object3DsData.rotationFunctionsRelative[i](&axisRotation, sine, cosine);
                 Mat3x3_Multiply(&worldRotation, &axisRotation, &worldRotation);
             }
@@ -605,10 +591,10 @@ void Object3D::PopulateRenderConfigWorld()
         ownScale.x = scale_[0];
         ownScale.y = scale_[1];
         ownScale.z = scale_[2];
-        func_02030e88(&data_0210a010.objectScale, &ownScale, &multipliedScale);
+        Vector3fixMultiply(&data_0210a010.objectScale, &ownScale, &multipliedScale);
         RenderConfig::SetObjectScale(&multipliedScale);
         Vector3fix multipliedPosition;
-        func_02030e88(&position_, &multipliedScale, &multipliedPosition);
+        Vector3fixMultiply(&position_, &multipliedScale, &multipliedPosition);
         Vector3fix_Add(&data_0210a010.objectRotationPosition.translation, &multipliedPosition, &multipliedPosition);
         RenderConfig::SetObjectPosition(&multipliedPosition);
     }
@@ -643,8 +629,8 @@ void Object3D::PopulateRenderConfigWorld()
                 fix32_t angle = rotationComponents[i];
                 if (angle != 0)
                 {
-                    fix32_t sine = func_02030c68(angle);
-                    fix32_t cosine = func_02030c9c(angle);
+                    fix32_t sine = fix32sin(angle);
+                    fix32_t cosine = fix32cos(angle);
                     object3DsData.rotationFunctionsAbsolute[i](&axisRotation, sine, cosine);
                     Mat3x3_Multiply(&totalRotation, &axisRotation, &totalRotation);
                 }
@@ -870,13 +856,13 @@ void Object3D::MaybeUpdateBonePositions()
     ApplyAnimations(NULL);
     Vector3fix position = { 0 };
     RenderConfig::SetObjectPosition(&position);
-    fix32_t cosine = func_02030c9c(rotation_.y);
-    fix32_t sine = func_02030c68(rotation_.y);
+    fix32_t cosine = fix32cos(rotation_.y);
+    fix32_t sine = fix32sin(rotation_.y);
 
     Matrix3x3 rotationMatrix;
     Mat3x3_WriteRotationY(&rotationMatrix, sine, cosine);
     func_02016d8c(&rotationMatrix);
-    Vector3fix scale = const_unitScale;
+    Vector3fix scale = { 0x1000, 0x1000, 0x1000 };
     RenderConfig::SetObjectScale(&scale);
     RenderConfig::SubmitToFifo();
 
@@ -2088,10 +2074,10 @@ Vector3fix Object3D::GetPointInFront(fix32_t distance) const
     Vector3fix ownPos = position_;
     Vector3fix ownRot = rotation_;
     Vector3fix forward = { 0, 0, 0 };
-    forward.x = func_02030c68(ownRot.y);
-    forward.z = func_02030c9c(ownRot.y);
+    forward.x = fix32sin(ownRot.y);
+    forward.z = fix32cos(ownRot.y);
     Vector3fix output;
-    func_02030e2c(&forward, distance, &output);
+    Vector3fixMultiplyScalar(&forward, distance, &output);
     Vector3fix_Add(&output, &ownPos, &output);
     return output;
 }

@@ -4,6 +4,7 @@
 #include "Memory/SafeAllocator.h"
 #include "Graphics/Vector.h"
 #include "Graphics/Model3D.h"
+#include "Grotto/Main/TileFeatures.h"
 #include "ZoneFeatures.h"
 
 struct Zone3D_StructPtr_8
@@ -15,15 +16,6 @@ struct Zone3D_StructPtr_8
     char mapShortName_[7];
     unsigned char unknown_c_low_ : 4;
     unsigned char unknown_c_high_ : 1;
-};
-
-// sizeof == 0x58
-struct Zone3D_BMDJStruct
-{
-    int unknown_0_;
-    char unk_4[0x44];
-    Vector3i vec_48_;
-    Zone3D_BMDJStruct* pNext_;
 };
 
 // sizeof == 0x2824, as seen in the dynamic allocation of one
@@ -75,7 +67,7 @@ public:
     char unknown_struct_10c_[0x30c];
     Model3DListNode* firstModel_418_;
     Zone3D_BMDJStruct* firstBMDJStruct_41c_;
-    void* grottoTileMapData_420_; // pointer to array of stride 0x48
+    GrottoTileData* grottoTileMapData_420_;
     int unknown_424_;
     char unk_428[4];
     unsigned char unknown_42c_;
@@ -161,4 +153,17 @@ public:
     void QueueLoadATS_AMBL();
     // usa: func_02014c04
     bool UnpackATS_AMBL();
+
+    // Grotto functionality, this is also part of the class but we keep it in a separate
+    // file for now. (It will probably need to go in one file eventually to make
+    // data/rodata positioning work)
+
+    // features and floorMap are optional and will default to the instances within
+    // the class if NULL. If output is null, then the extended data array at offset
+    // 0x420 will be populated instead.
+    int ComputeGrottoTileTypes(int floor, ZoneFeatures* features, TileFeaturePlacementData* output, FloorMap* floorMap);
+    void RotateGrottoTileFeaturePlacementData(unsigned char* placementArray, int numTurns);
+    void RotateGrottoObjectDirectionBitmask(unsigned char* mask, int numTurns);
+    int GetGrottoObjectPositionOrientation(int tileX, int tileY, fix32_t* outX, fix32_t* outY,
+    const TileFeaturePlacementData* tileDataArray, bool preferFaceDown);
 };

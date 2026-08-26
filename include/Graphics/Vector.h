@@ -28,6 +28,7 @@ void Vector3fixDivideScalar(const Vector3fix* in, fix32_t scalar, Vector3fix* ou
 fix32_t fix32ReduceAngle0To2Pi(fix32_t angle);
 
 // maybe Vector3fix16::operator=? If so, it's explicitly defined
+void Vector3fix16Copy(Vector3fix16* dst, const Vector3fix16* src);
 
 fix32_t Vector3fixSquaredDistance(const Vector3fix* a, const Vector3fix* b);
 

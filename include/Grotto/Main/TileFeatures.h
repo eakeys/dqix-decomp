@@ -1,5 +1,17 @@
 #pragma once
 
+#include "../../Graphics/Vector.h"
+
+// sizeof == 0x58
+// This needs to go somewhere else
+struct Zone3D_BMDJStruct
+{
+    int unknown_0_;
+    char unk_4[0x44];
+    Vector3i vec_48_;
+    Zone3D_BMDJStruct* pNext_;
+};
+
 struct TileFeaturePlacementData
 {
     // identifier for the tile type (e.g. D01A is 0, D02A is 1, ...)
@@ -14,6 +26,28 @@ struct TileFeaturePlacementData
     // The tile R02A (corresponding to a 270 degree corner in a room) has some
     // special behaviour, which I think is why it gets copied here.
     char tilename[5];
+};
+
+struct GrottoTileData
+{
+    Zone3D_BMDJStruct* bmdj;
+    TileFeaturePlacementData featurePlacement;
+    Matrix3x3 rotationMatrix;
+    fix32_t rotationAngle;
+    Vector3fix centrePosition;
+};
+
+enum TilePlacementPoint
+{
+    TilePlacementPoint_NW = 0,
+    TilePlacementPoint_N = 1,
+    TilePlacementPoint_NE = 2,
+    TilePlacementPoint_W = 3,
+    TilePlacementPoint_Center = 4,
+    TilePlacementPoint_E = 5,
+    TilePlacementPoint_SW = 6,
+    TilePlacementPoint_S = 7,
+    TilePlacementPoint_SE = 8,
 };
 
 int ChooseTileFeaturePosition(const TileFeaturePlacementData* data);

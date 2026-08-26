@@ -195,10 +195,10 @@ void Zone3D::SwitchZone(unsigned short newID)
         int width = grotto_.CalculateAndStoreFloorWidth(currentGrottoFloor_23ba_);
         int height = grotto_.CalculateAndStoreFloorHeight(currentGrottoFloor_23ba_);
 
-        grottoTileMapData_420_ = pAllocator_68_->Allocate(0x4800);
-        for (int i = 0; i < 0x100; i++)
+        grottoTileMapData_420_ = (GrottoTileData*)pAllocator_68_->Allocate(sizeof(GrottoTileData) * 256);
+        for (int i = 0; i < 256; i++)
         {
-            func_02013490((void*)((int)grottoTileMapData_420_ + i * 0x48));
+            func_02013490(&grottoTileMapData_420_[i]);
         }
         grotto_.ClearGenerator(false);
         grotto_.AllocateGenerator(pAllocator_68_, false);

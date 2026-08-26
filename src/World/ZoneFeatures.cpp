@@ -13,6 +13,12 @@ struct Struct_020fdc20
     ZoneFeatures* warp;
 } extern data_020fdc20;
 
+#define NO_fPROPAGATION
+
+#ifdef NO_PROPAGATION
+#pragma opt_propagation off
+#endif
+
 extern "C"
 {
     void* func_02011584(BattleStruct*);
@@ -38,14 +44,14 @@ extern "C"
     void func_020c2f18(const Vector3fix* in, Vector3fix* out);
 }
 
-//typedef int (*OpcodeProc)(Parameter*, int);
-
+// matches regardless of pragma
 int WarpScript_Opcode_64(Script::Parameter* params, int numParams)
 {
     data_020fdc20.warp->AllocateOpcode64Entries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
+// matches regardless of pragma
 int WarpScript_Opcode_65(Script::Parameter* params, int numParams)
 {
     const char* string2;
@@ -89,12 +95,14 @@ int WarpScript_Opcode_65(Script::Parameter* params, int numParams)
     return 1;
 }
 
+// matches regardless of pragma
 int WarpScript_Opcode_7d(Script::Parameter* params, int numParams)
 {
     data_020fdc20.warp->AllocateGrottoTileFeaturePlacementEntries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
+// matches regardless of pragma
 int WarpScript_Opcode_7e(Script::Parameter* params, int numParams)
 {
     TileFeaturePlacementData placement;
@@ -108,12 +116,14 @@ int WarpScript_Opcode_7e(Script::Parameter* params, int numParams)
     return 1;
 }
 
+// matches regardless of pragma
 int WarpScript_Opcode_66(Script::Parameter* params, int numParams)
 {
     data_020fdc20.warp->AllocateOpcode66Entries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
+// matches regardless of pragma
 int WarpScript_Opcode_67(Script::Parameter* params, int numParams)
 {
     float arg0 = params[0].ToFloat();
@@ -147,12 +157,15 @@ int WarpScript_Opcode_67(Script::Parameter* params, int numParams)
     return 1;
 }
 
+// matches regardless of pragma
 int WarpScript_Opcode_68(Script::Parameter* params, int numParams)
 {
     data_020fdc20.warp->AllocateOpcode68Entries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
+#ifndef NO_PROPAGATION
+// matches
 bool ProcessExtraOpcode69Params(Script::Parameter* param, int numParams, ZoneFeatures::Opcode68Entry& entry)
 {
     Script::Parameter* paramStart = param;
@@ -193,7 +206,60 @@ bool ProcessExtraOpcode69Params(Script::Parameter* param, int numParams, ZoneFea
     }
     return true;
 }
+#else
+// not a match
+bool ProcessExtraOpcode69Params(Script::Parameter* param, int numParams, ZoneFeatures::Opcode68Entry& entry)
+{
+    Script::Parameter* paramStart = param;
+    void* worldData = func_02011584(GetBattleStruct());
+    
+    entry.unk_0 = param[0].ToInt();
+    param++;
+    if (param[0].type == 0)
+    {
+        const char* str = param->ToString();
+        param++;
+        unsigned short* probablyZone = func_0209998c(worldData, str);
+        if (probablyZone == NULL)
+            return false;
+        entry.unk_1c = *probablyZone;
+    }
+    else
+    {
+        entry.unk_1c = param->ToInt();
+        param++;
+    }
 
+    
+    entry.unk_64[0] = param[0].ToInt();
+    entry.unk_64[1] = param[1].ToInt();
+
+    Vector3fix tempVector;
+    param = param[2].ToVec3fix(&tempVector);
+    entry.unk_20[0] = tempVector;
+    float foo = param->ToFloat();
+    param++;
+    entry.unk_50 = 4096.0f * foo;
+    if (numParams - (param - paramStart) > 0)
+    {
+        entry.unk_6c = param->ToInt();
+        param++;
+    }
+    if (numParams - (param - paramStart) > 0)
+    {
+        param = param->ToVec3fix(&tempVector);
+        entry.unk_20[1] = tempVector;
+        param = param->ToVec3fix(&tempVector);
+        entry.unk_20[2] = tempVector;
+        param = param->ToVec3fix(&tempVector);
+        entry.unk_20[3] = tempVector;
+    }
+    return true;
+}
+#endif
+
+#ifndef NO_PROPAGATION
+// match
 int WarpScript_Opcode_69(Script::Parameter* params, int numParams)
 {
     ZoneFeatures::Opcode68Entry entry;
@@ -229,6 +295,48 @@ int WarpScript_Opcode_69(Script::Parameter* params, int numParams)
     data_020fdc20.warp->CreateOpcode68Entry(entry);
     return 1;
 }
+#else
+// extremely bad, nowhere close to matching and I'm stumped
+int WarpScript_Opcode_69(Script::Parameter* params, int numParams)
+{
+    ZoneFeatures::Opcode68Entry entry;
+    entry.Reset();
+    Script::Parameter* p = params;
+    fix32_t centreX = (int)(4096.0f * (p)->ToFloat());
+    fix32_t centreY = (int)(4096.0f * (p + 1)->ToFloat());
+    fix32_t centreZ = (int)(4096.0f * (p + 2)->ToFloat());
+    fix32_t lengthX = (int)(4096.0f * (p + 3)->ToFloat()) / 2;
+    fix32_t lengthY = (int)(4096.0f * (p + 4)->ToFloat()) / 2;
+    fix32_t lengthZ = (int)(4096.0f * (p + 5)->ToFloat()) / 2;
+    p += 6;
+
+    fix32_t xMax = centreX + lengthX;
+    fix32_t xMin = centreX - lengthX;
+    fix32_t yMax = centreY + lengthY;
+    fix32_t yMin = centreY - lengthY;
+    fix32_t zMax = centreZ + lengthZ;
+    fix32_t zMin = centreZ - lengthZ;
+
+    
+
+    entry.unk_58[1] = centreY;
+    entry.unk_4[0] = xMax;
+    entry.unk_58[0] = centreX;
+    int remainingParams = numParams - (p - params);
+    entry.unk_58[2] = centreZ;   
+
+    entry.unk_4[1] = yMax;
+    entry.unk_4[2] = zMax;
+    entry.unk_4[3] = xMin;
+    entry.unk_4[4] = yMin;
+    entry.unk_4[5] = zMin;
+
+    if (!ProcessExtraOpcode69Params(p, remainingParams, entry))
+        return 0;
+    data_020fdc20.warp->CreateOpcode68Entry(entry);
+    return 1;
+}
+#endif
 
 void ZoneFeatures::Opcode68Entry::Reset()
 {
@@ -258,6 +366,7 @@ void ZoneFeatures::Opcode68Entry::Reset()
 }
 
 // this creates a warp point
+#ifndef NO_PROPAGATION
 int WarpScript_Opcode_72(Script::Parameter* params, int numParams)
 {
     Script::Parameter* paramsStart = params;
@@ -293,13 +402,22 @@ int WarpScript_Opcode_72(Script::Parameter* params, int numParams)
     data_020fdc20.warp->CreateOpcode68Entry(entry);
     return 1;
 }
+#else
+int WarpScript_Opcode_72(Script::Parameter* params, int numParams)
+{
+    // completely terrible, do this from scratch
+}
+#endif
 
+// matches with or without pragma
 int WarpScript_Opcode_6a(Script::Parameter* params, int numParams)
 {
     data_020fdc20.warp->AllocateOpcode6aEntries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
+#ifndef NO_PROPAGATION
+// not a match
 int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
 {
     Script::Parameter* paramsStart = params;
@@ -329,16 +447,17 @@ int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
     
     fix32_t halfx = entry.unk_14.vec.x / 2;
     fix32_t halfz = entry.unk_14.vec.z / 2;
-    fix32_t xsqu = FIX32_MULTIPLY(halfx, halfx);
     fix32_t zsqu = FIX32_MULTIPLY(halfz, halfz);
+    fix32_t xsqu = FIX32_MULTIPLY(halfx, halfx);
     entry.unk_24 = zsqu;
-    entry.unk_24 = xsqu + zsqu;
-    
+    entry.unk_24 = xsqu + zsqu;    
+
     if (entry.maybeType == 2)
     {
-        entry.unk_2c.type2.unk_0 = (params++)->ToInt();
-        entry.unk_2c.type2.unk_1 = (params++)->ToInt();
-        entry.unk_2c.type2.unk_2_high = (params++)->ToInt();
+        entry.unk_2c.type2.unk_0 = params[0].ToInt();
+        entry.unk_2c.type2.unk_1 = params[1].ToInt();
+        entry.unk_2c.type2.unk_2_high = params[2].ToInt();
+        params += 3;
     }
     else if (entry.maybeType == 3)
     {
@@ -382,10 +501,10 @@ int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
             {
                 vecC.x = 4096.0f * (params++)->ToFloat();
             }
-            vecC.y = 4096.0f * (params++)->ToFloat();
-            vecC.z = 4096.0f * (params++)->ToFloat();
+            vecC.y = 4096.0f * params[0].ToFloat();
+            vecC.z = 4096.0f * params[1].ToFloat();
             Vector3fix vecD;
-            params = params->ToVec3fix(&vecD);
+            params = params[2].ToVec3fix(&vecD);
             entry.unk_2c.type4.vector_4.CopyFrom(difference);
             entry.unk_2c.type4.distance_14 = distance;
             entry.unk_2c.type4.vector_18 = vecC;
@@ -404,17 +523,134 @@ int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
     }
     else if (entry.maybeType == 5)
     {
-        entry.unk_2c.type5.unk_0 = (params++)->ToInt();
-        entry.unk_2c.type5.unk_2 = (params++)->ToInt();
+        entry.unk_2c.type5.unk_0 = params[0].ToInt();
+        entry.unk_2c.type5.unk_2 = params[1].ToInt();
         entry.unk_2c.type5.unk_4 = 0;
     }
-    
-    ZoneFeatures* instance = data_020fdc20.warp;
+    // there's some nonsense here that doesn't match
+    Struct_020fdc20* instance = &data_020fdc20;
     entry.pNext = NULL;
-    instance->CreateOpcode6aEntry(entry);
+    instance->warp->CreateOpcode6aEntry(entry);
     return 1;
 }
+#else
+// matches
+int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
+{
+    Script::Parameter* paramsStart = params;
+    ZoneFeatures::Opcode6aEntry entry;
+    entry.Reset();
+    int hash = (params++)->ToInt();
+    entry.maybeType = hash;
+    bool didSubtraction = false;
+    if (entry.maybeType >= 10)
+    {
+        entry.maybeType -= 10;
+        didSubtraction = true;
+    }
 
+    Vector3fix tempVector;
+    params = params->ToVec3fix(&tempVector);
+    entry.unk_8.vec = tempVector;
+    params = params->ToVec3fix(&tempVector);
+    entry.unk_14.vec = tempVector;
+
+    if (didSubtraction)
+    {
+        fix32_t angle = 4096.0f * (params++)->ToFloat();
+        entry.unk_22 = func_02030f30(angle);
+    }
+    entry.unk_20 = 4096.0f * (params++)->ToFloat();
+    
+    fix32_t halfx = entry.unk_14.vec.x / 2;
+    fix32_t halfz = entry.unk_14.vec.z / 2;
+    fix32_t zsqu = FIX32_MULTIPLY(halfz, halfz);
+    fix32_t xsqu = FIX32_MULTIPLY(halfx, halfx);
+    entry.unk_24 = xsqu + zsqu;    
+
+    if (entry.maybeType == 2)
+    {
+        entry.unk_2c.type2.unk_0 = params[0].ToInt();
+        entry.unk_2c.type2.unk_1 = params[1].ToInt();
+        entry.unk_2c.type2.unk_2_high = params[2].ToInt();
+        params += 3;
+    }
+    else if (entry.maybeType == 3)
+    {
+        entry.unk_2c.type3.unk_0 = (params++)->ToInt();
+    }
+    else if (entry.maybeType == 4)
+    {
+        int arg = (params++)->ToInt();
+        entry.unk_2c.type4.unk_1 = -1;
+        entry.unk_2c.type4.unk_0 = arg;
+        entry.unk_2c.type4.unk_0_high = 0;
+        switch (entry.unk_2c.type4.unk_0)
+        {
+        case 0:
+            entry.unk_2c.type4.vector_4.vec3.vec.y = 4096.0f * (params++)->ToFloat();
+            entry.unk_2c.type4.vector_4.vec3.vec.z = 4096.0f * (params++)->ToFloat();
+            break;
+        case 1:
+            params = params->ToVec3fix(&tempVector);
+            entry.unk_2c.type4.vector_4.vec3.vec = tempVector;
+            break;
+        case 2:
+        case 3:
+            params = params->ToVec3fix(&tempVector);
+            entry.unk_2c.type4.vector_4.vec3.vec = tempVector;
+            break;
+        case 4:
+        case 5:
+        {
+            Vector3fix vecB;
+            Vector3fix vecA;
+            params = params->ToVec3fix(&vecB);
+            params = params->ToVec3fix(&vecA);
+            MaybeVector4fix difference;
+            func_020c2dc4(&vecA, &vecB, &difference.vec3.vec);
+            fix32_t distance = func_020c2eb8(&difference.vec3.vec);
+            func_020c2f18(&difference.vec3.vec, &difference.vec3.vec);
+            difference.w = func_020c2df8(&difference.vec3.vec, &vecB);
+            Vector3fix vecC  = { 0, 0, 0 };
+            if (entry.unk_2c.type4.unk_0 == 4)
+            {
+                vecC.x = 4096.0f * (params++)->ToFloat();
+            }
+            vecC.y = 4096.0f * params[0].ToFloat();
+            vecC.z = 4096.0f * params[1].ToFloat();
+            Vector3fix vecD;
+            params = params[2].ToVec3fix(&vecD);
+            entry.unk_2c.type4.vector_4.CopyFrom(difference);
+            entry.unk_2c.type4.distance_14 = distance;
+            entry.unk_2c.type4.vector_18 = vecC;
+            entry.unk_2c.type4.vector_24 = vecD;
+            break;
+        }
+        }
+        entry.unk_2c.type4.vector_30.x = 0;
+        entry.unk_2c.type4.vector_30.y = 0;
+        entry.unk_2c.type4.vector_30.z = 0;
+        if (numParams > 12)
+        {
+            params = params->ToVec3fix(&tempVector);
+            entry.unk_2c.type4.vector_30 = tempVector;
+        }
+    }
+    else if (entry.maybeType == 5)
+    {
+        entry.unk_2c.type5.unk_0 = params[0].ToInt();
+        entry.unk_2c.type5.unk_2 = params[1].ToInt();
+        entry.unk_2c.type5.unk_4 = 0;
+    }
+    Struct_020fdc20* instance = &data_020fdc20;
+    entry.pNext = NULL;
+    instance->warp->CreateOpcode6aEntry(entry);
+    return 1;
+}
+#endif
+
+// matches with or without pragma
 void ZoneFeatures::Opcode6aEntry::Reset()
 {
     VectorizedMemset(this, 0, sizeof(Opcode6aEntry));
@@ -433,6 +669,7 @@ void ZoneFeatures::Opcode6aEntry::Reset()
     pNext = NULL;
 }
 
+// matches with or without pragma
 MaybeVector4fix &MaybeVector4fix::CopyFrom(const MaybeVector4fix &other)
 {
     vec3 = other.vec3;
@@ -441,6 +678,7 @@ MaybeVector4fix &MaybeVector4fix::CopyFrom(const MaybeVector4fix &other)
     return *this;
 }
 
+// matches with or without pragma
 int WarpScript_Opcode_6e(Script::Parameter* params, int numParams)
 {
     Vector3fix tempVector;
@@ -453,6 +691,8 @@ int WarpScript_Opcode_6e(Script::Parameter* params, int numParams)
     return 1;
 }
 
+#ifndef NO_PROPAGATION
+// matches
 int WarpScript_Opcode_70(Script::Parameter* params, int numParams)
 {
     int red = (params++)->ToInt();
@@ -461,7 +701,20 @@ int WarpScript_Opcode_70(Script::Parameter* params, int numParams)
     data_020fdc20.warp->color_7e_ = red | (green << 5) | (blue << 10);
     return 1;
 }
+#else
+// matches
+int WarpScript_Opcode_70(Script::Parameter* params, int numParams)
+{
+    int red = params[0].ToInt();
+    int green = params[1].ToInt();
+    int blue = params[2].ToInt();
+    data_020fdc20.warp->color_7e_ = red | (green << 5) | (blue << 10);
+    return 1;
+}
+#endif
 
+#ifndef NO_PROPAGATION
+// matches
 int WarpScript_Opcode_73(Script::Parameter* params, int numParams)
 {
     ZoneFeatures::Opcode6aEntry entry;
@@ -486,7 +739,34 @@ int WarpScript_Opcode_73(Script::Parameter* params, int numParams)
     data_020fdc20.currentEntry = data_020fdc20.warp->CreateOpcode6aEntry(entry);
     return 1;
 }
+#else
+// not a match but extremely close
+int WarpScript_Opcode_73(Script::Parameter* params, int numParams)
+{
+    ZoneFeatures::Opcode6aEntry entry;
+    entry.Reset();
+    entry.maybeType = (params++)->ToInt();
+    Vector3fix tempVector;
+    params = params->ToVec3fix(&tempVector);
+    entry.unk_8.vec = tempVector;
+    params = params->ToVec3fix(&tempVector);
+    entry.unk_14.vec = tempVector;
+    
+    entry.unk_22 = func_02030f30(4096.0f * (params++)->ToFloat());
+    entry.unk_20 = 4096.0f * (params++)->ToFloat();
 
+    fix32_t halfx = entry.unk_14.vec.x / 2;
+    fix32_t halfz = entry.unk_14.vec.z / 2;    
+    fix32_t zsqu = FIX32_MULTIPLY(halfz, halfz);
+    fix32_t xsqu = FIX32_MULTIPLY(halfx, halfx);
+    entry.unk_24 = xsqu + zsqu;
+
+    data_020fdc20.currentEntry = data_020fdc20.warp->CreateOpcode6aEntry(entry);
+    return 1;
+}
+#endif
+
+#ifndef NO_PROPAGATION
 int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
 {
     if (data_020fdc20.currentEntry == NULL)
@@ -713,7 +993,237 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
     }
     return 1;
 }
+#else
+// not a match but I haven't tried this one at all
+int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
+{
+    if (data_020fdc20.currentEntry == NULL)
+        return 0;
+    void* worldData = func_02011584(GetBattleStruct());
+    switch (data_020fdc20.currentEntry->maybeType)
+    {
+    case 0:
+        data_020fdc20.currentEntry->unk_2c.type0.unk_0 = 0;
+        if (numParams != 0)
+            data_020fdc20.currentEntry->unk_0 = params->ToInt();
+        break;
+    case 6:
+        data_020fdc20.currentEntry->maybeType = 0;
+        data_020fdc20.currentEntry->unk_2c.type0.unk_0 = 1;
+        if (numParams != 0)
+            data_020fdc20.currentEntry->unk_0 = params->ToInt();
+        break;
+    case 1:
+        if (numParams != 0)
+            data_020fdc20.currentEntry->unk_0 = params->ToInt();
+        break;
+    case 2:
+        if (numParams == 3)
+        {
+            data_020fdc20.currentEntry->unk_2c.type2.unk_0 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2.unk_1 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2.unk_2_high = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2.unk_2_low = 0;
+        }
+        else
+        {
+            int numArgsConsumed = 0;
+            data_020fdc20.currentEntry->unk_2c.type2.unk_0 = (params++)->ToInt();
+            numArgsConsumed++;
+            data_020fdc20.currentEntry->unk_2c.type2.unk_1 = (params++)->ToInt();
+            numArgsConsumed++;
+            data_020fdc20.currentEntry->unk_2c.type2.unk_2_high = (params++)->ToInt();
+            numArgsConsumed++;
+            data_020fdc20.currentEntry->unk_2c.type2.unk_2_low = (params++)->ToInt();
+            numArgsConsumed++;
+            
+            if (data_020fdc20.currentEntry->unk_2c.type2.unk_2_high & 8)
+            {
+                if (params->type == 0)
+                {
+                    const char* zoneName = (params++)->ToString();
+                    numArgsConsumed++;
+                    unsigned short* maybeZoneData = func_0209998c(worldData, zoneName);
+                    
+                    if (maybeZoneData == NULL)
+                        return 0;
+                    data_020fdc20.currentEntry->unk_2c.type2.maybeZone = *maybeZoneData;
+                }
+                else
+                {
+                    data_020fdc20.currentEntry->unk_2c.type2.maybeZone = (params++)->ToInt();
+                    numArgsConsumed++;
+                }
+                data_020fdc20.currentEntry->unk_2c.type2.unk_6 = (params++)->ToInt();
+                numArgsConsumed++;
+                data_020fdc20.currentEntry->unk_2c.type2.unk_8 = (params++)->ToInt();
+                numArgsConsumed++;
+                Vector3fix tempVector;
+                params = params->ToVec3fix(&tempVector);
+                numArgsConsumed += 3;
+                data_020fdc20.currentEntry->unk_2c.type2.vectors_c[0] = tempVector;
+                data_020fdc20.currentEntry->unk_2c.type2.unk_3c = 4096.0f * (params++)->ToFloat();
+                numArgsConsumed++;
+                data_020fdc20.currentEntry->unk_2c.type2.unk_3e = 4096.0f * (params++)->ToFloat();
+                numArgsConsumed++;
+                
+                for (int i = 1; i < 4; i++)
+                {
+                    params = params->ToVec3fix(&tempVector);
+                    numArgsConsumed += 3;
+                    data_020fdc20.currentEntry->unk_2c.type2.vectors_c[i] = tempVector;
+                }
+            }
+            if (numArgsConsumed < numParams)
+            {
+                (void)((params++)->ToFloat());
+                numArgsConsumed++;
+            }
+            if (numArgsConsumed < numParams)
+            {
+                (void)((params++)->ToInt());
+                numArgsConsumed++;
+            }
+            if (data_020fdc20.currentEntry->unk_2c.type2.unk_2_high & 0x20)
+            {
+                data_020fdc20.currentEntry->unk_2c.type2.unk_40 = 4096.0f * (params++)->ToFloat();
+            }
+        }
+        break;
+    case 3:
+        data_020fdc20.currentEntry->unk_2c.type3.unk_0 = (params++)->ToInt();
+        break;
+    case 4:
+    {
+        data_020fdc20.currentEntry->unk_2c.type4.unk_0 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type4.unk_1 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type4.unk_0_high = (params++)->ToInt();
+        Vector3fix vecA;
+        Vector3fix vecB;
+        params = params->ToVec3fix(&vecA);
+        params = params->ToVec3fix(&vecB);
+        MaybeVector4fix vector4;
+        func_020c2dc4(&vecB, &vecA, &vector4.vec3.vec);
+        fix32_t distance = func_020c2eb8(&vector4.vec3.vec);
+        func_020c2f18(&vector4.vec3.vec, &vector4.vec3.vec);
+        vector4.w = func_020c2df8(&vector4.vec3.vec, &vecA);
+        Vector3fix vecC = { 0, 0, 0 };
+        if (data_020fdc20.currentEntry->unk_2c.type4.unk_0 == 4)
+        {
+            params = params->ToVec3fix(&vecC);
+        }
+        else
+        {
+            vecC.y = 4096.0f * (params++)->ToFloat();
+            vecC.z = 4096.0f * (params++)->ToFloat();
+        }
+        Vector3fix vecD;
+        params = params->ToVec3fix(&vecD);
+        data_020fdc20.currentEntry->unk_2c.type4.vector_4.CopyFrom(vector4);
+        data_020fdc20.currentEntry->unk_2c.type4.distance_14 = distance;
+        data_020fdc20.currentEntry->unk_2c.type4.vector_18 = vecC;
+        data_020fdc20.currentEntry->unk_2c.type4.vector_24 = vecD;
+        break;
+    }
+    case 5:
+        data_020fdc20.currentEntry->unk_2c.type5.unk_0 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type5.unk_2 = (params++)->ToInt();
+        if (numParams > 2)
+            data_020fdc20.currentEntry->unk_0 = (params++)->ToInt();
+        break;
+    case 8:
+        if (numParams != 0)
+            data_020fdc20.currentEntry->unk_0 = (params++)->ToInt();
+        break;
+    case 9:
+        data_020fdc20.currentEntry->unk_2c.type9.unk_0 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type9.unk_2 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type9.unk_4 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type9.unk_5 = (params++)->ToInt();
+        if (data_020fdc20.currentEntry->unk_2c.type9.unk_5 & 2)
+        {
+            if (params->type == 0)
+            {
+                const char* zoneName = (params++)->ToString();
+                unsigned short* maybeZoneData = func_0209998c(worldData, zoneName);
+                
+                if (maybeZoneData == NULL)
+                    return 0;
+                data_020fdc20.currentEntry->unk_2c.type9.maybeZone = *maybeZoneData;
+            }
+            else
+            {
+                data_020fdc20.currentEntry->unk_2c.type9.maybeZone = (params++)->ToInt();
+            }
+            data_020fdc20.currentEntry->unk_2c.type9.unk_8 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type9.unk_a = (params++)->ToInt();
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_c);
+            data_020fdc20.currentEntry->unk_2c.type9.unk_3c = 4096.0f * (params++)->ToFloat();
+            data_020fdc20.currentEntry->unk_2c.type9.unk_3e = 4096.0f * (params++)->ToFloat();
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_18);
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_24);
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_30);
+            data_020fdc20.currentEntry->unk_2c.type9.unk_40 = 4096.0f * (params++)->ToFloat();
+            data_020fdc20.currentEntry->unk_2c.type9.unk_42 = (params++)->ToInt();
+        }
+        break;
+    case 10:
+        data_020fdc20.currentEntry->unk_2c.type10.unk_0 = (params++)->ToInt();
+        params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type10.vector_4);
+        data_020fdc20.currentEntry->unk_2c.type10.unk_2 = 4096.0f * (params++)->ToFloat();
+        data_020fdc20.currentEntry->unk_2c.type10.unk_10 = 4096.0f * (params++)->ToFloat();
+        if (numParams > 6)
+        {
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type10.vector_14);
+            data_020fdc20.currentEntry->unk_2c.type10.unk_20 = 4096.0f * (params++)->ToFloat();
+        }
+        break;
+    case 12:
+    {
+        VectorizedMemset(&data_020fdc20.currentEntry->unk_2c.type12, 
+            0, sizeof(data_020fdc20.currentEntry->unk_2c.type12));
+        data_020fdc20.currentEntry->unk_2c.type12.subtype = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type12.unk_1 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type12.unk_2 = (params++)->ToInt();
 
+        // why didn't we do this 200 lines ago...
+        ZoneFeatures::Opcode6aEntry* entry = data_020fdc20.currentEntry;
+        switch (entry->unk_2c.type12.subtype)
+        {
+        case 1:
+            entry->unk_2c.type12.subtype1.unk_0 = 0;
+            entry->unk_2c.type12.subtype1.unk_1 = 0;
+            entry->unk_2c.type12.subtype1.unk_3 = 0;
+            entry->unk_2c.type12.subtype1.unk_4 = (params++)->ToInt();
+            entry->unk_2c.type12.subtype1.unk_5 = (params++)->ToInt();
+            entry->unk_2c.type12.subtype1.unk_2 = (params++)->ToInt();
+            break;
+        case 2:
+            entry->unk_2c.type12.subtype2.unk_0 = 0;
+            entry->unk_2c.type12.subtype2.unk_4 = 0;
+            entry->unk_2c.type12.subtype2.unk_8 = 4096.0f * (params++)->ToFloat();
+            entry->unk_2c.type12.subtype2.unk_c = 4096.0f * (params++)->ToFloat();
+            entry->unk_2c.type12.subtype2.unk_10 = 25;
+            break;
+        case 3:
+            entry->unk_2c.type12.subtype3.unk_0 = 0;
+            entry->unk_2c.type12.subtype3.unk_1 = 0;
+            entry->unk_2c.type12.subtype3.unk_4 = 4096 * 9 / 20; // 0.45
+            entry->unk_2c.type12.subtype3.unk_8 = 4096.0f * (params++)->ToFloat();
+            entry->unk_2c.type12.subtype3.unk_c = 4096.0f * (params++)->ToFloat();
+            entry->unk_2c.type12.subtype3.unk_10 = 4096.0f * (params++)->ToFloat();
+            entry->unk_2c.type12.subtype3.unk_8 = 4096 * 9 / 20; // 0.45
+            entry->unk_2c.type12.subtype3.unk_10 = -4096 / 10; // -0.1
+            break;
+        }
+        break;
+    }
+    }
+    return 1;
+}
+#endif
+
+// matches with or without pragma
 int WarpScript_Opcode_7b(Script::Parameter* params, int numParams)
 {
     int count = params[0].ToInt();
@@ -725,6 +1235,8 @@ int WarpScript_Opcode_7b(Script::Parameter* params, int numParams)
     return 1;
 }
 
+#ifndef NO_PROPAGATION
+// not a match
 int WarpScript_Opcode_7c(Script::Parameter* params, int numParams)
 {
     ZoneFeatures::Opcode7bEntry entry;
@@ -777,6 +1289,8 @@ int WarpScript_Opcode_7c(Script::Parameter* params, int numParams)
     fix32_t minZ = entry.minZ;
     fix32_t maxZ = entry.maxZ;
 
+    Struct_020fdc20* instance = &data_020fdc20;
+
     fix32_t baseX = entry.vector_0.vec.x;
     fix32_t baseZ = entry.vector_0.vec.z;
 
@@ -789,9 +1303,77 @@ int WarpScript_Opcode_7c(Script::Parameter* params, int numParams)
     entry.minZ = minZ;
     entry.maxX = maxX;
     entry.maxZ = maxZ;
-    data_020fdc20.warp->CreateOpcode7bEntry(entry);
+    instance->warp->CreateOpcode7bEntry(entry);
     return 1;
 }
+#else
+// matches
+int WarpScript_Opcode_7c(Script::Parameter* params, int numParams)
+{
+    ZoneFeatures::Opcode7bEntry entry;
+    params = params->ToVec3fix(&entry.vector_0.vec);
+    params = params->ToVec3fix(&entry.vector_c.vec);
+    entry.unk_18 = 4096.0f * (params++)->ToFloat();
+
+    fix32_t mhalfx = -entry.vector_c.vec.x / 2;
+    fix32_t mhalfz = -entry.vector_c.vec.z / 2;
+    fix32_t phalfx = entry.vector_c.vec.x / 2;
+    fix32_t phalfz = entry.vector_c.vec.z / 2;
+    
+
+    Vector3fix vertices[4] = { 0 };
+
+    vertices[0].x = mhalfx;
+    vertices[0].z = mhalfz;
+    vertices[1].x = mhalfx;
+    vertices[1].z = phalfz;
+    vertices[2].x = phalfx;
+    vertices[2].z = mhalfz;
+    vertices[3].x = phalfx;
+    vertices[3].z = phalfz;
+
+    Matrix4x3 matrix;
+    matrix = func_02030d84(entry.unk_18);
+
+    for (int i = 0; i < 4; i++)
+        func_020c2034(&vertices[i], &matrix.entries[0], &vertices[i]);
+
+    entry.minX = vertices[0].x;
+    entry.minZ = vertices[0].z;
+    entry.maxX = vertices[0].x;
+    entry.maxZ = vertices[0].z;
+
+    for (int i = 1; i < 4; i++)
+    {
+        if (entry.minX > vertices[i].x)
+            entry.minX = vertices[i].x;
+        if (entry.minZ > vertices[i].z)
+            entry.minZ = vertices[i].z;
+        if (entry.maxX < vertices[i].x)
+            entry.maxX = vertices[i].x;
+        if (entry.maxZ < vertices[i].z)
+            entry.maxZ = vertices[i].z;
+    }
+
+    fix32_t minX = entry.minX;
+    minX += entry.vector_0.vec.x;
+    fix32_t minZ = entry.minZ;
+    minZ += entry.vector_0.vec.z;
+    fix32_t maxX = entry.maxX;
+    maxX += entry.vector_0.vec.x;
+    fix32_t maxZ = entry.maxZ;
+    maxZ += entry.vector_0.vec.z;
+    
+    Struct_020fdc20* data = &data_020fdc20;
+    
+    entry.minX = minX;
+    entry.minZ = minZ;
+    entry.maxX = maxX;
+    entry.maxZ = maxZ;
+    data->warp->CreateOpcode7bEntry(entry);
+    return 1;
+}
+#endif
 
 void ExecuteZoneWarpScript(const void* data, unsigned int length, ZoneFeatures* warp, SafeAllocator* alloc)
 {

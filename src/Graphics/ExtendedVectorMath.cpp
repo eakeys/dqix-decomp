@@ -115,6 +115,13 @@ fix32_t fix32ReduceAngle0To2Pi(fix32_t angle)
     return angle;
 }
 
+void Vector3fix16Copy(Vector3fix16* dst, const Vector3fix16* src)
+{
+    dst->x = src->x;
+    dst->y = src->y;
+    dst->z = src->z;
+}
+
 fix32_t Vector3fixSquaredDistance(const Vector3fix* a, const Vector3fix* b)
 {
     fix32_t dx = a->x - b->x;

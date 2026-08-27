@@ -29,7 +29,6 @@
 extern "C"
 {
     Zone3D_BMDJStruct* func_020196fc(Zone3D*, int);
-    TileFeaturePlacementData* func_0201e434(ZoneFeatures*, const char*);
 }
 
 struct RelativePosition
@@ -134,13 +133,13 @@ int Zone3D::ComputeGrottoTileTypes(int floor, ZoneFeatures *featuresArg, TileFea
             if (output == NULL)
             {
                 extendedEntry->bmdj = func_020196fc(this, tileType);
-                TileFeaturePlacementData* knownData = func_0201e434(features, tileName);
+                TileFeaturePlacementData* knownData = features->GetGrottoTileFeaturePlacementEntry(tileName);
                 if (knownData != NULL)
                     extendedEntry->featurePlacement = *knownData;
             }
             else
             {
-                TileFeaturePlacementData* knownData = func_0201e434(features, tileName);
+                TileFeaturePlacementData* knownData = features->GetGrottoTileFeaturePlacementEntry(tileName);
                 if (knownData != NULL && output != NULL)
                     *(output + 16 * tileY + tileX) = *knownData;    
             }

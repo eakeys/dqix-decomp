@@ -7,6 +7,7 @@
 #include "NSBXX/Animation.h"
 #include "Animation3D.h"
 
+// sizeof == 0xac
 class Model3D
 {
 public:

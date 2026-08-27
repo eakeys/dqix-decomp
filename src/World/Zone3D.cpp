@@ -11,7 +11,7 @@
 // we still need to include this file because of Vector3i::operator= being
 // implicitly defined here, so use this to include all the other functions 
 // defined after it (a very incomplete list atm)
-//#define ZONE3D_EXPERIMENTAL
+// #define ZONE3D_EXPERIMENTAL
 
 #if defined(jpn)
 #define func_0200fdcc func_0200fc28
@@ -150,15 +150,15 @@ void Zone3D::SwitchZone(unsigned short newID)
 
     bFeatures_.Reset();
 
-    string_c_[0] = 0;
-    unknown_16_[0] = 0;
-    unknown_26_[0] = 0;
-    unknown_36_ = 0x7fff;
-    unknown_38_ = 0;
-    unknown_3c_ = 10;
-    unknown_40_ = 0;
-    unknown_44_ = 0;
-    unknown_48_ = 0;
+    mapListInfo_.maybeModelName[0] = 0;
+    mapListInfo_.buffer2[0] = 0;
+    mapListInfo_.buffer3[0] = 0;
+    mapListInfo_.unknown_2a = 0x7fff;
+    mapListInfo_.unknown_2c = 0;
+    mapListInfo_.unknown_30 = 10;
+    mapListInfo_.worldRotation = 0;
+    mapListInfo_.unknown_38 = 0;
+    mapListInfo_.unknown_3c = 0;
 
     func_0207a5b8(&unknown_struct_f4_[0]);
     func_0207b9cc(&unknown_struct_10c_[0]);
@@ -222,6 +222,24 @@ void Zone3D::SwitchZone(unsigned short newID)
 // implicitly defined Vector3i::operator=(const Vector3i&)
 
 #ifdef ZONE3D_EXPERIMENTAL
+
+bool Zone3D::ProcessMaplist9()
+{
+    if (mapListLoadHandle_ < 0)
+        return true;
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+    if (loader->GetTaskStatus(mapListLoadHandle_) == 0)
+        return false;
+    
+    void* script;
+    unsigned int length;
+    loader->GetLoadedFileByID(mapListLoadHandle_, &script, &length);
+    LoadZoneInfoFromMapListScript(currentZoneID_, &mapListInfo_, script, length);
+    loader->RemoveTask(mapListLoadHandle_);
+    mapListLoadHandle_ = -1;
+    LoadMapAMBL();
+    return true;
+}
 
 void Zone3D::LoadMapAMBL()
 {
@@ -313,7 +331,7 @@ bool Zone3D::UnpackMapAMBL()
                         unsigned int decompressedSize;
                         const void* decompressed = DecompressLZ77FileIntoScratchSpace(*alloc, innerFilePtr, decompressedSize);
                         // this call is responsible for setting the top-screen map
-                        func_0205e104(string_c_, alloc, decompressed, decompressedSize);
+                        func_0205e104(mapListInfo_.maybeModelName, alloc, decompressed, decompressedSize);
                     }
                     // bpos file. From testing these seem to be a grotto thing
                     else if (strcmp(data_020ef150, extension) == 0)
@@ -541,8 +559,8 @@ bool Zone3D::UnpackMapAMDJ()
         return false;
     }
 
-    if (unknown_16_[0] != '\0')
-        func_0207a614(&unknown_struct_f4_[0], unknown_16_);
+    if (mapListInfo_.buffer2[0] != '\0')
+        func_0207a614(&unknown_struct_f4_[0], mapListInfo_.buffer2);
     return true;
 }
 
@@ -575,21 +593,21 @@ void Zone3D::QueueLoadATS_AMBL()
         if (environ == 0)
             environ = 1;
         if (currentGrottoFloor_23ba_ <= 4)
-            sprintf(string_c_, data_020ef19f, environ);
+            sprintf(mapListInfo_.maybeModelName, data_020ef19f, environ);
         else if (currentGrottoFloor_23ba_ <= 8)
-            sprintf(string_c_, data_020ef1a9, environ);
+            sprintf(mapListInfo_.maybeModelName, data_020ef1a9, environ);
         else if (currentGrottoFloor_23ba_ <= 12)
-            sprintf(string_c_, data_020ef1b3, environ);
+            sprintf(mapListInfo_.maybeModelName, data_020ef1b3, environ);
         else if (currentGrottoFloor_23ba_ <= 16)
-            sprintf(string_c_, data_020ef1bd, environ);
+            sprintf(mapListInfo_.maybeModelName, data_020ef1bd, environ);
     }
-    if (strlen(string_c_) == 0)
+    if (strlen(mapListInfo_.maybeModelName) == 0)
         LoadMapAMDJ();
     else
     {
         BackgroundLoader* loader = BackgroundLoader::GetInstance();
         char filename[40];
-        sprintf(filename, data_020ef1c7, data_020ef116, string_c_[0]);
+        sprintf(filename, data_020ef1c7, data_020ef116, mapListInfo_.maybeModelName[0]);
         atsAMBLLoadHandle_ = loader->QueueLoadFile(filename, NULL);
     }
 }
@@ -615,7 +633,7 @@ bool Zone3D::UnpackATS_AMBL()
     unsigned int narcLength;
     loader->GetLoadedFileByID(atsAMBLLoadHandle_, &narcBuffer, &narcLength);
     char targetInnerFile[40];
-    sprintf(targetInnerFile, data_020ef1d6, string_c_);
+    sprintf(targetInnerFile, data_020ef1d6, mapListInfo_.maybeModelName);
 
     const void* batsFile;
     unsigned int batsFileLength;

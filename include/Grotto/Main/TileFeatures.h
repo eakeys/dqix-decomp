@@ -7,7 +7,10 @@
 struct Zone3D_BMDJStruct
 {
     int unknown_0_;
-    char unk_4[0x44];
+    char unk_4[0x10];
+    int counter_14;
+    char unk_18[0x2c];
+    void* ptr_44; // array of length counter_14, stride = 0x70 (func_020181fc)
     Vector3i vec_48_;
     Zone3D_BMDJStruct* pNext_;
 };

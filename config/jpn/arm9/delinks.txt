@@ -29,6 +29,14 @@ src/Grotto/Main/GenerateObjectPosition.cpp:
 	complete
 	.text start:0x020194c8 end:0x0201a0a0
 
+src/World/MapListLoader.cpp:
+    complete
+    .text start:0x0201bf30 end:0x0201c528
+
+//src/World/ZoneFeatures.cpp:
+//    complete
+//    .text start:0x0201c528 end:0x0201e7e0
+
 src/Grotto/Main/TileFeatures.cpp:
 	complete
 	.text start:0x0201e7e0 end:0x0201e950

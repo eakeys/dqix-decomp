@@ -6,6 +6,7 @@
 #include "Graphics/Model3D.h"
 #include "Grotto/Main/TileFeatures.h"
 #include "ZoneFeatures.h"
+#include "MapListLoader.h"
 
 struct Zone3D_StructPtr_8
 {
@@ -39,19 +40,7 @@ public:
     short unknown_4_;
     char unk_6[2];
     Zone3D_StructPtr_8* pUnknownStruct_8_;
-    char string_c_[10]; // holds e.g. "Z02M0100" while in a grotto
-    char unknown_16_[0x10];
-    char unknown_26_[0x10];
-#if defined(jpn)
-    char extraBytesJPN_36[0x20]; // not sure if extending previous or a new member
-#endif
-    short unknown_36_;
-    short unknown_38_;
-    int unknown_3c_;
-    short unknown_40_;
-    char unk_42[2];
-    int unknown_44_;
-    int unknown_48_;
+    MapListInfo mapListInfo_;
     SafeAllocator* pAllocator_4c_;
     void* unknown_ptr_50_; // referenced in the nsbtx processor, so something graphical
     SafeAllocator internalAllocator_;
@@ -125,6 +114,9 @@ public:
 public:
     // usa: func_0201383c
     void SwitchZone(unsigned short newID);
+
+    // usa: func_02013fb4
+    bool ProcessMaplist9();
 
     // usa: func_0201403c
     // The ambl is a NARC containing nsbtx, bmbl, dat and bpos files.

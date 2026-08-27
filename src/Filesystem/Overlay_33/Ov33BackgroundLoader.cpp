@@ -5,26 +5,23 @@
 #ifdef jpn
 #define func_020a1a40 func_020a37b8
 #define func_020a1ccc func_020a3a44
-
-#define data_ov033_022a2a2c data_ov033_022a320c
 #endif
 
 extern "C"
 {
     // get crc for string
     unsigned int func_01ff860c(const char*);
-
     // alternate version of load overlay
     void func_020a1a40(int);
     // alternate unload overlay
     void func_020a1ccc(int);
 }
 
-Ov33BackgroundLoader data_ov033_022a2a2c;
+static Ov33BackgroundLoader loaderInstance;
 
 void PopulateOv33BackgroundLoader(void* fileLoadSpace, unsigned int capacity, int relativePrio)
 {
-    data_ov033_022a2a2c.Populate(fileLoadSpace, capacity, relativePrio);
+    loaderInstance.Populate(fileLoadSpace, capacity, relativePrio);
 }
 
 int Ov33BackgroundLoader::Process()

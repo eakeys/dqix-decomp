@@ -231,6 +231,8 @@ public:
     void CreateOpcode64Entry(const Opcode64Entry& data);
     void CreateGrottoTileFeaturePlacementEntry(const TileFeaturePlacementData& data);
 
+    TileFeaturePlacementData* GetGrottoTileFeaturePlacementEntry(const char* name);
+
     void AllocateOpcode66Entries(int count, SafeAllocator* alloc);
     void CreateOpcode66Entry(const Opcode66Entry& data);
 

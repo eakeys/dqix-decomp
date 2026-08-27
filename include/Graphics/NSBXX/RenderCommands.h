@@ -57,6 +57,7 @@ struct MaterialRenderData
 
 struct AnimationData;
 
+// sizeof == 0x54
 struct ModelRenderContext
 {
     // bits 0, 1, 2, 3 set flags 7, 8, 9, 10 in RenderCommandHandler

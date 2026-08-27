@@ -7,4 +7,4 @@ __sinit_Ov33BackgroundLoader.cpp kind:function(arm,size=0x2c) addr:0x022a3198 lo
 _ZTV20Ov33BackgroundLoader kind:data(byte[12]) addr:0x022a31e0
 _ZTV16BackgroundLoader kind:data(byte[12]) addr:0x022a31ec
 @340 kind:bss addr:0x022a3200 local
-data_ov033_022a320c kind:bss addr:0x022a320c
+loaderInstance kind:bss addr:0x022a320c local

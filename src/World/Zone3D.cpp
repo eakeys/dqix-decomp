@@ -159,7 +159,7 @@ void Zone3D::SwitchZone(unsigned short newID)
     mapListInfo_.unknown_3c = 0;
 
     atmosphericEffects_.Reset();
-    func_0207b9cc(&unknown_struct_10c_[0]);
+    lighting_.Reset();
     func_020de848(&unknown_struct_2754_[0]);
 
     pUnknownStruct_8_ = func_02099950(uVar3, newID);
@@ -388,8 +388,8 @@ bool Zone3D::ProcessBATSFile(const void* filedata, unsigned int /*filesize*/)
     SafeAllocator* allocator = pAllocator_68_;
     unsigned int decompressedLength;
     void* decompressed = DecompressLZ77FileIntoScratchSpace(*allocator, filedata, decompressedLength);
-    func_0207b98c(unknown_struct_10c_);
-    func_0207ba0c(unknown_struct_10c_, decompressed, decompressedLength, allocator);
+    func_0207b98c(&lighting_);
+    func_0207ba0c(&lighting_, decompressed, decompressedLength, allocator);
     return true;
 }
 
@@ -580,6 +580,25 @@ bool Zone3D::ProcessBMDJFile(const void* filedata, unsigned int filesize, ZoneFe
     func_0201f040(&newStruct->unk_4, allocator, decompressed, decompressedLength);
     newStruct->pNext_ = firstBMDJStruct_41c_;
     firstBMDJStruct_41c_ = newStruct;
+    return true;
+}
+
+bool Zone3D::ProcessAtmosphericEffects()
+{
+    if (!atmosphericEffects_.IsArchiveLoaded())
+        return false;
+    atmosphericEffects_.ProcessArchive(&atmosphericEffects_, pAllocator_68_, unknown_ptr_50_);
+    for (AtmosphericEffect* effect = atmosphericEffects_.GetFirstEffect();
+        effect != NULL; effect = effect->pNext_)
+    {
+        if (effect->object_.pModel_ == NULL)
+            continue;
+        NSBXXTex* tex0 = effect->object_.pModel_->GetTEX0();
+        if (tex0 == NULL)
+            continue;
+        textureImageMemory_ += NSBXX_Tex_GetBlock1Length(tex0);
+        texturePaletteMemory_ += NSBXX_Tex_GetBlock4Length(tex0);
+    }
     return true;
 }
 

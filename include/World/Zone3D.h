@@ -5,6 +5,7 @@
 #include "Graphics/Vector.h"
 #include "Graphics/Model3D.h"
 #include "Graphics/AtmosphericEffect.h"
+#include "Graphics/Lighting.h"
 #include "Grotto/Main/TileFeatures.h"
 #include "ZoneFeatures.h"
 #include "MapListLoader.h"
@@ -54,7 +55,7 @@ public:
     // populated by BATS files.
     // If you remove it, lighting goes weird outdoors, but I don't see any 
     // change in towns / battlefields
-    char unknown_struct_10c_[0x30c];
+    LightingManager lighting_;
     Model3DListNode* firstModel_418_;
     Zone3D_BMDJStruct* firstBMDJStruct_41c_;
     GrottoTileData* grottoTileMapData_420_;
@@ -141,6 +142,8 @@ public:
     bool UnpackMapAMDJ();
     // usa: func_02014900
     bool ProcessBMDJFile(const void* filedata, unsigned int filesize, ZoneFeatures::Opcode64Entry* misc);
+
+    bool ProcessAtmosphericEffects();
 
     // usa: func_02014b04
     void QueueLoadATS_AMBL();

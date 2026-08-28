@@ -4,6 +4,7 @@
 #include "Memory/SafeAllocator.h"
 #include "Graphics/Vector.h"
 #include "Graphics/Model3D.h"
+#include "Graphics/AtmosphericEffect.h"
 #include "Grotto/Main/TileFeatures.h"
 #include "ZoneFeatures.h"
 #include "MapListLoader.h"
@@ -49,7 +50,7 @@ public:
     // Populated from BMBL and BPOS scripts, among other things holds data
     // about warps and placement of stairs/chests in grottos
     ZoneFeatures bFeatures_;
-    char unknown_struct_f4_[0x18]; //
+    AtmosphericEffectSet atmosphericEffects_;
     // populated by BATS files.
     // If you remove it, lighting goes weird outdoors, but I don't see any 
     // change in towns / battlefields

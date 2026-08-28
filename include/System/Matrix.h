@@ -212,6 +212,9 @@ extern "C"
     // usa: func_020c29ec
     // Similar function to the previous, is used in places to populate the
     // RenderConfig's projection matrix, but I don't know what exactly it is
+    // Might be something like glOrtho???
+    // From call site in AtmosphericEffect it looks to be (top, bottom, left, right, near, far)
+    // not sure about 7th parameter
     void Mat4x4_WriteProjectionUnknown(fix32_t a, fix32_t b, fix32_t c, fix32_t d, fix32_t e, fix32_t f, fix32_t g, Matrix4x4* out);
 
 

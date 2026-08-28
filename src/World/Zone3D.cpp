@@ -41,8 +41,6 @@ extern "C"
 
     void* func_02053c6c(void*);
     void func_0205e104(const char*, SafeAllocator*, const void*, unsigned int);
-    void func_0207a5b8(void*);
-    void func_0207a614(void*, const char*);
 
     // member functions of the struct at 0x10c
     void func_0207b98c(void*);
@@ -160,7 +158,7 @@ void Zone3D::SwitchZone(unsigned short newID)
     mapListInfo_.unknown_38 = 0;
     mapListInfo_.unknown_3c = 0;
 
-    func_0207a5b8(&unknown_struct_f4_[0]);
+    atmosphericEffects_.Reset();
     func_0207b9cc(&unknown_struct_10c_[0]);
     func_020de848(&unknown_struct_2754_[0]);
 
@@ -560,7 +558,7 @@ bool Zone3D::UnpackMapAMDJ()
     }
 
     if (mapListInfo_.buffer2[0] != '\0')
-        func_0207a614(&unknown_struct_f4_[0], mapListInfo_.buffer2);
+        atmosphericEffects_.LoadArchive(mapListInfo_.buffer2);
     return true;
 }
 

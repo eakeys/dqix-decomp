@@ -99,6 +99,14 @@ src/Filesystem/FileIO.cpp:
     complete
     .text start:0x02075098 end:0x0207568c
 
+src/Graphics/AtmosphericEffect.cpp:
+    complete
+    .text start:0x0207a060 end:0x0207b2cc
+    .init start:0x020e6124 end:0x020e61ac
+    .ctor start:0x020eeb74 end:0x020eeb78
+    .data start:0x020f0e38 end:0x020f0ec8
+    .bss start:0x02108e40 end:0x02108e60
+
 src/Graphics/Animation3D.cpp:
     complete
     .text start:0x0207e060 end:0x0207e23c

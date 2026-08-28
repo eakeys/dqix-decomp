@@ -676,6 +676,11 @@ struct AnimationData* NSBXX_Model_AllocateAnimationData(class AllocatorUnion* al
 // by mask will be cleared, otherwise they will be set
 void NSBXX_Model_SetAllMaterialFlags(NSBXXInternalModel* model, int value, unsigned int mask);
 
+// usa: func_020b6f64
+// applies to all materials of the model. If value == 0 then the bits specified
+// by mask will be cleared, otherwise they will be set
+void NSBXX_Model_AdjustPolygonAttrMask(NSBXXInternalModel* model, bool setBits, unsigned int mask);
+
 // usa: func_020b7184
 // The alpha value can be between 0-31.
 // (This function should become static later)

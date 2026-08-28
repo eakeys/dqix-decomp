@@ -2750,30 +2750,30 @@ func_0207ad58 kind:function(arm,size=0x7c) addr:0x0207ad58
 func_0207add4 kind:function(arm,size=0x2c) addr:0x0207add4
 func_0207ae00 kind:function(arm,size=0x4c) addr:0x0207ae00
 func_0207ae4c kind:function(arm,size=0x4c) addr:0x0207ae4c
-func_0207ae98 kind:function(arm,size=0x68) addr:0x0207ae98
-func_0207af00 kind:function(arm,size=0x9c) addr:0x0207af00
-func_0207af9c kind:function(arm,size=0x8c) addr:0x0207af9c
-func_0207b028 kind:function(arm,size=0x30) addr:0x0207b028
-func_0207b058 kind:function(arm,size=0x8c) addr:0x0207b058
-func_0207b0e4 kind:function(arm,size=0x9c) addr:0x0207b0e4
-func_0207b180 kind:function(arm,size=0xb4) addr:0x0207b180
-func_0207b234 kind:function(arm,size=0x68) addr:0x0207b234
-func_0207b29c kind:function(arm,size=0x60) addr:0x0207b29c
-func_0207b2fc kind:function(arm,size=0x94) addr:0x0207b2fc
-func_0207b390 kind:function(arm,size=0x60) addr:0x0207b390
-func_0207b3f0 kind:function(arm,size=0x5c) addr:0x0207b3f0
-func_0207b44c kind:function(arm,size=0x90) addr:0x0207b44c
-func_0207b4dc kind:function(arm,size=0x90) addr:0x0207b4dc
-func_0207b56c kind:function(arm,size=0x524) addr:0x0207b56c
-func_0207ba90 kind:function(arm,size=0x338) addr:0x0207ba90
-func_0207bdc8 kind:function(arm,size=0x2c) addr:0x0207bdc8
-func_0207bdf4 kind:function(arm,size=0x44) addr:0x0207bdf4
-func_0207be38 kind:function(arm,size=0x8) addr:0x0207be38
-func_0207be40 kind:function(arm,size=0x100) addr:0x0207be40
-func_0207bf40 kind:function(arm,size=0x4c) addr:0x0207bf40
-func_0207bf8c kind:function(arm,size=0x50) addr:0x0207bf8c
-func_0207bfdc kind:function(arm,size=0xa0) addr:0x0207bfdc
-func_0207c07c kind:function(arm,size=0x88) addr:0x0207c07c
+_ZN17AtmosphericEffect10InitializeEv kind:function(arm,size=0x68) addr:0x0207ae98
+_Z27EffectScript_SetScrollSpeedPN6Script9ParameterEi kind:function(arm,size=0x9c) addr:0x0207af00 local
+_Z27EffectScript_SetScrollFlagsPN6Script9ParameterEi kind:function(arm,size=0x8c) addr:0x0207af9c local
+_Z25EffectScript_SelectEffectPN6Script9ParameterEi kind:function(arm,size=0x30) addr:0x0207b028 local
+_Z27EffectScript_SetOriginFlagsPN6Script9ParameterEi kind:function(arm,size=0x8c) addr:0x0207b058 local
+_Z28EffectScript_SetScrollOriginPN6Script9ParameterEi kind:function(arm,size=0x9c) addr:0x0207b0e4 local
+_Z22EffectScript_DuplicatePN6Script9ParameterEi kind:function(arm,size=0xb4) addr:0x0207b180 local
+_Z21EffectScript_SetScalePN6Script9ParameterEi kind:function(arm,size=0x68) addr:0x0207b234 local
+_Z21EffectScript_SetAlphaPN6Script9ParameterEi kind:function(arm,size=0x60) addr:0x0207b29c local
+_Z30EffectScript_SetTileDimensionsPN6Script9ParameterEi kind:function(arm,size=0x94) addr:0x0207b2fc local
+_Z23EffectScript_Unknown_6dPN6Script9ParameterEi kind:function(arm,size=0x60) addr:0x0207b390 local
+_ZN20AtmosphericEffectSet5ResetEv kind:function(arm,size=0x5c) addr:0x0207b3f0
+_ZN20AtmosphericEffectSet11LoadArchiveEPKc kind:function(arm,size=0x90) addr:0x0207b44c
+_ZN20AtmosphericEffectSet15IsArchiveLoadedEv kind:function(arm,size=0x90) addr:0x0207b4dc
+_ZN20AtmosphericEffectSet14ProcessArchiveEPS_P13SafeAllocatorPv kind:function(arm,size=0x524) addr:0x0207b56c
+_ZN20AtmosphericEffectSet4DrawEv kind:function(arm,size=0x338) addr:0x0207ba90
+_ZN20AtmosphericEffectSet15AddEffectObjectEP17AtmosphericEffect kind:function(arm,size=0x2c) addr:0x0207bdc8
+_ZN20AtmosphericEffectSet15GetEffectByNameEPKc kind:function(arm,size=0x44) addr:0x0207bdf4
+_ZN20AtmosphericEffectSet14GetFirstEffectEv kind:function(arm,size=0x8) addr:0x0207be38
+_ZN20AtmosphericEffectSet16AdvanceAlphaFadeEv kind:function(arm,size=0x100) addr:0x0207be40
+_ZN20AtmosphericEffectSet12StartFadeOutEv kind:function(arm,size=0x4c) addr:0x0207bf40
+_ZN20AtmosphericEffectSet11StartFadeInEv kind:function(arm,size=0x50) addr:0x0207bf8c
+_ZN20AtmosphericEffectSet19DetermineFadeStartsEv kind:function(arm,size=0xa0) addr:0x0207bfdc
+_ZN20AtmosphericEffectSet20DetermineFadeStarts2Ev kind:function(arm,size=0x88) addr:0x0207c07c
 func_0207c104 kind:function(arm,size=0x38) addr:0x0207c104
 func_0207c13c kind:function(arm,size=0x8) addr:0x0207c13c
 func_0207c144 kind:function(arm,size=0x1b4) addr:0x0207c144
@@ -6013,7 +6013,7 @@ __sinit_020e6918 kind:function(arm,size=0x88) addr:0x020e6918
 __sinit_020e69a0 kind:function(arm,size=0x20) addr:0x020e69a0
 __sinit_020e69c0 kind:function(arm,size=0x18) addr:0x020e69c0
 __sinit_020e69d8 kind:function(arm,size=0x2c) addr:0x020e69d8
-__sinit_020e6a04 kind:function(arm,size=0x88) addr:0x020e6a04
+__sinit_AtmosphericEffect.cpp kind:function(arm,size=0x88) addr:0x020e6a04 local
 __sinit_020e6a8c kind:function(arm,size=0x88) addr:0x020e6a8c
 __sinit_020e6b14 kind:function(arm,size=0x2c) addr:0x020e6b14
 __sinit_020e6b40 kind:function(arm,size=0x2c) addr:0x020e6b40
@@ -6380,7 +6380,7 @@ data_020eea90 kind:data(any) addr:0x020eea90
 .p__sinit_020e69a0 kind:data(word) addr:0x020eeae8
 .p__sinit_020e69c0 kind:data(word) addr:0x020eeaec
 .p__sinit_020e69d8 kind:data(word) addr:0x020eeaf0
-.p__sinit_020e6a04 kind:data(word) addr:0x020eeaf4
+.p__sinit_AtmosphericEffect.cpp kind:data(word) addr:0x020eeaf4 local
 .p__sinit_020e6a8c kind:data(word) addr:0x020eeaf8
 .p__sinit_020e6b14 kind:data(word) addr:0x020eeafc
 .p__sinit_020e6b40 kind:data(word) addr:0x020eeb00
@@ -7085,13 +7085,12 @@ data_020f0eb9 kind:data(any) addr:0x020f0eb9
 data_020f0ec9 kind:data(any) addr:0x020f0ec9
 data_020f0ee0 kind:data(any) addr:0x020f0ee0
 data_020f0eee kind:data(any) addr:0x020f0eee
-data_020f0f00 kind:data(any) addr:0x020f0f00
-data_020f0f10 kind:data(any) addr:0x020f0f10
-data_020f0f68 kind:data(any) addr:0x020f0f68
-data_020f0f78 kind:data(any) addr:0x020f0f78
-data_020f0f7c kind:data(any) addr:0x020f0f7c
-data_020f0f82 kind:data(any) addr:0x020f0f82
-data_020f0f88 kind:data(any) addr:0x020f0f88
+s_dataFloatA kind:data(any) addr:0x020f0f00 local
+s_dataFloatD kind:data(any) addr:0x020f0f04 local
+s_dataFloatC kind:data(any) addr:0x020f0f08 local
+s_dataFloatB kind:data(any) addr:0x020f0f0c local
+effectScriptOpcodes kind:data(any) addr:0x020f0f10 local
+@stringBase0 kind:data(byte[0x25]) addr:0x020f0f68 local
 data_020f0f90 kind:data(any) addr:0x020f0f90
 data_020f0fa0 kind:data(any) addr:0x020f0fa0
 data_020f0fe0 kind:data(any) addr:0x020f0fe0
@@ -7547,7 +7546,8 @@ data_02108d40 kind:bss addr:0x02108d40
 data_02108d44 kind:bss addr:0x02108d44
 data_02108d48 kind:bss addr:0x02108d48
 data_02108d54 kind:bss addr:0x02108d54
-data_02108d84 kind:bss addr:0x02108d84
+effectScriptData kind:bss addr:0x02108d84 local
+s_sums kind:bss addr:0x02108d90 local
 data_02108da4 kind:bss addr:0x02108da4
 data_02108dbc kind:bss addr:0x02108dbc
 data_02108dc8 kind:bss addr:0x02108dc8

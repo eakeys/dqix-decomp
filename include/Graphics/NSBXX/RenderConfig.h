@@ -96,7 +96,7 @@ struct RenderConfig
 
     // Accepts actual 1.19.12 fixed point numbers, the function will transform
     // them to the required format for FIFO submission
-    static void SetLightVector(unsigned int light, fix32_t x, fix32_t y, fix32_t z);
+    static void SetLightVector(unsigned int light, fix16_t x, fix16_t y, fix16_t z);
 
     // RGB is in the usual 5b.5g.5r format
     static void SetLightColor(unsigned int light, uint32_t rgb);

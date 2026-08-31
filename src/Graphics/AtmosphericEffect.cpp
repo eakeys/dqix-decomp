@@ -10,6 +10,7 @@
 #include "Graphics/NSBXX/GeometryFifo.h"
 #include "Graphics/NSBXX/NSBXX.h"
 #include "Combat/Main/BattleList.h"
+#include "Graphics/LightingManager.h"
 
 // This keeps showing up in multiple translation units: in every case, we have
 // four floats in data and then generate five floats in bss in some weird order.
@@ -40,7 +41,6 @@ struct EffectScriptData
 #define func_0200fddc func_0200fc38 
 #define func_02033fa0 func_02033ad8 
 #define func_0204be20 func_0204cc40 
-#define func_02050454 func_02051924 
 #define func_0207df90 func_0207ed10 
 #define func_0207dfac func_0207ed2c 
 #endif
@@ -50,7 +50,6 @@ extern "C"
     void* func_0200fddc(BattleStruct*);
     void* func_02033fa0(void*);
     bool func_0204be20(void*);
-    void* func_02050454();
 
     void func_0207df90(void*);
     void func_0207dfac(void*);
@@ -731,7 +730,7 @@ void AtmosphericEffectSet::DetermineFadeStarts()
     if (unknown_14_high_ == 0)
         return;
 
-    int inputData = *(int*)((char*)func_02050454() + 0x98);
+    int inputData = LightingManager::GetInstance()->unknown_98;
 
     if (inputData != unknown_14_low_ || unknown_14_bit_7_)
     {

@@ -77,6 +77,10 @@ src/World/Object3D.cpp:
     .data start:0x020ef998 end:0x020efa34
     .bss start:0x02104858 end:0x021048a0
 
+src/Graphics/LightingManager.cpp:
+    complete
+    .text start:0x02051924 end:0x02053e28
+
 src/Util/Random.cpp:
 	complete
 	.text start:0x0207535c end:0x02075634
@@ -105,7 +109,7 @@ src/Graphics/AtmosphericEffect.cpp:
     .data start:0x020f0f00 end:0x020f0f90
     .bss start:0x02108d84 end:0x02108da4
 
-//src/Graphics/Lighting.cpp:
+//src/Graphics/LightingInfo.cpp:
 //    complete
 //    .text start:0x0207c104 end:0x0207c860
 

@@ -131,7 +131,7 @@ void RenderConfig::SetObjectScale(Vector3fix *scale)
     }
 }
 
-void RenderConfig::SetLightVector(unsigned int light, fix32_t x, fix32_t y, fix32_t z)
+void RenderConfig::SetLightVector(unsigned int light, fix16_t x, fix16_t y, fix16_t z)
 {
     uint32_t formattedX = (x >> 3) & 0x3ff;
     uint32_t formattedY = ((uint32_t)(y >> 3) << 22) >> 12;

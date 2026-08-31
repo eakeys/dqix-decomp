@@ -26,6 +26,9 @@
 #define BG2CNTSUB (*(volatile unsigned short*)(0x0400100c))
 #define BG3CNTSUB (*(volatile unsigned short*)(0x0400100e))
 
+#define GX_FOG_COLOR (*(volatile unsigned int*)0x04000358)
+#define GX_FOG_OFFSET (*(volatile unsigned int*)0x0400035c)
+
 #define GXFIFO (*(volatile unsigned int*)0x04000400)
 #define GXFIFO_MATRIX_MODE (*(volatile unsigned int*)0x04000440)
 #define GXFIFO_MATRIX_PUSH (*(volatile unsigned int*)0x04000444)
@@ -36,8 +39,15 @@
 
 #define GXFIFO_MATRIX_SCALE (*(volatile unsigned int*)0x0400046c)
 #define GXFIFO_MATRIX_TRANSLATE (*(volatile unsigned int*)0x04000470)
-
+#define GXFIFO_VERTEX_COLOR (*(volatile unsigned int*)0x04000480)
+#define GXFIFO_VERTEX_NORMAL (*(volatile unsigned int*)0x04000484)
+#define GXFIFO_VERTEX_TEXCOORD (*(volatile unsigned int*)0x04000488)
+#define GXFIFO_VERTEX_16 (*(volatile unsigned int*)0x0400048c)
 #define GXFIFO_POLYGON_ATTRIBUTES (*(volatile unsigned int*)0x040004a4)
+#define GXFIFO_TEXIMAGE_PARAMS (*(volatile unsigned int*)0x040004a8)
+#define GXFIFO_PALETTE_BASE (*(volatile unsigned int*)0x040004ac)
+#define GXFIFO_DIFFUSE_AMBIENT (*(volatile unsigned int*)0x040004c0)
+#define GXFIFO_SPECULAR_EMISSION (*(volatile unsigned int*)0x040004c4)
 
 #define GXFIFO_POLYGON_BEGIN (*(volatile unsigned int*)0x04000500)
 #define GXFIFO_POLYGON_END (*(volatile unsigned int*)0x04000504)

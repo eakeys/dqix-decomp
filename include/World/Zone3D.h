@@ -5,7 +5,7 @@
 #include "Graphics/Vector.h"
 #include "Graphics/Model3D.h"
 #include "Graphics/AtmosphericEffect.h"
-#include "Graphics/Lighting.h"
+#include "Graphics/LightingInfo.h"
 #include "Grotto/Main/TileFeatures.h"
 #include "ZoneFeatures.h"
 #include "MapListLoader.h"
@@ -55,7 +55,7 @@ public:
     // populated by BATS files.
     // If you remove it, lighting goes weird outdoors, but I don't see any 
     // change in towns / battlefields
-    LightingManager lighting_;
+    LightingInfo lighting_;
     Model3DListNode* firstModel_418_;
     Zone3D_BMDJStruct* firstBMDJStruct_41c_;
     GrottoTileData* grottoTileMapData_420_;

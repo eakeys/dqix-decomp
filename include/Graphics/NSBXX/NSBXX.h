@@ -108,6 +108,37 @@ struct NSBXXNameList
         }
         return NULL;
     }
+
+    // 12 million helper functions that build up the 'get entry' function. By 
+    // composing them we trick the compiler into still inlining them even in
+    // regular -O2
+    inline void* GetDataStart() const { return (void*)((intptr_t)this + offsetToDataStart_); }
+    inline void* GetEntryv3Helper(unsigned int index, void* dataStart) const 
+    {
+        return (void*)((intptr_t)dataStart + 4 + *(uint16_t*)dataStart * index);
+    }
+
+    inline void* GetEntryv3(unsigned int index) const
+    {
+        return GetEntryv3Helper(index, GetDataStart());
+    }
+
+    inline void* GetEntryv3Safe(unsigned int index) const
+    {
+        return (this != NULL && index < numEntries_) ? GetEntryv3(index) : NULL;
+    }
+
+    inline void* GetEntryFromPtrOffset(void* pOffset) const
+    {
+        return (void*)((intptr_t)this + *(uint32_t*)pOffset);
+    }
+
+    inline void* GetEntryFromOffsetList_v3(unsigned int index) const
+    {
+        uint32_t* pOffset;
+        return (this != NULL && (pOffset = (uint32_t*)GetEntryv3Safe(index))) ? 
+            GetEntryFromPtrOffset(pOffset) : NULL;
+    }
 };
 
 struct NSBXXInnerFileCommon {
@@ -530,6 +561,16 @@ struct NSBXXInternalModel
             return NULL;
     }
 
+    inline NSBXXNameList* GetMeshListUnsafe() const
+    {
+        return (NSBXXNameList*)((intptr_t)this + meshesOffset_);
+    }
+
+    inline NSBXXNameList* GetMeshListSafe() const
+    {
+        return (this != NULL && meshesOffset_ != 0) ? GetMeshListUnsafe() : NULL;
+    }
+
     inline NSBXXNameList* GetMeshList() const
     {
         if (this != NULL && meshesOffset_ != 0)
@@ -692,6 +733,10 @@ int NSBXX_Model_GetMaterialPolygonID(NSBXXInternalModel* model, unsigned int mat
 // usa: func_020b726c
 // color to be specified with red in bits 0-4, green in bits 5-9, blue in bits 10-14
 void NSBXX_Model_SetDiffuseReflectionColor(NSBXXInternalModel* model, int rgb);
+
+// usa: func_020b72ac
+// color to be specified with red in bits 0-4, green in bits 5-9, blue in bits 10-14
+void NSBXX_Model_SetAmbientReflectionColor(NSBXXInternalModel* model, int col);
 
 // usa: func_020b732c
 // The alpha value can be between 0-31.

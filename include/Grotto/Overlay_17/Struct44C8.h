@@ -58,7 +58,9 @@ struct Struct_ov017_44C8
     char unknown_36d4[4]; // jpn: offset 34c4
     void* unknown_ptr_36d8; // jpn: offset 34c8
     char unknown_36dc[0x20]; // jpn: offset 34cc
-    void* unknown_ptr_array_36fc[0x10]; // jpn: offset 34ec
+    void* unknown_ptr_array_36fc[7]; // jpn: offset 34ec
+    void* unknown_ptr_3718;
+    void* unknown_ptr_array_371c[8];
     struct Substruct_373c // jpn: offset 352c
     {
         char unknown[0x48];

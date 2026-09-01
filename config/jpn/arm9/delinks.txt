@@ -113,9 +113,13 @@ src/Graphics/AtmosphericEffect.cpp:
     .data start:0x020f0f00 end:0x020f0f90
     .bss start:0x02108d84 end:0x02108da4
 
-//src/Graphics/LightingInfo.cpp:
-//    complete
-//    .text start:0x0207c104 end:0x0207c860
+src/Graphics/LightingInfo.cpp:
+    complete
+    .text start:0x0207c104 end:0x0207c860
+    .init start:0x020e6a8c end:0x020e6b14
+    .ctor start:0x020eeaf8 end:0x020eeafc
+    .data start:0x020f0f90 end:0x020f0fe0
+    .bss start:0x02108da4 end:0x02108dbc
 
 src/Graphics/Animation3D.cpp:
     complete

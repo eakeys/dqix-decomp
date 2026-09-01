@@ -1,27 +1,31 @@
 #include "Graphics/LightingInfo.h"
 #include "Resource/Script.h"
 
-#if defined(jpn)
-#define data_020f0ed8 data_020f0fa0
-#define data_02108e60 data_02108da4
-#endif
+static float s_nightLength = 180.0f;
+static float s_morningLength = 30.0f;
+static float s_dayLength = 180.0f;
+static float s_eveningLength = 30.0f;
 
-extern Script::OpcodeLookupEntry data_020f0ed8[];
+#define DECLARE_SUM_ARRAY(name, a, b, c, d) static float name[5] = { (name[4] = a + (b + (d + c)), \
+    (name[2] = name[3] + d), \
+    (name[1] = name[2] + c), \
+    /* name[0] = */ name[1] + b) }
+DECLARE_SUM_ARRAY(s_dayThresholds, s_eveningLength, s_dayLength, s_morningLength, s_nightLength);
 
-extern LightingInfo* data_02108e60;
+static LightingInfo* s_scriptCurrentLightingInfo;
 
-int LightingScript_Opcode_64(Script::Parameter* params, int numParams)
+static int LightingScript_DeclareAdvancedLighting(Script::Parameter* params, int numParams)
 {
     if (numParams > 0)
-        data_02108e60->gradientCenterOffset_ = params[0].ToFloat();
-    data_02108e60->maybeMode_ = 2;
+        s_scriptCurrentLightingInfo->gradientCenterOffset_ = params[0].ToFloat();
+    s_scriptCurrentLightingInfo->maybeMode_ = 2;
     return 1;
 }
 
-int LightingScript_Opcode_65(Script::Parameter* params, int numParams) { return 1; }
+static int LightingScript_Nop(Script::Parameter* params, int numParams) { return 1; }
 
 // Never used
-int LightingScript_Opcode_66(Script::Parameter* params, int numParams)
+static int LightingScript_CreateAdvancedLightingEntry_Alternate(Script::Parameter* params, int numParams)
 {
     int index = (params++)->ToInt();
 
@@ -34,7 +38,7 @@ int LightingScript_Opcode_66(Script::Parameter* params, int numParams)
     secondaryEntry.direction[1] = (params++)->ToFloat();
     secondaryEntry.direction[2] = (params++)->ToFloat();
     secondaryEntry.color = (params++)->ToInt();
-    data_02108e60->advanced_.light1[index] = secondaryEntry;
+    s_scriptCurrentLightingInfo->advanced_.light1[index] = secondaryEntry;
 
     LightingManager::Light3DConfig primaryEntry;
     primaryEntry.maybeEnabled = (params++)->ToInt();
@@ -43,71 +47,68 @@ int LightingScript_Opcode_66(Script::Parameter* params, int numParams)
     primaryEntry.direction[2] = 0.5f;
     primaryEntry.color = (params++)->ToInt();
     primaryEntry.maybeEnabled = true;
-    data_02108e60->advanced_.light0[index] = primaryEntry;
+    s_scriptCurrentLightingInfo->advanced_.light0[index] = primaryEntry;
 
-    int col1 = (params++)->ToInt();
-    int col2 = (params++)->ToInt();
-    int col3 = (params++)->ToInt();
+    int bgColor = (params++)->ToInt();
+    int bgColor2 = (params++)->ToInt();
+    int ambientColor = (params++)->ToInt();
     int col4 = (params++)->ToInt();
-    int col5 = (params++)->ToInt();
-    int col6 = (params++)->ToInt();
-    int col7 = (params++)->ToInt();
-    data_02108e60->advanced_.backgroundColor[index] = col1;
-    data_02108e60->advanced_.backgroundSecondColor[index] = col2;
-    data_02108e60->advanced_.maybeAmbientColor[index] = col3;
-    data_02108e60->advanced_.unk_142[index] = col4;
-    data_02108e60->advanced_.spriteDiffuseColor[index] = col5;
-    data_02108e60->advanced_.modelDiffuseColor[index] = col6;
-    data_02108e60->advanced_.edgeColor[index] = col7;
+    int spriteColor = (params++)->ToInt();
+    int modelColor = (params++)->ToInt();
+    int edgeColor = (params++)->ToInt();
+    s_scriptCurrentLightingInfo->advanced_.backgroundColor[index] = bgColor;
+    s_scriptCurrentLightingInfo->advanced_.backgroundSecondColor[index] = bgColor2;
+    s_scriptCurrentLightingInfo->advanced_.maybeAmbientColor[index] = ambientColor;
+    s_scriptCurrentLightingInfo->advanced_.unk_142[index] = col4;
+    s_scriptCurrentLightingInfo->advanced_.spriteDiffuseColor[index] = spriteColor;
+    s_scriptCurrentLightingInfo->advanced_.modelDiffuseColor[index] = modelColor;
+    s_scriptCurrentLightingInfo->advanced_.edgeColor[index] = edgeColor;
 
     return 1;
 }
 
-int LightingScript_Opcode_67(Script::Parameter* params, int numParams)
+static int LightingScript_DeclareBasicLighting(Script::Parameter* params, int numParams)
 {
     if (numParams > 0)
-        data_02108e60->gradientCenterOffset_ = params[0].ToFloat();
-    data_02108e60->maybeMode_ = 1;
+        s_scriptCurrentLightingInfo->gradientCenterOffset_ = params[0].ToFloat();
+    s_scriptCurrentLightingInfo->maybeMode_ = 1;
     return 1;
 }
 
-// Used in conjunction with opcode 67, configures basic lighting
-// this function isn't a match yet
-int LightingScript_Opcode_68(Script::Parameter* params, int numParams)
+static int LightingScript_CreateBasicLightingEntry(Script::Parameter* params, int numParams)
 {
     int index = (params++)->ToInt();
     float argX = (params++)->ToFloat();
     float argY = (params++)->ToFloat();
     float argZ = (params++)->ToFloat();
-    int col1 = (params++)->ToInt();
-    int col2 = (params++)->ToInt();
-    int col3 = (params++)->ToInt();
+    short bgColor = (params++)->ToInt(); // needs to be signed to get a match
+    short bgColor2 = (params++)->ToInt();
+    short potBarrelColor = (params++)->ToInt();
     float arg8 = (params++)->ToFloat();
     float arg9 = (params++)->ToFloat();
-    int col4 = (params++)->ToInt();
-    int col5 = (params++)->ToInt();
-    int col6 = (params++)->ToInt();
+    short spriteColor = (params++)->ToInt();
+    short modelColor = (params++)->ToInt();
+    short edgeColor = (params++)->ToInt();
 
-    Vector3float& storageVec = data_02108e60->basic_.unk_0[index];
+    Vector3float& storageVec = s_scriptCurrentLightingInfo->basic_.unk_0[index];
 
     storageVec.x = argX;
     storageVec.y = argY;
     storageVec.z = argZ;
-    data_02108e60->basic_.backgroundColor[index] = col1;
-    data_02108e60->basic_.backgroundSecondColor[index] = col2;
-    data_02108e60->basic_.potBarrelDiffuseColor[index] = col3;
-    data_02108e60->basic_.unk_70[index] = arg8;
-    data_02108e60->basic_.unk_54[index] = arg9;
-    data_02108e60->basic_.unk_e0[index] = 1;
-    data_02108e60->basic_.spriteDiffuseColor[index] = col4;
-    data_02108e60->basic_.modelDiffuseColor[index] = col5;
-    data_02108e60->basic_.edgeColor[index] = col6;
+    s_scriptCurrentLightingInfo->basic_.backgroundColor[index] = bgColor;
+    s_scriptCurrentLightingInfo->basic_.backgroundSecondColor[index] = bgColor2;
+    s_scriptCurrentLightingInfo->basic_.potBarrelDiffuseColor[index] = potBarrelColor;
+    s_scriptCurrentLightingInfo->basic_.unk_70[index] = arg8;
+    s_scriptCurrentLightingInfo->basic_.unk_54[index] = arg9;
+    s_scriptCurrentLightingInfo->basic_.unk_e0[index] = 1;
+    s_scriptCurrentLightingInfo->basic_.spriteDiffuseColor[index] = spriteColor;
+    s_scriptCurrentLightingInfo->basic_.modelDiffuseColor[index] = modelColor;
+    s_scriptCurrentLightingInfo->basic_.edgeColor[index] = edgeColor;
 
     return 1;
 }
 
-// Set fog data
-int LightingScript_Opcode_69(Script::Parameter* params, int numParams)
+static int LightingScript_CreateFogEntry(Script::Parameter* params, int numParams)
 {
     int index = (params++)->ToInt();
     if (index > 6)
@@ -130,67 +131,77 @@ int LightingScript_Opcode_69(Script::Parameter* params, int numParams)
     }
     entry.alpha = (params++)->ToInt();
 
-    LightingInfo* mgr = data_02108e60;
-    mgr->fogList.entries[index].unk_0 = entry.unk_0;
-    mgr->fogList.entries[index].type = entry.type;
-    mgr->fogList.entries[index].depthShift = entry.depthShift;
-    mgr->fogList.entries[index].offset = entry.offset;
-    mgr->fogList.entries[index].color = entry.color;
-    mgr->fogList.entries[index].alpha = entry.alpha;
-    COPY_ARRAY(mgr->fogList.entries[index].densityTable, entry.densityTable);
+    LightingInfo* info = s_scriptCurrentLightingInfo;
+    info->fogList.entries[index].unk_0 = entry.unk_0;
+    info->fogList.entries[index].type = entry.type;
+    info->fogList.entries[index].depthShift = entry.depthShift;
+    info->fogList.entries[index].offset = entry.offset;
+    info->fogList.entries[index].color = entry.color;
+    info->fogList.entries[index].alpha = entry.alpha;
+    COPY_ARRAY(info->fogList.entries[index].densityTable, entry.densityTable);
 
     return 1;
 }
 
-int LightingScript_Opcode_6a(Script::Parameter* params, int numParams)
+static int LightingScript_CreateAdvancedLightingEntry(Script::Parameter* params, int numParams)
 {
     int index = (params++)->ToInt();
-    LightingManager::Light3DConfig secondaryEntry;
-    secondaryEntry.maybeEnabled = (params++)->ToInt();
-    secondaryEntry.direction[0] = (params++)->ToFloat();
-    secondaryEntry.direction[1] = (params++)->ToFloat();
-    secondaryEntry.direction[2] = (params++)->ToFloat();
-    secondaryEntry.color = (params++)->ToInt();
-    data_02108e60->advanced_.light1[index] = secondaryEntry;
+    LightingManager::Light3DConfig light1;
+    light1.maybeEnabled = (params++)->ToInt();
+    light1.direction[0] = (params++)->ToFloat();
+    light1.direction[1] = (params++)->ToFloat();
+    light1.direction[2] = (params++)->ToFloat();
+    light1.color = (params++)->ToInt();
+    s_scriptCurrentLightingInfo->advanced_.light1[index] = light1;
 
-    LightingManager::Light3DConfig primaryEntry;
-    primaryEntry.maybeEnabled = (params++)->ToInt();
-    primaryEntry.direction[0] = (params++)->ToFloat();
-    primaryEntry.direction[1] = (params++)->ToFloat();
-    primaryEntry.direction[2] = (params++)->ToFloat();
-    primaryEntry.color = (params++)->ToInt();
-    data_02108e60->advanced_.light0[index] = primaryEntry;
+    LightingManager::Light3DConfig light0;
+    light0.maybeEnabled = (params++)->ToInt();
+    light0.direction[0] = (params++)->ToFloat();
+    light0.direction[1] = (params++)->ToFloat();
+    light0.direction[2] = (params++)->ToFloat();
+    light0.color = (params++)->ToInt();
+    s_scriptCurrentLightingInfo->advanced_.light0[index] = light0;
 
-    int col1 = (params++)->ToInt();
-    int col2 = (params++)->ToInt();
-    int col3 = (params++)->ToInt();
+    int bgColor = (params++)->ToInt();
+    int bgColor2 = (params++)->ToInt();
+    int ambientColor = (params++)->ToInt();
     int col4 = (params++)->ToInt();
-    int col5 = (params++)->ToInt();
-    int col6 = (params++)->ToInt();
-    int col7 = (params++)->ToInt();
-    data_02108e60->advanced_.backgroundColor[index] = col1;
-    data_02108e60->advanced_.backgroundSecondColor[index] = col2;
-    data_02108e60->advanced_.maybeAmbientColor[index] = col3;
-    data_02108e60->advanced_.unk_142[index] = col4;
-    data_02108e60->advanced_.spriteDiffuseColor[index] = col5;
-    data_02108e60->advanced_.modelDiffuseColor[index] = col6;
-    data_02108e60->advanced_.edgeColor[index] = col7;
+    int spriteColor = (params++)->ToInt();
+    int modelColor = (params++)->ToInt();
+    int edgeColor = (params++)->ToInt();
+    s_scriptCurrentLightingInfo->advanced_.backgroundColor[index] = bgColor;
+    s_scriptCurrentLightingInfo->advanced_.backgroundSecondColor[index] = bgColor2;
+    s_scriptCurrentLightingInfo->advanced_.maybeAmbientColor[index] = ambientColor;
+    s_scriptCurrentLightingInfo->advanced_.unk_142[index] = col4;
+    s_scriptCurrentLightingInfo->advanced_.spriteDiffuseColor[index] = spriteColor;
+    s_scriptCurrentLightingInfo->advanced_.modelDiffuseColor[index] = modelColor;
+    s_scriptCurrentLightingInfo->advanced_.edgeColor[index] = edgeColor;
 
     return 1;
 }
 
+static Script::OpcodeLookupEntry s_lightingOpcodes[] = {
+    { 0x64, &LightingScript_DeclareAdvancedLighting },
+    { 0x65, &LightingScript_Nop },
+    { 0x66, &LightingScript_CreateAdvancedLightingEntry_Alternate },
+    { 0x67, &LightingScript_DeclareBasicLighting },
+    { 0x68, &LightingScript_CreateBasicLightingEntry },
+    { 0x69, &LightingScript_CreateFogEntry },
+    { 0x6a, &LightingScript_CreateAdvancedLightingEntry },
+    { 0, NULL }
+};
 
 void ExecuteLightingScript(const void* script, unsigned int length, LightingInfo* manager, SafeAllocator* alloc)
 {
     if (length == 0)
         return;
-    data_02108e60 = manager;
+    s_scriptCurrentLightingInfo = manager;
     Script runner;
     runner.Initialize();
-    runner.SetOpcodeLookup(data_020f0ed8);
+    runner.SetOpcodeLookup(s_lightingOpcodes);
     runner.Load(script, length);
     runner.Execute();
-    data_02108e60 = NULL;
+    s_scriptCurrentLightingInfo = NULL;
 }
 
 void LightingInfo::Initialize()

@@ -71,7 +71,7 @@ public:
         unsigned short spriteDiffuseColor[7];
         unsigned short modelDiffuseColor[7];
         unsigned short edgeColor[7];
-        unsigned char unk_e0[7];
+        bool unk_e0[7];
         char padding_e7;
 
         // see FogList member function of the same name

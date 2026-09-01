@@ -2909,13 +2909,13 @@ _ZN20AtmosphericEffectSet12StartFadeOutEv kind:function(arm,size=0x4c) addr:0x02
 _ZN20AtmosphericEffectSet11StartFadeInEv kind:function(arm,size=0x50) addr:0x0207b154
 _ZN20AtmosphericEffectSet32DetermineVisibilityFromTimeOfDayEv kind:function(arm,size=0xa0) addr:0x0207b1a4
 _ZN20AtmosphericEffectSet30DetermineVisibilityFromUnknownEv kind:function(arm,size=0x88) addr:0x0207b244
-_Z24LightingScript_Opcode_64PN6Script9ParameterEi kind:function(arm,size=0x38) addr:0x0207b2cc
-_Z24LightingScript_Opcode_65PN6Script9ParameterEi kind:function(arm,size=0x8) addr:0x0207b304
-_Z24LightingScript_Opcode_66PN6Script9ParameterEi kind:function(arm,size=0x1b4) addr:0x0207b30c
-_Z24LightingScript_Opcode_67PN6Script9ParameterEi kind:function(arm,size=0x34) addr:0x0207b4c0
-_Z24LightingScript_Opcode_68PN6Script9ParameterEi kind:function(arm,size=0x144) addr:0x0207b4f4
-_Z24LightingScript_Opcode_69PN6Script9ParameterEi kind:function(arm,size=0x144) addr:0x0207b638
-_Z24LightingScript_Opcode_6aPN6Script9ParameterEi kind:function(arm,size=0x1ac) addr:0x0207b77c
+_Z38LightingScript_DeclareAdvancedLightingPN6Script9ParameterEi kind:function(arm,size=0x38) addr:0x0207b2cc local 
+_Z18LightingScript_NopPN6Script9ParameterEi kind:function(arm,size=0x8) addr:0x0207b304 local 
+_Z52LightingScript_CreateAdvancedLightingEntry_AlternatePN6Script9ParameterEi kind:function(arm,size=0x1b4) addr:0x0207b30c local 
+_Z35LightingScript_DeclareBasicLightingPN6Script9ParameterEi kind:function(arm,size=0x34) addr:0x0207b4c0 local 
+_Z39LightingScript_CreateBasicLightingEntryPN6Script9ParameterEi kind:function(arm,size=0x144) addr:0x0207b4f4 local 
+_Z29LightingScript_CreateFogEntryPN6Script9ParameterEi kind:function(arm,size=0x144) addr:0x0207b638 local 
+_Z42LightingScript_CreateAdvancedLightingEntryPN6Script9ParameterEi kind:function(arm,size=0x1ac) addr:0x0207b77c local 
 _Z21ExecuteLightingScriptPKvjP12LightingInfoP13SafeAllocator kind:function(arm,size=0x64) addr:0x0207b928
 _ZN12LightingInfo10InitializeEv kind:function(arm,size=0x40) addr:0x0207b98c
 _ZN12LightingInfo5ResetEv kind:function(arm,size=0x40) addr:0x0207b9cc
@@ -6191,7 +6191,7 @@ __sinit_020e60c0 kind:function(arm,size=0x20) addr:0x020e60c0
 __sinit_020e60e0 kind:function(arm,size=0x18) addr:0x020e60e0
 __sinit_020e60f8 kind:function(arm,size=0x2c) addr:0x020e60f8
 __sinit_AtmosphericEffect.cpp kind:function(arm,size=0x88) addr:0x020e6124 local
-__sinit_020e61ac kind:function(arm,size=0x88) addr:0x020e61ac
+__sinit_LightingInfo.cpp kind:function(arm,size=0x88) addr:0x020e61ac local
 __sinit_020e6234 kind:function(arm,size=0x2c) addr:0x020e6234
 __sinit_020e6260 kind:function(arm,size=0x2c) addr:0x020e6260
 __sinit_020e628c kind:function(arm,size=0x14) addr:0x020e628c
@@ -6566,7 +6566,7 @@ data_020eeab0 kind:data(any) addr:0x020eeab0
 .p__sinit_020e60e0 kind:data(word) addr:0x020eeb6c
 .p__sinit_020e60f8 kind:data(word) addr:0x020eeb70
 .p__sinit_AtmosphericEffect.cpp kind:data(word) addr:0x020eeb74 local
-.p__sinit_020e61ac kind:data(word) addr:0x020eeb78
+.p__sinit_LightingInfo.cpp kind:data(word) addr:0x020eeb78 local
 .p__sinit_020e6234 kind:data(word) addr:0x020eeb7c
 .p__sinit_020e6260 kind:data(word) addr:0x020eeb80
 .p__sinit_020e628c kind:data(word) addr:0x020eeb84
@@ -7229,8 +7229,11 @@ s_dataFloatC kind:data(any) addr:0x020f0e40 local
 s_dataFloatB kind:data(any) addr:0x020f0e44 local
 effectScriptOpcodes kind:data(any) addr:0x020f0e48 local
 @stringBase0 kind:data(byte[0x25]) addr:0x020f0ea0 local
-data_020f0ec8 kind:data(any) addr:0x020f0ec8
-data_020f0ed8 kind:data(any) addr:0x020f0ed8
+s_eveningLength kind:data(any) addr:0x020f0ec8 local
+s_dayLength kind:data(any) addr:0x020f0ecc local 
+s_morningLength kind:data(any) addr:0x020f0ed0 local 
+s_nightLength kind:data(any) addr:0x020f0ed4 local 
+s_lightingOpcodes kind:data(any) addr:0x020f0ed8 local
 data_020f0f18 kind:data(any) addr:0x020f0f18
 data_020f0f40 kind:data(any) addr:0x020f0f40
 data_020f0f68 kind:data(any) addr:0x020f0f68
@@ -7709,7 +7712,8 @@ data_02108e04 kind:bss addr:0x02108e04
 data_02108e10 kind:bss addr:0x02108e10
 effectScriptData kind:bss addr:0x02108e40 local
 s_sums kind:bss addr:0x02108e4c local
-data_02108e60 kind:bss addr:0x02108e60
+s_scriptCurrentLightingInfo kind:bss addr:0x02108e60 local
+s_dayThresholds kind:bss addr:0x02108e64 local
 data_02108e78 kind:bss addr:0x02108e78
 data_02108e84 kind:bss addr:0x02108e84
 data_02108e90 kind:bss addr:0x02108e90

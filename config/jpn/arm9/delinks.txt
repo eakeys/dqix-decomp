@@ -80,6 +80,10 @@ src/World/Object3D.cpp:
 src/Graphics/LightingManager.cpp:
     complete
     .text start:0x02051924 end:0x02053e28
+    .init start:0x020e6678 end:0x020e670c
+    .ctor start:0x020eeac8 end:0x020eeacc
+    .data start:0x020f033c end:0x020f0450
+    .bss start:0x02107860 end:0x02107910
 
 src/Util/Random.cpp:
 	complete

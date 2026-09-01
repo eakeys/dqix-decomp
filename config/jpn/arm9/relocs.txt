@@ -8984,7 +8984,7 @@ from:0x0205192c kind:load to:0x02107874 module:main
 from:0x0205196c kind:load to:0x02107860 module:main
 from:0x02051970 kind:load to:0x020f033c module:main
 from:0x02051e38 kind:load to:0x020f0350 module:main
-from:0x02051e3c kind:load to:0x020f0351 module:main
+from:0x02051e3c kind:load to:0x020f0350 add:0x1 module:main
 from:0x02051e4c kind:arm_call to:0x0200f25c module:main
 from:0x02051e64 kind:arm_call to:0x0200c534 module:main
 from:0x02051e6c kind:arm_call to:0x0200c698 module:main

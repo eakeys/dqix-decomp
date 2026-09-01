@@ -22,23 +22,57 @@
 #define func_ov017_021901ac func_ov017_02190d90
 #define func_ov017_021b8468 func_ov017_021b8978
 #define func_ov017_021b8478 func_ov017_021b8988
-
-#define data_020f030c data_020f033c
-#define data_020f0320 data_020f0350
-
-#define data_0210791c data_02107860
-#define data_02107930 data_02107874
 #endif
 
 struct FifoCommandInfo
 {
     unsigned char numOperands;
     bool hasColor;
-} extern data_020f0320[8][16];
+} static s_commandColorInfo[8][16] = {
+    { // Commands 0x00-0x0F: no operands, no color
+        0
+    },
+    { // Commands 0x10-0x1c
+        { 1, false }, { 0, false }, { 1, false }, { 1, false },
+        { 1, false }, { 0, false }, { 16, false }, { 12, false },
+        { 16, false }, { 12, false }, { 9, false }, { 3, false },
+        { 3, false },
+    },
+    { // Commands 0x20-0x2b
+        { 1, true }, { 1, false }, { 1, false }, { 2, false },
+        { 1, false }, { 1, false }, { 1, false }, { 1, false },
+        { 1, false }, { 1, false }, { 1, false }, { 1, false },
+    },
+    { // Commands 0x30-0x34
+        { 1, false }, { 1, false }, { 1, false }, { 1, false },
+        { 32, false },
+    },
+    { // Command 0x40
+        { 1, false },
+    },
+    { // Command 0x50
+        { 1, false },
+    },
+    { // Command 0x60
+        { 1, false },
+    },
+    { // Commands 0x70-0x72
+        { 3, false }, { 2, false }, { 1, false },
+    }
+};
 
-extern float data_0210791c[5];
-extern float data_020f030c;
-extern LightingManager data_02107930;
+static float s_dayTransitionLength = 2.0f;
+static float s_nightLength = 180.0f;
+static float s_morningLength = 30.0f;
+static float s_dayLength = 180.0f;
+static float s_eveningLength = 30.0f;
+
+#define DECLARE_SUM_ARRAY(name, a, b, c, d) static float name[5] = { (name[4] = a + (b + (d + c)), \
+    (name[2] = name[3] + d), \
+    (name[1] = name[2] + c), \
+    /* name[0] = */ name[1] + b) }
+DECLARE_SUM_ARRAY(s_dayThresholds, s_eveningLength, s_dayLength, s_morningLength, s_nightLength);
+static LightingManager s_lightingManager;
 
 extern "C"
 {
@@ -73,16 +107,16 @@ extern "C"
 
 void SetVector3fixComponents(Vector3fix*, fix32_t, fix32_t, fix32_t);
 
-LightingManager* LightingManager::GetInstance() { return &data_02107930; }
+LightingManager* LightingManager::GetInstance() { return &s_lightingManager; }
 
 void GetDayThresholds(float *outNightToMorning, float *outMorningToDay,
     float *outDayToEvening, float *outEveningToNight, float *outTransitionTime)
 {
-    *outNightToMorning = data_0210791c[2];
-    *outMorningToDay = data_0210791c[1];
-    *outDayToEvening = data_0210791c[0];
-    *outEveningToNight = data_0210791c[3];
-    *outTransitionTime = data_020f030c;
+    *outNightToMorning = s_dayThresholds[2];
+    *outMorningToDay = s_dayThresholds[1];
+    *outDayToEvening = s_dayThresholds[0];
+    *outEveningToNight = s_dayThresholds[3];
+    *outTransitionTime = s_dayTransitionLength;
 }
 
 void LightingManager::AdvancedLighting::FillMissingEntries()
@@ -250,8 +284,8 @@ bool LightingManager::GetFifoCommandData(int opcode, int* outNumArgs)
 {
     int high = opcode >> 4; // 0 to 7
     int low = opcode ^ (high << 4); // 0 to 15
-    *outNumArgs = data_020f0320[high][low].numOperands;
-    return data_020f0320[high][low].hasColor;
+    *outNumArgs = s_commandColorInfo[high][low].numOperands;
+    return s_commandColorInfo[high][low].hasColor;
 }
 
 unsigned short LightingManager::ColorTransformTintBrightnessContrast(unsigned int inColor)
@@ -383,19 +417,19 @@ void LightingManager::GetCurrentAdvancedLightingValues(unsigned short *outMaybeA
         (void)GetBattleStruct();
         currentTimeType = unknown_98;
         float endTimes[4] = {
-            data_0210791c[2], data_0210791c[1], data_0210791c[0], data_0210791c[4]
+            s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
         };
         float currentTimeValue = dayNightTimer_;
         nextTimeType = currentTimeType + 1;
         if (nextTimeType > 3)
             nextTimeType = 0;
-        transitionTime = (currentTimeValue - (endTimes[currentTimeType] - data_020f030c));
+        transitionTime = (currentTimeValue - (endTimes[currentTimeType] - s_dayTransitionLength));
         if (transitionTime < 0.0f)
             lerpFactor = 0.0f;
         else
         {
             lerpFactor = transitionTime;
-            lerpFactor /= data_020f030c;
+            lerpFactor /= s_dayTransitionLength;
         }
 
         void* ov17thing = func_ov017_0218b5b0()->unknown_ptr_3718;
@@ -524,18 +558,18 @@ void LightingManager::ComputeFogInfo(FogInfo *outFog)
         (void)GetBattleStruct();
         int currentTimeType = unknown_98;
         float endTimes[4] = {
-            data_0210791c[2], data_0210791c[1], data_0210791c[0], data_0210791c[4]
+            s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
         };
         float currentTimeValue = dayNightTimer_;
         int nextTimeType = currentTimeType + 1;
         if (nextTimeType > 3)
             nextTimeType = 0;
-        float transitionTime = (lightRGBScale_ / 4096.0f) * (currentTimeValue - (endTimes[currentTimeType] - data_020f030c));
+        float transitionTime = (lightRGBScale_ / 4096.0f) * (currentTimeValue - (endTimes[currentTimeType] - s_dayTransitionLength));
         float lerpFactor;
         if (transitionTime < 0.0f)
             lerpFactor = 0.0f;
         else
-            lerpFactor = transitionTime / data_020f030c;
+            lerpFactor = transitionTime / s_dayTransitionLength;
         
         FogInfo oldFog;
         FogInfo newFog;
@@ -641,17 +675,17 @@ void LightingManager::ModelTransformTintBrightnessContrast(NSBXXInternalModel *m
         if (index == 0)
         {
             float endTimes[4] = {
-                data_0210791c[2], data_0210791c[1], data_0210791c[0], data_0210791c[4]
+                s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
             };
             index = unknown_98;
-            if (dayNightTimer_ > endTimes[unknown_98] - 2.0f * data_020f030c)
+            if (dayNightTimer_ > endTimes[unknown_98] - 2.0f * s_dayTransitionLength)
             {
                 index++;
                 if (index >= 4)
                     index = 0;
                 unknown_98 = index;
                 float beginTimes[4] = {
-                    data_0210791c[3], data_0210791c[2], data_0210791c[1], data_0210791c[0]
+                    s_dayThresholds[3], s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0]
                 };
                 dayNightTimer_ = beginTimes[unknown_98];
                 func_02010288(battle, dayNightTimer_);
@@ -763,17 +797,17 @@ void LightingManager::ProcessZoneChange(Zone3D *newZone)
             if (index == 0)
             {
                 float thresholds[4] = {
-                    data_0210791c[2], data_0210791c[1], data_0210791c[0], data_0210791c[4]
+                    s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
                 };
                 index = unknown_98;
-                if (dayNightTimer_ > thresholds[index] - (2.0f * data_020f030c))
+                if (dayNightTimer_ > thresholds[index] - (2.0f * s_dayTransitionLength))
                 {
                     index++;
                     if (index >= 4)
                         index = 0;
                     unknown_98 = index;
                     float thresholds2[4] = {
-                        data_0210791c[3], data_0210791c[2], data_0210791c[1], data_0210791c[0]
+                        s_dayThresholds[3], s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0]
                     };
                     dayNightTimer_ = thresholds2[unknown_98];
                     func_02010288(battle, dayNightTimer_);
@@ -1155,14 +1189,14 @@ void LightingManager::BeginFade(fix16_t targetBrightness, unsigned short length)
 
 TimeOfDay ConvertToTimeOfDay(float time)
 {
-    if (time < 0.0f || data_0210791c[4] < time)
+    if (time < 0.0f || s_dayThresholds[4] < time)
         return TimeOfDay_Invalid;
     
-    if (time >= data_0210791c[0])
+    if (time >= s_dayThresholds[0])
         return TimeOfDay_Evening;
-    if (time >= data_0210791c[1])
+    if (time >= s_dayThresholds[1])
         return TimeOfDay_Day;
-    if (time >= data_0210791c[2])
+    if (time >= s_dayThresholds[2])
         return TimeOfDay_Morning;
     return TimeOfDay_Night;
 }

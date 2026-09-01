@@ -6002,7 +6002,7 @@ __sinit_020e6538 kind:function(arm,size=0x90) addr:0x020e6538
 __sinit_020e65c8 kind:function(arm,size=0x14) addr:0x020e65c8
 __sinit_020e65dc kind:function(arm,size=0x88) addr:0x020e65dc
 __sinit_020e6664 kind:function(arm,size=0x14) addr:0x020e6664
-__sinit_020e6678 kind:function(arm,size=0x94) addr:0x020e6678
+__sinit_LightingManager.cpp kind:function(arm,size=0x94) addr:0x020e6678 local
 __sinit_020e670c kind:function(arm,size=0x88) addr:0x020e670c
 __sinit_020e6794 kind:function(arm,size=0x2c) addr:0x020e6794
 __sinit_020e67c0 kind:function(arm,size=0x2c) addr:0x020e67c0
@@ -6369,7 +6369,7 @@ data_020eea90 kind:data(any) addr:0x020eea90
 .p__sinit_020e65c8 kind:data(word) addr:0x020eeabc
 .p__sinit_020e65dc kind:data(word) addr:0x020eeac0
 .p__sinit_020e6664 kind:data(word) addr:0x020eeac4
-.p__sinit_020e6678 kind:data(word) addr:0x020eeac8
+.p__sinit_LightingManager.cpp kind:data(word) addr:0x020eeac8 local
 .p__sinit_020e670c kind:data(word) addr:0x020eeacc
 .p__sinit_020e6794 kind:data(word) addr:0x020eead0
 .p__sinit_020e67c0 kind:data(word) addr:0x020eead4
@@ -6860,9 +6860,12 @@ data_020f0327 kind:data(any) addr:0x020f0327
 data_020f0330 kind:data(any) addr:0x020f0330
 data_020f0333 kind:data(any) addr:0x020f0333
 data_020f0336 kind:data(any) addr:0x020f0336
-data_020f033c kind:data(any) addr:0x020f033c
-data_020f0350 kind:data(any) addr:0x020f0350
-data_020f0351 kind:data(any) addr:0x020f0351
+s_dayTransitionLength kind:data(any) addr:0x020f033c local
+s_eveningLength kind:data(any) addr:0x020f0340 local
+s_dayLength kind:data(any) addr:0x020f0344 local
+s_morningLength kind:data(any) addr:0x020f0348 local
+s_nightLength kind:data(any) addr:0x020f034c local
+s_commandColorInfo kind:data(any) addr:0x020f0350 local
 data_020f0450 kind:data(any) addr:0x020f0450
 data_020f046c kind:data(any) addr:0x020f046c
 data_020f0491 kind:data(any) addr:0x020f0491
@@ -7517,8 +7520,8 @@ data_021077f0 kind:bss addr:0x021077f0
 data_02107824 kind:bss addr:0x02107824
 data_02107828 kind:bss addr:0x02107828
 data_0210785c kind:bss addr:0x0210785c
-data_02107860 kind:bss addr:0x02107860
-data_02107874 kind:bss addr:0x02107874
+s_dayThresholds kind:bss addr:0x02107860 local
+s_lightingManager kind:bss addr:0x02107874 local
 data_02107910 kind:bss addr:0x02107910
 data_02107924 kind:bss addr:0x02107924
 data_02107930 kind:bss addr:0x02107930

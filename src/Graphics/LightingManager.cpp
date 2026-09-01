@@ -400,22 +400,22 @@ void LightingManager::GetCurrentAdvancedLightingValues(unsigned short *outMaybeA
     if (lightingInfo->maybeMode_ != 2)
         return;
 
-    if (unknown_90 != 0)
+    if (lightingIndexOverride_ != 0)
     {
-        *outMaybeAmbient = lightingInfo->advanced_.maybeAmbientColor[unknown_90];
-        *outBGColor = lightingInfo->advanced_.backgroundColor[unknown_90];
-        *outBGSecondColor = lightingInfo->advanced_.backgroundSecondColor[unknown_90];
-        *outArg4 = lightingInfo->advanced_.unk_142[unknown_90];
-        *outSpriteDiffuse = lightingInfo->advanced_.spriteDiffuseColor[unknown_90];
-        *outModelDiffuse = lightingInfo->advanced_.modelDiffuseColor[unknown_90];
-        *outEdgeColor = lightingInfo->advanced_.edgeColor[unknown_90];
-        *outLight0 = lightingInfo->advanced_.light0[unknown_90];
-        *outLight1 = lightingInfo->advanced_.light1[unknown_90];
+        *outMaybeAmbient = lightingInfo->advanced_.maybeAmbientColor[lightingIndexOverride_];
+        *outBGColor = lightingInfo->advanced_.backgroundColor[lightingIndexOverride_];
+        *outBGSecondColor = lightingInfo->advanced_.backgroundSecondColor[lightingIndexOverride_];
+        *outArg4 = lightingInfo->advanced_.unk_142[lightingIndexOverride_];
+        *outSpriteDiffuse = lightingInfo->advanced_.spriteDiffuseColor[lightingIndexOverride_];
+        *outModelDiffuse = lightingInfo->advanced_.modelDiffuseColor[lightingIndexOverride_];
+        *outEdgeColor = lightingInfo->advanced_.edgeColor[lightingIndexOverride_];
+        *outLight0 = lightingInfo->advanced_.light0[lightingIndexOverride_];
+        *outLight1 = lightingInfo->advanced_.light1[lightingIndexOverride_];
     }
     else
     {
         (void)GetBattleStruct();
-        currentTimeType = unknown_98;
+        currentTimeType = timeOfDayIndex_;
         float endTimes[4] = {
             s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
         };
@@ -542,9 +542,9 @@ void LightingManager::ComputeFogInfo(FogInfo *outFog)
     if (zone == NULL)
         return;
 
-    if (unknown_90 != 0)
+    if (lightingIndexOverride_ != 0)
     {
-        const FogInfo* source = &zone->lighting_.fogList.entries[unknown_90];
+        const FogInfo* source = &zone->lighting_.fogList.entries[lightingIndexOverride_];
         outFog->unk_0 = source->unk_0;
         outFog->type = source->type;
         outFog->depthShift = source->depthShift;
@@ -556,7 +556,7 @@ void LightingManager::ComputeFogInfo(FogInfo *outFog)
     else
     {
         (void)GetBattleStruct();
-        int currentTimeType = unknown_98;
+        int currentTimeType = timeOfDayIndex_;
         float endTimes[4] = {
             s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
         };
@@ -614,7 +614,7 @@ void LightingManager::ComputeFogInfo(FogInfo *outFog)
 void LightingManager::Initialize()
 {
     VectorizedMemset(this, 0, sizeof(LightingManager));
-    unknown_90 = 0;
+    lightingIndexOverride_ = 0;
     fogInfo_.unk_0 = 0;
     fogInfo_.type = 0;
     fogInfo_.depthShift = 1;
@@ -624,7 +624,7 @@ void LightingManager::Initialize()
     for (int i = 0; i < 0x20; i++)
         fogInfo_.densityTable[i] = 2 * i;
     unknown_84 = 1;
-    unknown_85 = 1;
+    fogEnabled_ = true;
 
     RenderConfig::SetLightVector(0, 0, 0, 0);
     RenderConfig::SetLightVector(1, 0, 0, 0);
@@ -671,23 +671,23 @@ void LightingManager::ModelTransformTintBrightnessContrast(NSBXXInternalModel *m
         index = 4;
     else
     {
-        index = unknown_90;
+        index = lightingIndexOverride_;
         if (index == 0)
         {
             float endTimes[4] = {
                 s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
             };
-            index = unknown_98;
-            if (dayNightTimer_ > endTimes[unknown_98] - 2.0f * s_dayTransitionLength)
+            index = timeOfDayIndex_;
+            if (dayNightTimer_ > endTimes[timeOfDayIndex_] - 2.0f * s_dayTransitionLength)
             {
                 index++;
                 if (index >= 4)
                     index = 0;
-                unknown_98 = index;
+                timeOfDayIndex_ = index;
                 float beginTimes[4] = {
                     s_dayThresholds[3], s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0]
                 };
-                dayNightTimer_ = beginTimes[unknown_98];
+                dayNightTimer_ = beginTimes[timeOfDayIndex_];
                 func_02010288(battle, dayNightTimer_);
             }
         }
@@ -793,23 +793,23 @@ void LightingManager::ProcessZoneChange(Zone3D *newZone)
         }
         else
         {
-            index = unknown_90;
+            index = lightingIndexOverride_;
             if (index == 0)
             {
                 float thresholds[4] = {
                     s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0], s_dayThresholds[4]
                 };
-                index = unknown_98;
+                index = timeOfDayIndex_;
                 if (dayNightTimer_ > thresholds[index] - (2.0f * s_dayTransitionLength))
                 {
                     index++;
                     if (index >= 4)
                         index = 0;
-                    unknown_98 = index;
+                    timeOfDayIndex_ = index;
                     float thresholds2[4] = {
                         s_dayThresholds[3], s_dayThresholds[2], s_dayThresholds[1], s_dayThresholds[0]
                     };
-                    dayNightTimer_ = thresholds2[unknown_98];
+                    dayNightTimer_ = thresholds2[timeOfDayIndex_];
                     func_02010288(battle, dayNightTimer_);
                 }
             }
@@ -958,7 +958,7 @@ void LightingManager::RecomputeAdvancedLighting()
     }
 
     ComputeFogInfo(&fogInfo_);
-    if (unknown_85)
+    if (fogEnabled_)
     {
         func_020c54a4(true, fogInfo_.type, fogInfo_.depthShift, fogInfo_.offset);
         GX_FOG_COLOR = (fogInfo_.color) | (fogInfo_.alpha << 16);
@@ -1049,9 +1049,9 @@ void LightingManager::DrawBackgroundGradient()
     Struct_ov017_44C8* ov17thing = func_ov017_0218b5b0();
     if (lightingInfo->maybeMode_ == 1)
     {
-        int index = unknown_98;
-        if (unknown_90 != 0)
-            index = unknown_90;
+        int index = timeOfDayIndex_;
+        if (lightingIndexOverride_ != 0)
+            index = lightingIndexOverride_;
         outerColor = lightingInfo->basic_.backgroundColor[index];
         innerColor = lightingInfo->basic_.backgroundSecondColor[index];
     }
@@ -1075,7 +1075,7 @@ void LightingManager::DrawBackgroundGradient()
         }
     }
         
-    fix16_t yExtra = 4096.0f * lightingInfo->unknown_308_;
+    fix16_t yExtra = 4096.0f * lightingInfo->gradientCenterOffset_;
     
     int outerRed, outerGreen, outerBlue;
     int innerRed, innerGreen, innerBlue;

@@ -54,10 +54,14 @@ public:
     // Each object has its own alpha, but this is an overall alpha and the
     // two get multiplied
     unsigned char alpha_;
-    unsigned char unknown_14_low_ : 2;
+    unsigned char timeOfDayIndex_ : 2;
     unsigned char unknown_14_bit_2_ : 1;
-    unsigned char unknown_14_high_ : 4;
-    unsigned char unknown_14_bit_7_ : 1;
+    // if bit k of this is set, then the effect will be hidden when the time of
+    // day is equal to k (0 = night, 1 = morning, 2 = day, 3 = evening)
+    unsigned char timeOfDayHideBits_ : 4;
+    // if set, the visibility will be updated to match the time of day and will
+    // change in a single frame instead of fading
+    unsigned char visibilityDirty_ : 1;
 
     char padding_15[3];
 
@@ -82,6 +86,6 @@ public:
     void StartFadeIn();
 
     // These both use some external data and don't really make sense atm
-    void DetermineFadeStarts();
-    void DetermineFadeStarts2();
+    void DetermineVisibilityFromTimeOfDay();
+    void DetermineVisibilityFromUnknown();
 };

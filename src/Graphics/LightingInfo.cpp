@@ -13,7 +13,7 @@ extern LightingInfo* data_02108e60;
 int LightingScript_Opcode_64(Script::Parameter* params, int numParams)
 {
     if (numParams > 0)
-        data_02108e60->unknown_308_ = params[0].ToFloat();
+        data_02108e60->gradientCenterOffset_ = params[0].ToFloat();
     data_02108e60->maybeMode_ = 2;
     return 1;
 }
@@ -66,7 +66,7 @@ int LightingScript_Opcode_66(Script::Parameter* params, int numParams)
 int LightingScript_Opcode_67(Script::Parameter* params, int numParams)
 {
     if (numParams > 0)
-        data_02108e60->unknown_308_ = params[0].ToFloat();
+        data_02108e60->gradientCenterOffset_ = params[0].ToFloat();
     data_02108e60->maybeMode_ = 1;
     return 1;
 }
@@ -196,7 +196,7 @@ void ExecuteLightingScript(const void* script, unsigned int length, LightingInfo
 void LightingInfo::Initialize()
 {
     maybeMode_ = 0;
-    unknown_308_ = 0.0f;
+    gradientCenterOffset_ = 0.0f;
     memset(&basic_, 0, sizeof(basic_));
     memset(&advanced_, 0, sizeof(advanced_));
     memset(&fogList, 0, sizeof(fogList));
@@ -205,7 +205,7 @@ void LightingInfo::Initialize()
 void LightingInfo::Reset()
 {
     maybeMode_ = 0;
-    unknown_308_ = 0.0f;
+    gradientCenterOffset_ = 0.0f;
     memset(&basic_, 0, sizeof(basic_));
     memset(&advanced_, 0, sizeof(advanced_));
     memset(&fogList, 0, sizeof(fogList));

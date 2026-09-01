@@ -23,7 +23,22 @@ enum TimeOfDay
 };
 
 // sizeof == 0x9c.
-// An instance of this exists at 0x02107930 (usa)
+// An instance of this exists at 0x02107930 (usa).
+// Manages lighting-related stuff for a zone, e.g. diffuse colors for models
+// and sprites, fog color/alpha/visibility and configuration of (two of) the
+// DS's 3D lights. Unlike LightingInfo which holds all values associated to a
+// single zone, this holds only the current values for the current zone.
+// 
+// There are two 'modes' of lighting: the 'basic' mode (enum value 1), used for
+// more populated zones e.g. towns, which does not use the 3D lights, and the
+// 'advanced' mode (enum value 2), used for fields and battlefields (note not
+// caves etc, only open-world fields). Each zone has specific values for colors etc.
+// at each time of day, all stored in arrays (with [0] = night, [1] = morning etc
+// as the enum above). For some reason all arrays are of length 7 though. Some
+// zones specify entries for indices 4 and up, but they're usually default values.
+// One notable exception is the front carriage of the Starflight Express (id 6401 = 0x1901)
+// which actually uses index 4 for rendering
+// 
 class LightingManager
 {
 public:
@@ -44,7 +59,7 @@ public:
     // aka 'mode 1', used in towns/buildings/caves
     struct BasicLighting
     {
-        Vector3float unk_0[7]; // is indexed with values going up to 5, but 7 fits perfectly
+        Vector3float unk_0[7];
         float unk_54[7];
         float unk_70[7];
         // clear color when out of bounds
@@ -126,15 +141,18 @@ public:
 
     FogInfo fogInfo_;
     char unknown_84;
-    unsigned char unknown_85; // probably bool "has fog"
+    bool fogEnabled_; // probably bool "has fog"
 
     fix16_t gradientCenterNorm_;
     unsigned int gradientCenterPixel_;
     unsigned short gradientOuterColor_;
     unsigned short gradientInnerColor_;
-    int unknown_90;
-    float dayNightTimer_; // populated from battle struct
-    int unknown_98;
+    // if nonzero, this will be used to index into all the LightingInfo arrays
+    // instead of the time of day index. I've never seen it nonzero in normal
+    // gameplay but I haven't looked super hard
+    int lightingIndexOverride_;
+    float dayNightTimer_;
+    int timeOfDayIndex_;
 
     struct FogList
     {

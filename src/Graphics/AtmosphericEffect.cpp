@@ -19,6 +19,10 @@
 // have coming first). This is truly bizarre: none of these are ever used outside
 // of initialization, but they're still here. My best guess is this is created
 // by a macro, but we need to see more instances before committing to one form
+//
+// update: these are the lengths of the various times of day. See LightingManager.cpp
+// for an instance where this is actually used. Not sure why it leaks into so many
+// files though, maybe it was declared in a header and included in multiple places
 #define DECLARE_SUM_ARRAY(a, b, c, d) static float s_sums[5] = { (s_sums[4] = a + (b + (d + c)), \
     (s_sums[2] = s_sums[3] + d), \
     (s_sums[1] = s_sums[2] + c), \
@@ -259,7 +263,7 @@ static int EffectScript_SetTileDimensions(Script::Parameter* params, int numPara
     return 1;
 }
 
-static int EffectScript_Unknown_6d(Script::Parameter* params, int numParams) 
+static int EffectScript_SetHiddenTimesOfDay(Script::Parameter* params, int numParams) 
 { 
     unsigned char mask = 0;
     for (int i = 0; i < numParams; i++)
@@ -267,7 +271,7 @@ static int EffectScript_Unknown_6d(Script::Parameter* params, int numParams)
         int extra = (params++)->ToInt();
         mask |= extra;
     }
-    effectScriptData.effect->unknown_14_high_ = mask;
+    effectScriptData.effect->timeOfDayHideBits_ = mask;
     return 1;
 }
 
@@ -281,7 +285,7 @@ static Script::OpcodeLookupEntry effectScriptOpcodes[] = {
     { 0x6a, &EffectScript_SetScale },
     { 0x6b, &EffectScript_SetAlpha },
     { 0x6c, &EffectScript_SetTileDimensions },
-    { 0x6d, &EffectScript_Unknown_6d },
+    { 0x6d, &EffectScript_SetHiddenTimesOfDay },
     { 0, NULL }};
 
 void AtmosphericEffectSet::Reset()
@@ -294,10 +298,10 @@ void AtmosphericEffectSet::Reset()
     effectFlags_ = 0;
     alpha_ = 31;
     fadeTimeRemaining_ = 0;
-    unknown_14_low_ = 0;
+    timeOfDayIndex_ = 0;
     unknown_14_bit_2_ = 0;
-    unknown_14_high_ = 0;
-    unknown_14_bit_7_ = true;
+    timeOfDayHideBits_ = 0;
+    visibilityDirty_ = true;
 }
 
 void AtmosphericEffectSet::LoadArchive(const char* name)
@@ -311,10 +315,10 @@ void AtmosphericEffectSet::LoadArchive(const char* name)
     archiveLength_ = 0;
     alpha_ = 31;
     fadeTimeRemaining_ = 0;
-    unknown_14_low_ = 0;
+    timeOfDayIndex_ = 0;
     unknown_14_bit_2_ = 0;
-    unknown_14_high_ = 0;
-    unknown_14_bit_7_ = true;
+    timeOfDayHideBits_ = 0;
+    visibilityDirty_ = true;
 }
 
 bool AtmosphericEffectSet::IsArchiveLoaded()
@@ -528,8 +532,8 @@ bool AtmosphericEffectSet::Draw()
     if (effectFlags_ & 1)
         return false;
 
-    DetermineFadeStarts();
-    DetermineFadeStarts2();
+    DetermineVisibilityFromTimeOfDay();
+    DetermineVisibilityFromUnknown();
     AdvanceAlphaFade();
 
     Vector3fix eye;
@@ -725,43 +729,43 @@ void AtmosphericEffectSet::StartFadeIn()
         effectFlags_ = (effectFlags_ | (1 << 1)) & ~(1 << 2);
 }
 
-void AtmosphericEffectSet::DetermineFadeStarts()
+void AtmosphericEffectSet::DetermineVisibilityFromTimeOfDay()
 {
-    if (unknown_14_high_ == 0)
+    if (timeOfDayHideBits_ == 0)
         return;
 
-    int inputData = LightingManager::GetInstance()->unknown_98;
+    int inputTimeOfDay = LightingManager::GetInstance()->timeOfDayIndex_;
 
-    if (inputData != unknown_14_low_ || unknown_14_bit_7_)
+    if (inputTimeOfDay != timeOfDayIndex_ || visibilityDirty_)
     {
-        if (unknown_14_high_ & (1 << inputData))
+        if (timeOfDayHideBits_ & (1 << inputTimeOfDay))
             StartFadeOut();
         else
             StartFadeIn();
-        if (unknown_14_bit_7_)
+        if (visibilityDirty_)
         {
             fadeTimeRemaining_ = 1;
-            unknown_14_bit_7_ = false;
+            visibilityDirty_ = false;
         }
     }
-    unknown_14_low_ = inputData;
+    timeOfDayIndex_ = inputTimeOfDay;
 }
 
-void AtmosphericEffectSet::DetermineFadeStarts2()
+void AtmosphericEffectSet::DetermineVisibilityFromUnknown()
 {
-    bool inputIsFadeOut = func_0204be20(func_02033fa0(func_0200fddc(GetBattleStruct())));
+    bool inputShouldHide = func_0204be20(func_02033fa0(func_0200fddc(GetBattleStruct())));
 
-    if (inputIsFadeOut != unknown_14_bit_2_ || unknown_14_bit_7_)
+    if (inputShouldHide != unknown_14_bit_2_ || visibilityDirty_)
     {
-        if (inputIsFadeOut)
+        if (inputShouldHide)
             StartFadeOut();
         else
             StartFadeIn();
-        if (unknown_14_bit_7_)
+        if (visibilityDirty_)
         {
             fadeTimeRemaining_ = 1;
-            unknown_14_bit_7_ = false;
+            visibilityDirty_ = false;
         }
     }
-    unknown_14_bit_2_ = inputIsFadeOut;
+    unknown_14_bit_2_ = inputShouldHide;
 }

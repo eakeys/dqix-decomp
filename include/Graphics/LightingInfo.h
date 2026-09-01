@@ -21,7 +21,7 @@ public:
 
     LightingManager::FogList fogList;
     int maybeMode_; // 1 = use small struct, 2 = use big
-    float unknown_308_;
+    float gradientCenterOffset_;
 
     // Initialize() doesn't return *this, so it isn't a constructor, but
     // it's called by Zone3D constructor, so our constructor must be inline and call it

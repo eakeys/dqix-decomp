@@ -7,12 +7,6 @@
 #ifdef jpn
 #define func_02032370 func_02031ea8
 
-#define data_020f0f18 data_020f0fe0
-#define data_020f0f40 data_020f1008
-#define data_020f0f68 data_020f1030
-#define data_020f0f6f data_020f1037
-#define data_020f0f7c data_020f1044
-
 #define data_02108e78 data_02108dbc
 #define data_02108e90 data_02108dd4
 #endif
@@ -22,11 +16,6 @@ extern "C"
     // rng value between 0 and max-1 from A-table
     int func_02032370(int max);
 }
-
-extern Script::OpcodeLookupEntry data_020f0f18[], data_020f0f40[];
-extern char data_020f0f68[]; // "%s.bin"
-extern char data_020f0f6f[]; // "randTBox.bin"
-extern char data_020f0f7c[]; // "randTTT.bin"
 
 struct {
     LootDistribution* distribution;
@@ -44,13 +33,13 @@ int Loot_Opcode_64(Script::Parameter* params, int numParams) { return 1; }
 
 int Loot_Opcode_65(Script::Parameter* params, int numParams) { return 1; }
 
-int LootManager_Opcode_66(Script::Parameter* params, int numParams)
+int LootManager_Unknown_66(Script::Parameter* params, int numParams)
 {
     data_02108e78.manager->unk_10 = params[0].ToInt();
     return 1;
 }
 
-int LootManager_Opcode_67(Script::Parameter* params, int numParams)
+int LootManager_CreateContainer(Script::Parameter* params, int numParams)
 {
     (void)func_ov017_0218b5b0();
     LootableContainerManager::Container* container =
@@ -144,12 +133,20 @@ void LootableContainerManager::ResetAllocator(SafeAllocator *alloc)
     numEntries_ = 0;
 }
 
+static Script::OpcodeLookupEntry s_zoneContainerOpcodes[] = {
+    { 0x64, &Loot_Opcode_64 },
+    { 0x65, &Loot_Opcode_65 },
+    { 0x66, &LootManager_Unknown_66 },
+    { 0x67, &LootManager_CreateContainer },
+    { 0, NULL }
+};
+
 void LootableContainerManager::LoadZoneContainers(const void *treasureArchive,
     unsigned int archiveLength, const char *zoneName, SafeAllocator *alloc)
 {
     (void)GetBattleStruct();
     char scriptFilename[20];
-    sprintf(scriptFilename, data_020f0f68, zoneName);
+    sprintf(scriptFilename, "%s.bin", zoneName);
     const void* scriptFile;
     unsigned int scriptFileLength;
     if (!GetFileInNarcPermissive(treasureArchive, scriptFilename, &scriptFile, &scriptFileLength))
@@ -163,7 +160,7 @@ void LootableContainerManager::LoadZoneContainers(const void *treasureArchive,
         data_02108e78.allocator = &ov17thing->lootableContainerAllocator_18c_;
     Script runner;
     runner.Initialize();
-    runner.SetOpcodeLookup(data_020f0f18);
+    runner.SetOpcodeLookup(s_zoneContainerOpcodes);
     runner.Load(scriptFile, scriptFileLength);
     runner.Execute();
     data_02108e78.allocator = &ov17thing->lootableContainerAllocator_18c_;
@@ -176,7 +173,7 @@ void LootableContainerManager::LoadZoneContainers(const void *treasureArchive,
     LootDistribution rng;
     int blankItemID = 0;
 
-    if (GetFileInNarcPermissive(treasureArchive, data_020f0f6f, &scriptFile, &scriptFileLength))
+    if (GetFileInNarcPermissive(treasureArchive, "randTBox.bin", &scriptFile, &scriptFileLength))
     {
         rng.Reset();
         rng.LoadFromScript(&tempAlloc, scriptFile, scriptFileLength);
@@ -185,7 +182,7 @@ void LootableContainerManager::LoadZoneContainers(const void *treasureArchive,
             // blue chests only here
             if (container->containerType != 4)
                 continue;
-            const LootDistribution::Atom* outcome = rng.Sample(container->itemIDOrRank);
+            const LootDistribution::Outcome* outcome = rng.Sample(container->itemIDOrRank);
             if (outcome != NULL)
             {
                 container->lootType = outcome->lootType;
@@ -200,7 +197,7 @@ void LootableContainerManager::LoadZoneContainers(const void *treasureArchive,
         tempAlloc.Reset();
     }
 
-    if (GetFileInNarcPermissive(treasureArchive, data_020f0f7c, &scriptFile, &scriptFileLength))
+    if (GetFileInNarcPermissive(treasureArchive, "randTTT.bin", &scriptFile, &scriptFileLength))
     {
         rng.Reset();
         rng.LoadFromScript(&tempAlloc, scriptFile, scriptFileLength);
@@ -209,7 +206,7 @@ void LootableContainerManager::LoadZoneContainers(const void *treasureArchive,
             // pots, barrels and cupboards
             if (container->containerType != 1 && container->containerType != 2 && container->containerType != 3)
                 continue;
-            const LootDistribution::Atom* outcome = rng.Sample(container->itemIDOrRank);
+            const LootDistribution::Outcome* outcome = rng.Sample(container->itemIDOrRank);
             if (outcome != NULL)
             {
                 container->lootType = outcome->lootType;
@@ -254,7 +251,7 @@ LootableContainerManager::Container* LootableContainerManager::GetContainerByID(
     return NULL;
 }
 
-int LootDistribution_Opcode_69(Script::Parameter* params, int numParams)
+int LootDistribution_DeclareOutcome(Script::Parameter* params, int numParams)
 {
     int packed = params[0].ToInt();
     int percentage = packed & 0x7f;
@@ -262,28 +259,36 @@ int LootDistribution_Opcode_69(Script::Parameter* params, int numParams)
     int resultType = (packed >> 23) & 0x7;
     int rank = (packed >> 26) & 0x1f;
 
-    LootDistribution::Atom atom;
-    atom.rank = rank;
-    atom.lootType = resultType;
-    atom.itemID = id;
-    atom.percentage = percentage;
-    data_02108e78.distribution->InsertAtom(&atom);
+    LootDistribution::Outcome outcome;
+    outcome.rank = rank;
+    outcome.lootType = resultType;
+    outcome.itemID = id;
+    outcome.percentage = percentage;
+    data_02108e78.distribution->InsertOutcome(&outcome);
     return 1;
 }
 
-int LootDistribution_Opcode_6a(Script::Parameter* params, int numParams)
+int LootDistribution_AllocateOutcomes(Script::Parameter* params, int numParams)
 {
-    data_02108e78.distribution->AllocateAtoms(params[0].ToInt());
+    data_02108e78.distribution->AllocateOutcomes(params[0].ToInt());
     return 1;
 }
 
 void LootDistribution::Reset()
 {
-    pAtoms_ = NULL;
-    atomArrayCapacity_ = 0;
-    atomArraySize_ = 0;
+    pOutcomes_ = NULL;
+    outcomeArrayCapacity_ = 0;
+    outcomeArraySize_ = 0;
     pAllocator_ = NULL;
 }
+
+static Script::OpcodeLookupEntry s_distributionOpcodes[] = {
+    { 0x64, &Loot_Opcode_64 },
+    { 0x65, &Loot_Opcode_65 },
+    { 0x69, &LootDistribution_DeclareOutcome },
+    { 0x6a, &LootDistribution_AllocateOutcomes },
+    { 0, NULL } 
+};
 
 void LootDistribution::LoadFromScript(SafeAllocator* alloc, const void* script, unsigned int length)
 {
@@ -291,59 +296,59 @@ void LootDistribution::LoadFromScript(SafeAllocator* alloc, const void* script, 
     pAllocator_ = alloc;
     Script runner;
     runner.Initialize();
-    runner.SetOpcodeLookup(data_020f0f40);
+    runner.SetOpcodeLookup(s_distributionOpcodes);
     runner.Load(script, length);
     runner.Execute();
     data_02108e78.distribution = NULL;
 }
 
-void LootDistribution::InsertAtom(Atom *source)
+void LootDistribution::InsertOutcome(Outcome *source)
 {
-    if (atomArraySize_ >= atomArrayCapacity_)
+    if (outcomeArraySize_ >= outcomeArrayCapacity_)
         return;
-    int position = atomArraySize_++;
+    int position = outcomeArraySize_++;
 
-    Atom* dest = &pAtoms_[position];
+    Outcome* dest = &pOutcomes_[position];
 
     dest->rankAndLootType = source->rankAndLootType;
     dest->percentage = source->percentage;
     dest->itemID = source->itemID;
 }
 
-void LootDistribution::AllocateAtoms(unsigned short count)
+void LootDistribution::AllocateOutcomes(unsigned short count)
 {
-    pAtoms_ = (Atom*)pAllocator_->Allocate(count * sizeof(Atom));
-    if (pAtoms_ != NULL)
-        atomArrayCapacity_ = count;
+    pOutcomes_ = (Outcome*)pAllocator_->Allocate(count * sizeof(Outcome));
+    if (pOutcomes_ != NULL)
+        outcomeArrayCapacity_ = count;
 }
 
-const LootDistribution::Atom* LootDistribution::Sample(int rank)
+const LootDistribution::Outcome* LootDistribution::Sample(int rank)
 {
-    const Atom* atoms[32];
-    int numAtoms = GetAtomsByRank(rank, atoms, 32);
-    if (numAtoms == 0)
+    const Outcome* outcomes[32];
+    int numOutcomes = GetOutcomesByRank(rank, outcomes, 32);
+    if (numOutcomes == 0)
         return NULL;
 
     int rng = func_02032370(100);
-    for (int i = 0; i < numAtoms; i++)
+    for (int i = 0; i < numOutcomes; i++)
     {
-        rng -= atoms[i]->percentage;
+        rng -= outcomes[i]->percentage;
         if (rng < 0)
-            return atoms[i];
+            return outcomes[i];
     }
 
     return NULL;
 }
 
-int LootDistribution::GetAtomsByRank(int rank, const Atom** outList, int outCapacity)
+int LootDistribution::GetOutcomesByRank(int rank, const Outcome** outList, int outCapacity)
 {
     int numFound = 0;
-    for (int i = 0; i < atomArraySize_; i++)
+    for (int i = 0; i < outcomeArraySize_; i++)
     {
-        const Atom* atom = &pAtoms_[i];
-        if (atom->rank != rank)
+        const Outcome* outcome = &pOutcomes_[i];
+        if (outcome->rank != rank)
             continue;
-        outList[numFound++] = atom;
+        outList[numFound++] = outcome;
         if (outCapacity <= numFound)
             return numFound;
     }

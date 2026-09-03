@@ -48,7 +48,7 @@ public:
 class LootDistribution
 {
 public:
-    struct Atom
+    struct Outcome
     {
         union {
             unsigned char rankAndLootType;
@@ -62,19 +62,19 @@ public:
         unsigned short itemID; // or amount of gold, or ambush type
     };
 
-    Atom* pAtoms_;
-    unsigned short atomArrayCapacity_;
-    unsigned short atomArraySize_;
+    Outcome* pOutcomes_;
+    unsigned short outcomeArrayCapacity_;
+    unsigned short outcomeArraySize_;
     SafeAllocator* pAllocator_;
 
     void Reset();
 
     void LoadFromScript(SafeAllocator* alloc, const void* script, unsigned int length);
-    void InsertAtom(Atom* atom);
-    void AllocateAtoms(unsigned short count);
+    void InsertOutcome(Outcome* atom);
+    void AllocateOutcomes(unsigned short count);
 
     // Sample from the specified distribution
-    const Atom* Sample(int rank);
+    const Outcome* Sample(int rank);
     // Returns the number put in the list
-    int GetAtomsByRank(int rank, const Atom** outList, int outCapacity);
+    int GetOutcomesByRank(int rank, const Outcome** outList, int outCapacity);
 };

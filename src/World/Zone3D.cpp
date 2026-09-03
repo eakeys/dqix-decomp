@@ -129,7 +129,7 @@ void Zone3D::SwitchZone(unsigned short newID)
     firstBMDJStruct_41c_ = 0;
     firstModel_418_ = NULL;
     unknown_476_ = 0;
-    unknown_477_ = 0;
+    numChests_ = 0;
     unknown_82c_ = 0;
     unknown_474_ = 0;
     unknown_82c_ = 0; // why zero it twice?

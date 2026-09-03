@@ -1,6 +1,7 @@
 #include <globaldefs.h>
 #include "Grotto/Main/TileFeatures.h"
 #include "World/Zone3D.h"
+#include "Combat/Main/BattleList.h"
 #include "std_library_functions.h"
 
 #ifdef jpn
@@ -28,7 +29,10 @@
 
 extern "C"
 {
+    // get timer (seconds since game start?)
+    void func_020105a8(BattleStruct*, int*);
     Zone3D_BMDJStruct* func_020196fc(Zone3D*, int);
+    void* func_0202ae18();
 }
 
 struct RelativePosition
@@ -316,3 +320,22 @@ int Zone3D::GetGrottoObjectPositionOrientation(int tileX, int tileY, fix32_t *ou
     *outY += (fix32_t)(tileY * 8.0f * 4096.0f);
     return direction;
 }
+
+/* // wip, come back after decomping blue chest script stuff
+bool Zone3D::PlaceGrottoChestsAndDetermineContents(const void *treasureArchive)
+{
+    BattleStruct* battle = GetBattleStruct();
+    ActiveGrottoClass* grotto = &grotto_;
+    FloorMap* floorMap = &grotto->floorMap;
+    void* struct0202ae18 = func_0202ae18();
+    numChests_ = floorMap->chestCount;
+    if (numChests_ == 0)
+    {
+        int timeSeconds;
+        func_020105a8(battle, &timeSeconds);
+        int floor = currentGrottoFloor_23ba_;
+        int seed = grotto->GetActiveGrottoSeed();
+        srand(timeSeconds + seed + floor);
+        return false;
+    }
+}*/

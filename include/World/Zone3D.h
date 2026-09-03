@@ -73,7 +73,8 @@ public:
 
     short unknown_474_;
     char unknown_476_;
-    char unknown_477_;
+    // this seems to include blue and red chests
+    unsigned char numChests_;
     int unknown_478_;
     int unknown_47c_;
 
@@ -161,5 +162,8 @@ public:
     void RotateGrottoTileFeaturePlacementData(unsigned char* placementArray, int numTurns);
     void RotateGrottoObjectDirectionBitmask(unsigned char* mask, int numTurns);
     int GetGrottoObjectPositionOrientation(int tileX, int tileY, fix32_t* outX, fix32_t* outY,
-    const TileFeaturePlacementData* tileDataArray, bool preferFaceDown);
+        const TileFeaturePlacementData* tileDataArray, bool preferFaceDown);
+
+    // pass the contents of data/scenario/treasure.nsarc
+    bool PlaceGrottoChestsAndDetermineContents(const void* treasureArchive);
 };

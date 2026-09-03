@@ -15,11 +15,13 @@ struct Struct_ov017_44C8
 {
     char unknown_0[0x38];
 
+    SafeAllocator allocator_array_38[17];
+    SafeAllocator lootableContainerAllocator_18c_;
 #if defined(usa)
-    SafeAllocator allocator_array_38[33];
+    SafeAllocator allocator_array_1a0[15];
     char unknown_2cc[0xe70];
 #elif defined(jpn)
-    SafeAllocator allocator_array_38[29];
+    SafeAllocator allocator_array_1a0[11];
     char unknown_2cc[0xcb0];
 #endif
 

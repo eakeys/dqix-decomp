@@ -48,6 +48,7 @@ public:
         fix16_t unk_20; 
     };
 
+    // Uses include stairs in grottos
     struct Opcode68Entry
     {
         int unk_0;
@@ -65,6 +66,7 @@ public:
     };
 
     // Used by opcodes 6a, 6b, 73, 74
+    // Uses include chests in grottos
     struct Opcode6aEntry
     {
         unsigned short unk_0;

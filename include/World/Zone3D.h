@@ -8,6 +8,7 @@
 #include "Graphics/LightingInfo.h"
 #include "Grotto/Main/TileFeatures.h"
 #include "ZoneFeatures.h"
+#include "Chest.h"
 #include "MapListLoader.h"
 
 struct Zone3D_StructPtr_8
@@ -75,12 +76,15 @@ public:
     char unknown_476_;
     // this seems to include blue and red chests
     unsigned char numChests_;
-    int unknown_478_;
-    int unknown_47c_;
+    int unknown_478_; // pointer to array of something counted by unknown_476. Stride 0x368
+    Chest* chests_;
 
     char unk_480[0x498 - 0x480];
-    Model3D models_498_[2];
-    char unk_5f0[0x82c - 0x5f0];
+    // used for both red and blue chests, the color/palette is varied per draw call
+    Model3D chestBaseModel_;
+    Model3D chestLidModel_;
+    unsigned int chestPaletteVRAMOffsets_[4];
+    char unk_600[0x82c - 0x600];
 
     int unknown_82c_;
 
@@ -109,7 +113,9 @@ public:
     ActiveGrottoClass grotto_; // offset 23ec in USA. this is 0x20 bytes larger in JPN
     char unk_2664[0x2724 - 0x2664];
     char unknown_struct_2724_[0xc];
-    char unk_2730[0x2754 - 0x2730];
+    char unk_2730[0x274c - 0x2730];
+    int maybeShouldDrawChests_274c_;
+    int unknown_2750_; // used in func_0201730c
     char unknown_struct_2754_[0x18];
     char unk_276c[0x2820 - 0x276c];
     char unknown_2820_;
@@ -150,6 +156,10 @@ public:
     void QueueLoadATS_AMBL();
     // usa: func_02014c04
     bool UnpackATS_AMBL();
+
+
+    // usa: func_02017540
+    void DrawChests();
 
     // Grotto functionality, this is also part of the class but we keep it in a separate
     // file for now. (It will probably need to go in one file eventually to make

@@ -12,7 +12,7 @@
 // we still need to include this file because of Vector3i::operator= being
 // implicitly defined here, so use this to include all the other functions 
 // defined after it (a very incomplete list atm)
-// #define ZONE3D_EXPERIMENTAL
+ #define ZONE3D_EXPERIMENTAL
 
 #if defined(jpn)
 #define func_0200fdcc func_0200fc28
@@ -58,7 +58,12 @@ extern "C"
     void func_02013750(Zone3D*, bool);
     void func_02014414(Zone3D*, const void*, unsigned);
     void func_02014a24(Zone3D*, void*);
+    // submit matrix to RenderConfig rotation
+    void func_02016d8c(const Matrix3x3*);
 }
+
+extern Vector3fix data_020e6e2c; // { 0x1000, 0x1000, 0x1000 }
+extern Vector3fix data_020e6e38; // { 0, 0x68b, -0x56c }
 
 extern char data_020ef0f0[]; // "data/map/maplist9.bin"
 extern char data_020ef106[]; // "%s/Z0%dM01.ambl"
@@ -131,7 +136,7 @@ void Zone3D::SwitchZone(unsigned short newID)
     atsAMBLLoadHandle_ = -1;
 
     unknown_478_ = 0;
-    unknown_47c_ = 0;
+    chests_ = NULL;
     unknown_834_ = 0;
     unknown_2820_ = 0;
 
@@ -672,6 +677,69 @@ void BuildArcMemberPath(const char* stem, const char* extension, char* path)
     {
         strcat(path, data_020ef1e6);
         strcat(path, extension);
+    }
+}
+
+void Zone3D::DrawChests()
+{
+    if (!maybeShouldDrawChests_274c_)
+        return;
+
+    NSBXXInternalModel* models[] = { chestBaseModel_.rawInternalModel_, chestLidModel_.rawInternalModel_, NULL };
+    NSBXXTex* textures[] = { chestBaseModel_.GetTEX0(), chestLidModel_.GetTEX0(), NULL };
+
+    Vector3fix unitScale = data_020e6e2c;
+    RenderConfig::SetObjectScale(&unitScale);
+
+    unsigned int* pPaletteVRAMOffset = &chestPaletteVRAMOffsets_[0];
+    for (int chestType = 0; chestType < 2; chestType++)
+    {
+        NSBXXInternalModel* const* loopModel = &models[0];
+        NSBXXTex* const* loopTexture = &textures[0];
+        while (*loopTexture != NULL && *loopModel != NULL)
+        {
+            NSBXX_Tex_WritePaletteVRAMOffset(*loopTexture, *pPaletteVRAMOffset);
+            pPaletteVRAMOffset++;
+            NSBXX_DetachTexturePaletteFromModel(*loopModel);
+            NSBXX_AttachTexturePaletteToModel(*loopModel, *loopTexture);
+            loopTexture++;
+            loopModel++;
+        }
+
+        Chest* loopChest = &chests_[0];
+        for (int chestIdx = 0; chestIdx < numChests_; loopChest++, chestIdx++)
+        {
+            if (loopChest->maybeFlags_ == 0)
+                continue;
+            if ((chestType == 0 && !loopChest->isBlue_) || (chestType == 1 && loopChest->isBlue_))
+            {
+                Vector3fix drawPos = loopChest->position_;
+                fix32_t chestRotation = loopChest->rotation_;
+                fix32_t lidRotation = loopChest->lidRotation_;
+                RenderConfig::SetObjectPosition(&drawPos);
+                Matrix3x3 rotationMatrix;
+                fix32_t cosine = fix32cos(chestRotation);
+                fix32_t sine = fix32sin(chestRotation);
+                Mat3x3_WriteRotationY(&rotationMatrix, sine, cosine);
+                func_02016d8c(&rotationMatrix);
+                RenderConfig::SubmitToFifo();
+                chestBaseModel_.DrawMeshWithMaterial(true, 0, 0, true);
+
+                Vector3fix lidPosRelative = data_020e6e38;
+                Mat3x3_ApplyToVector(&lidPosRelative, &rotationMatrix, &lidPosRelative);
+                Vector3fix_Add(&drawPos, &lidPosRelative, &drawPos);
+                RenderConfig::SetObjectPosition(&drawPos);
+                cosine = fix32cos(lidRotation);
+                sine = fix32sin(lidRotation);
+                Matrix3x3 lidRotationMatrix;
+                Mat3x3_WriteRotationX(&lidRotationMatrix, sine, cosine);
+                Matrix3x3 lidTotalRotation;
+                Mat3x3_Multiply(&lidRotationMatrix, &rotationMatrix, &lidTotalRotation);
+                func_02016d8c(&lidTotalRotation);
+                RenderConfig::SubmitToFifo();
+                chestLidModel_.DrawMeshWithMaterial(true, 0, 0, true);
+            }
+        }
     }
 }
 

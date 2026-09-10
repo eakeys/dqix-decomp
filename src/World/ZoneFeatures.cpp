@@ -16,9 +16,9 @@ extern Script::OpcodeLookupEntry data_020ef388[];
 
 struct Struct_020fdc20
 {
-    ZoneFeatures::Opcode6aEntry* currentEntry;
+    ZoneFeatures::InteractableFeature* currentEntry;
     SafeAllocator* allocator;
-    ZoneFeatures* warp;
+    ZoneFeatures* features;
 } extern data_020fdc20;
 
 extern "C"
@@ -30,7 +30,7 @@ extern "C"
 
 int WarpScript_Opcode_64(Script::Parameter* params, int numParams)
 {
-    data_020fdc20.warp->AllocateOpcode64Entries(params[0].ToInt(), data_020fdc20.allocator);
+    data_020fdc20.features->AllocateOpcode64Entries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
@@ -73,13 +73,13 @@ int WarpScript_Opcode_65(Script::Parameter* params, int numParams)
     else
         strcpy(entry.string_30, string3);
 
-    data_020fdc20.warp->CreateOpcode64Entry(entry);
+    data_020fdc20.features->CreateOpcode64Entry(entry);
     return 1;
 }
 
 int WarpScript_Opcode_7d(Script::Parameter* params, int numParams)
 {
-    data_020fdc20.warp->AllocateGrottoTileFeaturePlacementEntries(params[0].ToInt(), data_020fdc20.allocator);
+    data_020fdc20.features->AllocateGrottoTileFeaturePlacementEntries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
@@ -92,13 +92,13 @@ int WarpScript_Opcode_7e(Script::Parameter* params, int numParams)
     for (int i = 0; i < 9; i++)
         placement.directionBitmasks[i] = (params++)->ToInt();
 
-    data_020fdc20.warp->CreateGrottoTileFeaturePlacementEntry(placement);
+    data_020fdc20.features->CreateGrottoTileFeaturePlacementEntry(placement);
     return 1;
 }
 
 int WarpScript_Opcode_66(Script::Parameter* params, int numParams)
 {
-    data_020fdc20.warp->AllocateOpcode66Entries(params[0].ToInt(), data_020fdc20.allocator);
+    data_020fdc20.features->AllocateOpcode66Entries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
@@ -130,14 +130,14 @@ int WarpScript_Opcode_67(Script::Parameter* params, int numParams)
     entry.unk_18[1] = arg7;
     entry.unk_20 = 4096.0f * arg8;
     
-    data_020fdc20.warp->CreateOpcode66Entry(entry);
+    data_020fdc20.features->CreateOpcode66Entry(entry);
 
     return 1;
 }
 
 int WarpScript_Opcode_68(Script::Parameter* params, int numParams)
 {
-    data_020fdc20.warp->AllocateOpcode68Entries(params[0].ToInt(), data_020fdc20.allocator);
+    data_020fdc20.features->AllocateOpcode68Entries(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
@@ -214,7 +214,7 @@ int WarpScript_Opcode_69(Script::Parameter* params, int numParams)
 
     if (!ProcessExtraOpcode69Params(p, numParams - (p - params), entry))
         return 0;
-    data_020fdc20.warp->CreateOpcode68Entry(entry);
+    data_020fdc20.features->CreateOpcode68Entry(entry);
     return 1;
 }
 
@@ -277,20 +277,20 @@ int WarpScript_Opcode_72(Script::Parameter* params, int numParams)
 
     if (!ProcessExtraOpcode69Params(params, numParams - (params - paramsStart), entry))
         return 0;
-    data_020fdc20.warp->CreateOpcode68Entry(entry);
+    data_020fdc20.features->CreateOpcode68Entry(entry);
     return 1;
 }
 
 int WarpScript_Opcode_6a(Script::Parameter* params, int numParams)
 {
-    data_020fdc20.warp->AllocateOpcode6aEntries(params[0].ToInt(), data_020fdc20.allocator);
+    data_020fdc20.features->AllocateInteractableFeatures(params[0].ToInt(), data_020fdc20.allocator);
     return 1;
 }
 
 int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
 {
     Script::Parameter* paramsStart = params;
-    ZoneFeatures::Opcode6aEntry entry;
+    ZoneFeatures::InteractableFeature entry;
     entry.Reset();
     int hash = (params++)->ToInt();
     entry.maybeType = hash;
@@ -323,9 +323,9 @@ int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
 
     if (entry.maybeType == 2)
     {
-        entry.unk_2c.type2.unk_0 = params[0].ToInt();
-        entry.unk_2c.type2.unk_1 = params[1].ToInt();
-        entry.unk_2c.type2.unk_2_high = params[2].ToInt();
+        entry.unk_2c.type2_door.unk_0 = params[0].ToInt();
+        entry.unk_2c.type2_door.unk_1 = params[1].ToInt();
+        entry.unk_2c.type2_door.unk_2_high = params[2].ToInt();
         params += 3;
     }
     else if (entry.maybeType == 3)
@@ -392,21 +392,21 @@ int WarpScript_Opcode_6b(Script::Parameter* params, int numParams)
     }
     else if (entry.maybeType == 5)
     {
-        entry.unk_2c.type5.unk_0 = params[0].ToInt();
-        entry.unk_2c.type5.unk_2 = params[1].ToInt();
-        entry.unk_2c.type5.unk_4 = 0;
+        entry.unk_2c.type5_cupboard.unk_0 = params[0].ToInt();
+        entry.unk_2c.type5_cupboard.unk_2 = params[1].ToInt();
+        entry.unk_2c.type5_cupboard.unk_4 = 0;
     }
     Struct_020fdc20* instance = &data_020fdc20;
     instance++; // do some nonsense to disable propagation optimizations
     entry.pNext = NULL;
-    (instance - 1)->warp->CreateOpcode6aEntry(entry);
+    (instance - 1)->features->CreateInteractableFeature(entry);
     return 1;
 }
 
-void ZoneFeatures::Opcode6aEntry::Reset()
+void ZoneFeatures::InteractableFeature::Reset()
 {
-    VectorizedMemset(this, 0, sizeof(Opcode6aEntry));
-    unk_0 = 0;
+    VectorizedMemset(this, 0, sizeof(InteractableFeature));
+    maybeFeatureID = 0;
     maybeType = 0;
     unk_20 = 0;
     unk_22 = 0;
@@ -435,9 +435,9 @@ int WarpScript_Opcode_6e(Script::Parameter* params, int numParams)
     params = params->ToVec3fix(&tempVector);
     fix32_t angle = fix32ReduceAngle0To2Pi(4096.0f * (params++)->ToFloat());
 
-    ZoneFeatures* warp = data_020fdc20.warp;
-    warp->vector_70_ = tempVector;
-    warp->angle_7c_ = angle;
+    ZoneFeatures* features = data_020fdc20.features;
+    features->vector_70_ = tempVector;
+    features->angle_7c_ = angle;
     return 1;
 }
 
@@ -446,13 +446,13 @@ int WarpScript_Opcode_70(Script::Parameter* params, int numParams)
     int red = (params++)->ToInt();
     int green = (params++)->ToInt();
     int blue = (params++)->ToInt();
-    data_020fdc20.warp->color_7e_ = red | (green << 5) | (blue << 10);
+    data_020fdc20.features->color_7e_ = red | (green << 5) | (blue << 10);
     return 1;
 }
 
 int WarpScript_Opcode_73(Script::Parameter* params, int numParams)
 {
-    ZoneFeatures::Opcode6aEntry entry;
+    ZoneFeatures::InteractableFeature entry;
     entry.Reset();
     entry.maybeType = (params++)->ToInt();
     Vector3fix tempVector;
@@ -471,7 +471,7 @@ int WarpScript_Opcode_73(Script::Parameter* params, int numParams)
     entry.unk_24 = zsqu;
     entry.unk_24 = xsqu + zsqu;
 
-    data_020fdc20.currentEntry = data_020fdc20.warp->CreateOpcode6aEntry(entry);
+    data_020fdc20.currentEntry = data_020fdc20.features->CreateInteractableFeature(entry);
     return 1;
 }
 
@@ -485,39 +485,39 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
     case 0:
         data_020fdc20.currentEntry->unk_2c.type0.unk_0 = 0;
         if (numParams != 0)
-            data_020fdc20.currentEntry->unk_0 = params->ToInt();
+            data_020fdc20.currentEntry->maybeFeatureID = params->ToInt();
         break;
     case 6:
         data_020fdc20.currentEntry->maybeType = 0;
         data_020fdc20.currentEntry->unk_2c.type0.unk_0 = 1;
         if (numParams != 0)
-            data_020fdc20.currentEntry->unk_0 = params->ToInt();
+            data_020fdc20.currentEntry->maybeFeatureID = params->ToInt();
         break;
     case 1:
         if (numParams != 0)
-            data_020fdc20.currentEntry->unk_0 = params->ToInt();
+            data_020fdc20.currentEntry->maybeFeatureID = params->ToInt();
         break;
     case 2:
         if (numParams == 3)
         {
-            data_020fdc20.currentEntry->unk_2c.type2.unk_0 = (params++)->ToInt();
-            data_020fdc20.currentEntry->unk_2c.type2.unk_1 = (params++)->ToInt();
-            data_020fdc20.currentEntry->unk_2c.type2.unk_2_high = (params++)->ToInt();
-            data_020fdc20.currentEntry->unk_2c.type2.unk_2_low = 0;
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_0 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_1 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_2_high = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_2_low = 0;
         }
         else
         {
             int numArgsConsumed = 0;
-            data_020fdc20.currentEntry->unk_2c.type2.unk_0 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_0 = (params++)->ToInt();
             numArgsConsumed++;
-            data_020fdc20.currentEntry->unk_2c.type2.unk_1 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_1 = (params++)->ToInt();
             numArgsConsumed++;
-            data_020fdc20.currentEntry->unk_2c.type2.unk_2_high = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_2_high = (params++)->ToInt();
             numArgsConsumed++;
-            data_020fdc20.currentEntry->unk_2c.type2.unk_2_low = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type2_door.unk_2_low = (params++)->ToInt();
             numArgsConsumed++;
             
-            if (data_020fdc20.currentEntry->unk_2c.type2.unk_2_high & 8)
+            if (data_020fdc20.currentEntry->unk_2c.type2_door.unk_2_high & 8)
             {
                 if (params->type == 0)
                 {
@@ -527,31 +527,31 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
                     
                     if (maybeZoneData == NULL)
                         return 0;
-                    data_020fdc20.currentEntry->unk_2c.type2.maybeZone = *maybeZoneData;
+                    data_020fdc20.currentEntry->unk_2c.type2_door.warpZone = *maybeZoneData;
                 }
                 else
                 {
-                    data_020fdc20.currentEntry->unk_2c.type2.maybeZone = (params++)->ToInt();
+                    data_020fdc20.currentEntry->unk_2c.type2_door.warpZone = (params++)->ToInt();
                     numArgsConsumed++;
                 }
-                data_020fdc20.currentEntry->unk_2c.type2.unk_6 = (params++)->ToInt();
+                data_020fdc20.currentEntry->unk_2c.type2_door.unk_6 = (params++)->ToInt();
                 numArgsConsumed++;
-                data_020fdc20.currentEntry->unk_2c.type2.unk_8 = (params++)->ToInt();
+                data_020fdc20.currentEntry->unk_2c.type2_door.unk_8 = (params++)->ToInt();
                 numArgsConsumed++;
                 Vector3fix tempVector;
                 params = params->ToVec3fix(&tempVector);
                 numArgsConsumed += 3;
-                data_020fdc20.currentEntry->unk_2c.type2.vectors_c[0] = tempVector;
-                data_020fdc20.currentEntry->unk_2c.type2.unk_3c = 4096.0f * (params++)->ToFloat();
+                data_020fdc20.currentEntry->unk_2c.type2_door.vectors_c[0] = tempVector;
+                data_020fdc20.currentEntry->unk_2c.type2_door.unk_3c = 4096.0f * (params++)->ToFloat();
                 numArgsConsumed++;
-                data_020fdc20.currentEntry->unk_2c.type2.unk_3e = 4096.0f * (params++)->ToFloat();
+                data_020fdc20.currentEntry->unk_2c.type2_door.unk_3e = 4096.0f * (params++)->ToFloat();
                 numArgsConsumed++;
                 
                 for (int i = 1; i < 4; i++)
                 {
                     params = params->ToVec3fix(&tempVector);
                     numArgsConsumed += 3;
-                    data_020fdc20.currentEntry->unk_2c.type2.vectors_c[i] = tempVector;
+                    data_020fdc20.currentEntry->unk_2c.type2_door.vectors_c[i] = tempVector;
                 }
             }
             if (numArgsConsumed < numParams)
@@ -564,9 +564,9 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
                 (void)((params++)->ToInt());
                 numArgsConsumed++;
             }
-            if (data_020fdc20.currentEntry->unk_2c.type2.unk_2_high & 0x20)
+            if (data_020fdc20.currentEntry->unk_2c.type2_door.unk_2_high & 0x20)
             {
-                data_020fdc20.currentEntry->unk_2c.type2.unk_40 = 4096.0f * (params++)->ToFloat();
+                data_020fdc20.currentEntry->unk_2c.type2_door.unk_40 = 4096.0f * (params++)->ToFloat();
             }
         }
         break;
@@ -606,21 +606,21 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
         break;
     }
     case 5:
-        data_020fdc20.currentEntry->unk_2c.type5.unk_0 = (params++)->ToInt();
-        data_020fdc20.currentEntry->unk_2c.type5.unk_2 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type5_cupboard.unk_0 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type5_cupboard.unk_2 = (params++)->ToInt();
         if (numParams > 2)
-            data_020fdc20.currentEntry->unk_0 = (params++)->ToInt();
+            data_020fdc20.currentEntry->maybeFeatureID = (params++)->ToInt();
         break;
     case 8:
         if (numParams != 0)
-            data_020fdc20.currentEntry->unk_0 = (params++)->ToInt();
+            data_020fdc20.currentEntry->maybeFeatureID = (params++)->ToInt();
         break;
     case 9:
-        data_020fdc20.currentEntry->unk_2c.type9.unk_0 = (params++)->ToInt();
-        data_020fdc20.currentEntry->unk_2c.type9.unk_2 = (params++)->ToInt();
-        data_020fdc20.currentEntry->unk_2c.type9.unk_4 = (params++)->ToInt();
-        data_020fdc20.currentEntry->unk_2c.type9.unk_5 = (params++)->ToInt();
-        if (data_020fdc20.currentEntry->unk_2c.type9.unk_5 & 2)
+        data_020fdc20.currentEntry->unk_2c.type9_ladder.ladderPointID = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type9_ladder.otherEndPointID = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_4 = (params++)->ToInt();
+        data_020fdc20.currentEntry->unk_2c.type9_ladder.flags = (params++)->ToInt();
+        if (data_020fdc20.currentEntry->unk_2c.type9_ladder.flags & 2)
         {
             if (params->type == 0)
             {
@@ -629,22 +629,22 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
                 
                 if (maybeZoneData == NULL)
                     return 0;
-                data_020fdc20.currentEntry->unk_2c.type9.maybeZone = *maybeZoneData;
+                data_020fdc20.currentEntry->unk_2c.type9_ladder.warpDestinationZone = *maybeZoneData;
             }
             else
             {
-                data_020fdc20.currentEntry->unk_2c.type9.maybeZone = (params++)->ToInt();
+                data_020fdc20.currentEntry->unk_2c.type9_ladder.warpDestinationZone = (params++)->ToInt();
             }
-            data_020fdc20.currentEntry->unk_2c.type9.unk_8 = (params++)->ToInt();
-            data_020fdc20.currentEntry->unk_2c.type9.unk_a = (params++)->ToInt();
-            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_c);
-            data_020fdc20.currentEntry->unk_2c.type9.unk_3c = 4096.0f * (params++)->ToFloat();
-            data_020fdc20.currentEntry->unk_2c.type9.unk_3e = 4096.0f * (params++)->ToFloat();
-            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_18);
-            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_24);
-            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9.vector_30);
-            data_020fdc20.currentEntry->unk_2c.type9.unk_40 = 4096.0f * (params++)->ToFloat();
-            data_020fdc20.currentEntry->unk_2c.type9.unk_42 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_8 = (params++)->ToInt();
+            data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_a = (params++)->ToInt();
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9_ladder.warpDestinationPosition);
+            data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_3c = 4096.0f * (params++)->ToFloat();
+            data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_3e = 4096.0f * (params++)->ToFloat();
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9_ladder.vector_18);
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9_ladder.vector_24);
+            params = params->ToVec3fix(&data_020fdc20.currentEntry->unk_2c.type9_ladder.vector_30);
+            data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_40 = 4096.0f * (params++)->ToFloat();
+            data_020fdc20.currentEntry->unk_2c.type9_ladder.unk_42 = (params++)->ToInt();
         }
         break;
     case 10:
@@ -667,7 +667,7 @@ int WarpScript_Opcode_74(Script::Parameter* params, int numParams)
         data_020fdc20.currentEntry->unk_2c.type12.unk_2 = (params++)->ToInt();
 
         // why didn't we do this 200 lines ago...
-        ZoneFeatures::Opcode6aEntry* entry = data_020fdc20.currentEntry;
+        ZoneFeatures::InteractableFeature* entry = data_020fdc20.currentEntry;
         switch (entry->unk_2c.type12.subtype)
         {
         case 1:
@@ -709,7 +709,7 @@ int WarpScript_Opcode_7b(Script::Parameter* params, int numParams)
         (ZoneFeatures::Opcode7bEntry*)data_020fdc20.allocator->Allocate(count * sizeof(ZoneFeatures::Opcode7bEntry));
     if (alloc == NULL)
         return 0;
-    data_020fdc20.warp->SetOpcode7bAllocation(alloc, count);
+    data_020fdc20.features->SetOpcode7bAllocation(alloc, count);
     return 1;
 }
 
@@ -767,7 +767,7 @@ int WarpScript_Opcode_7c(Script::Parameter* params, int numParams)
 
     Struct_020fdc20* instance = &data_020fdc20;
     instance++;
-    (instance - 1)->warp->CreateOpcode7bEntry(entry);
+    (instance - 1)->features->CreateOpcode7bEntry(entry);
     return 1;
 }
 
@@ -775,7 +775,7 @@ void ExecuteZoneWarpScript(const void* data, unsigned int length, ZoneFeatures* 
 {
     if (length == 0)
         return;
-    data_020fdc20.warp = warp;
+    data_020fdc20.features = warp;
     data_020fdc20.allocator = alloc;
     data_020fdc20.currentEntry = NULL;
     
@@ -785,7 +785,7 @@ void ExecuteZoneWarpScript(const void* data, unsigned int length, ZoneFeatures* 
     script.Load(data, length);
     script.Execute();
 
-    data_020fdc20.warp = NULL;
+    data_020fdc20.features = NULL;
     data_020fdc20.allocator = NULL;
     data_020fdc20.currentEntry = NULL;
 }
@@ -907,19 +907,19 @@ void ZoneFeatures::CreateOpcode68Entry(const Opcode68Entry& source)
     arraySize68_++;
 }
 
-void ZoneFeatures::AllocateOpcode6aEntries(int count, SafeAllocator *alloc)
+void ZoneFeatures::AllocateInteractableFeatures(int count, SafeAllocator *alloc)
 {
-    entries6a_ = (Opcode6aEntry*)alloc->Allocate(count * sizeof(Opcode6aEntry));
+    entries6a_ = (InteractableFeature*)alloc->Allocate(count * sizeof(InteractableFeature));
     arraySize6a_ = 0;
     arrayCapacity6a_ = count;
 }
 
-ZoneFeatures::Opcode6aEntry* ZoneFeatures::CreateOpcode6aEntry(const Opcode6aEntry& source) 
+ZoneFeatures::InteractableFeature* ZoneFeatures::CreateInteractableFeature(const InteractableFeature& source) 
 {
     if (arraySize6a_ < arrayCapacity6a_)
     {
-        Opcode6aEntry& dest = entries6a_[arraySize6a_];
-        entries6a_[arraySize6a_].unk_0 = source.unk_0;
+        InteractableFeature& dest = entries6a_[arraySize6a_];
+        entries6a_[arraySize6a_].maybeFeatureID = source.maybeFeatureID;
         dest.maybeType = source.maybeType;
         dest.unk_8 = source.unk_8;
         dest.unk_14 = source.unk_14;

@@ -67,9 +67,12 @@ public:
 
     // Used by opcodes 6a, 6b, 73, 74
     // Uses include chests in grottos
-    struct Opcode6aEntry
+    struct InteractableFeature
     {
-        unsigned short unk_0;
+        // I don't know if this id is unique globally or just within its zone,
+        // but it seems to be used to identify certain things with special functionality
+        // e.g. which bookshelf gives what dialogue
+        unsigned short maybeFeatureID;
         int maybeType;
         WrappedVector3fix unk_8;
         WrappedVector3fix unk_14;
@@ -77,6 +80,8 @@ public:
         short unk_22;
         int unk_24;
         int unk_28;
+        // in addition to the types that don't have special data, it seems:
+        // 8 = bookshelf
         union
         {
             struct {
@@ -87,7 +92,7 @@ public:
                 unsigned char unk_1;
                 unsigned short unk_2_low : 4;
                 unsigned short unk_2_high : 12;
-                unsigned short maybeZone;
+                unsigned short warpZone;
                 unsigned short unk_6;
                 unsigned short unk_8;
                 char padding_a[2];
@@ -95,7 +100,7 @@ public:
                 fix16_t unk_3c;
                 fix16_t unk_3e;
                 fix32_t unk_40;
-            } type2;
+            } type2_door; // if you remove one of these, the corresponding door stays but you can't interact with it
             struct {
                 unsigned char unk_0;
             } type3;
@@ -114,16 +119,18 @@ public:
                 unsigned short unk_0;
                 unsigned short unk_2;
                 unsigned short unk_4;
-            } type5;
+            } type5_cupboard; // similar to doors, if removed you can't interact but still there
             struct {
-                unsigned short unk_0;
-                unsigned short unk_2;
+                unsigned short ladderPointID;
+                unsigned short otherEndPointID;
                 unsigned char unk_4;
-                unsigned char unk_5;
-                unsigned short maybeZone;
+                // bit 0: this endpoint is at the top going down
+                // bit 1: has a warp at this point?
+                unsigned char flags;
+                unsigned short warpDestinationZone;
                 unsigned short unk_8;
                 unsigned short unk_a;
-                Vector3fix vector_c;
+                Vector3fix warpDestinationPosition;
                 Vector3fix vector_18;
                 Vector3fix vector_24;
                 Vector3fix vector_30;
@@ -131,7 +138,7 @@ public:
                 fix16_t unk_3e;
                 fix16_t unk_40;
                 unsigned short unk_42;
-            } type9;
+            } type9_ladder; // (endpoint of) climbable ladder/vine in heights of loneliness
             struct {
                 unsigned short unk_0;
                 fix16_t unk_2;
@@ -173,7 +180,7 @@ public:
                 };
             } type12;
         } unk_2c;
-        Opcode6aEntry* pNext;
+        InteractableFeature* pNext;
 
         void Reset();
     };
@@ -202,7 +209,7 @@ public:
     int arraySize68_;
     int arrayCapacity68_;
 
-    Opcode6aEntry* entries6a_;
+    InteractableFeature* entries6a_;
     int arraySize6a_;
     int arrayCapacity6a_;
 
@@ -210,7 +217,7 @@ public:
     int grottoTileFeatureEntryCount_;
     int grottoTileFeatureEntryCapacity_;
 
-    Opcode6aEntry* entries6aByType_[13];
+    InteractableFeature* entries6aByType_[13];
 
     Vector3fix vector_70_;
     fix16_t angle_7c_;
@@ -241,10 +248,8 @@ public:
     void AllocateOpcode68Entries(int count, SafeAllocator* alloc);
     void CreateOpcode68Entry(const Opcode68Entry& data);
 
-    void AllocateOpcode6aEntries(int count, SafeAllocator* alloc);
-    Opcode6aEntry* CreateOpcode6aEntry(const Opcode6aEntry& data);
-    // not real, just here for testing purposes
-    Opcode6aEntry* CreateOpcode6aEntry(const Opcode6aEntry& data, int fakeArg);
+    void AllocateInteractableFeatures(int count, SafeAllocator* alloc);
+    InteractableFeature* CreateInteractableFeature(const InteractableFeature& data);
 
     void SetOpcode7bAllocation(Opcode7bEntry* array, unsigned short capacity);
     void CreateOpcode7bEntry(const Opcode7bEntry& data);

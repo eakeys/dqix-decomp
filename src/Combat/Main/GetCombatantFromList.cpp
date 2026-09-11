@@ -12,7 +12,7 @@ ARM struct CombatantStruct* GetCombatantFromList(struct BattleStruct *battleStru
     if (combatant == 0) {
         return 0;
     }
-    if ((combatant->flags & 0x80) == 0) {
+    if ((combatant->object_.unknown_0_ & 0x80) == 0) {
         combatant = 0;
     }
     return combatant;

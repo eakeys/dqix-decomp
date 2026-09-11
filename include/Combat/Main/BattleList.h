@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../World/Object3D.h"
+
 struct PrimaryCombatStats {
     unsigned short currHP;
     unsigned short currMP;
@@ -31,8 +33,8 @@ struct ModifiableCombatStats {
 };
 
 struct CombatantStruct {
-    unsigned short flags;
-    char unk[0x132];
+    Object3D object_;
+    char unk_ac[0x86];
     struct BaseCombatStats* baseStats; // TODO: holds more general info than just stats
     struct ModifiableCombatStats* currentStats; // includes things like buffs being applied
 };
@@ -41,6 +43,8 @@ struct BattleStruct {
     int unk0;
     int unk4;
     struct CombatantStruct* combatantList[0xe9]; // TODO: validate this size as well as this struct as a whole
+    int playerCombatantIndex;
 };
 struct BattleStruct* GetBattleStruct();
+CombatantStruct* GetPlayerCombatant(BattleStruct* battle);
 struct CombatantStruct* GetCombatantFromList(struct BattleStruct* battleStruct, int id);

@@ -1,6 +1,8 @@
 #include "Graphics/Text.h"
 #include "System/Graphics.h"
 #include "Graphics/Vector.h"
+#include "Filesystem/FileIO.h"
+#include "Filesystem/BackgroundLoader.h"
 #include <globaldefs.h>
 
 extern unsigned int data_021077fc; // palette VRAM offset for glyphs
@@ -8,7 +10,15 @@ struct Struct_02107800
 {
     char unk_0[0x1c];
     TextManager* manager;
+    char unk_20[0xc];
+    FontIndexFile* pFontIndexFiles[2];
+    FontDataFile* pFontDataFiles[2];
 } extern data_02107800;
+
+extern char data_020f0049[]; // "data/pack_lv5/fi_%s.bin"
+extern char data_020f0061[]; // "data/pack_lv5/fd_%s.bin"
+extern char data_020f0079[]; // "s7"
+extern char data_020f007c[]; // "me"
 
 extern "C"
 {
@@ -119,4 +129,68 @@ void WriteTexCoords(fix32_t x, fix32_t y)
 TextManager* TextManager::GetInstance()
 {
     return data_02107800.manager;
+}
+
+FontIndexFile::CharacterEntry* GetNextFontCharacterEntry(const char* tag, int fontType)
+{
+    if (tag == NULL)
+        return NULL;
+
+    FontIndexFile* indexFile = data_02107800.pFontIndexFiles[fontType];
+    for (unsigned int i = 0; i < indexFile->numCharEntries; i++)
+    {
+        FontIndexFile::CharacterEntry* entry = &indexFile->characters[i];
+        if (memcmp(entry->tag, tag, entry->tagLength) == 0)
+            return entry;
+    }
+
+    return NULL;
+}
+
+void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIndex, FontDataFile** ppData)
+{
+    char fileName[64] = {0};
+    sprintf(fileName, data_020f0049, name);
+    unsigned int fileSize = 0;
+    LoadFileIntoMemory(fileName, data_0211e33c, &fileSize);
+
+    if (fileSize != 0)
+    {
+        *ppIndex = (FontIndexFile*)alloc->Allocate(fileSize);
+        memcpy(*ppIndex, data_0211e33c, fileSize);
+        FontIndexFile* basePtr = *ppIndex;
+        intptr_t baseAddr = (intptr_t)basePtr;
+        // convert stored offsets into legitimate pointers
+        basePtr->unknownEntries = (int*)(baseAddr + (intptr_t)basePtr->unknownEntries);
+        basePtr->characters = (FontIndexFile::CharacterEntry*)(baseAddr + (intptr_t)basePtr->characters);
+        basePtr->tagPool = (const char*)(baseAddr + (intptr_t)basePtr->tagPool);
+
+        FontIndexFile::CharacterEntry* entry;
+        for (unsigned int i = 0; i < basePtr->numCharEntries; i++)
+        {
+            entry = basePtr->characters + i;
+            entry->tag = (const char*)(baseAddr + (intptr_t)entry->tag);
+        }
+    }
+
+    memset(fileName, 0, sizeof(fileName));
+    sprintf(fileName, data_020f0061, name);
+    fileSize = 0;
+    LoadFileIntoMemory(fileName, data_0211e33c, &fileSize);
+
+    if (fileSize != 0)
+    {
+        *ppData = (FontDataFile*)alloc->Allocate(fileSize);
+        memcpy(*ppData, data_0211e33c, fileSize);
+        FontDataFile* basePtr = *ppData;
+        basePtr->ptr_c = (void*)((intptr_t)basePtr + (intptr_t)basePtr->ptr_c);
+    }
+}
+
+void LoadCustomFonts(SafeAllocator* alloc)
+{
+    BackgroundLoader::AddLockGlobal();
+    LoadCustomFont(alloc, data_020f0079, &data_02107800.pFontIndexFiles[0], &data_02107800.pFontDataFiles[0]);
+    LoadCustomFont(alloc, data_020f007c, &data_02107800.pFontIndexFiles[1], &data_02107800.pFontDataFiles[1]);
+    BackgroundLoader::RemoveLockGlobal();
 }

@@ -1,7 +1,7 @@
 #include "Graphics/Text.h"
 #include "std_library_functions.h"
 #include "Util/StringTests.h"
-#include "Combat/Main/BattleList.h"
+#include "GameState/GameState.h"
 #include <globaldefs.h>
 
 extern "C"
@@ -210,11 +210,11 @@ void TextManager::SubstituteUnsupportedCharacters(const char* input, char* outpu
     *output = *input;
 }
 
-int TextConditional_Value1Single(BattleStruct*, TextManager* mgr, int) { return (mgr->valueLookup[0] == 1) ? 0 : 1; }
-int TextConditional_Value2Single(BattleStruct*, TextManager* mgr, int) { return (mgr->valueLookup[1] == 1) ? 0 : 1; }
-int TextConditional_Value3Single(BattleStruct*, TextManager* mgr, int) { return (mgr->valueLookup[2] == 1) ? 0 : 1; }
-int TextConditional_Value4Single(BattleStruct*, TextManager* mgr, int) { return (mgr->valueLookup[3] == 1) ? 0 : 1; }
-int TextConditional_Value5Single(BattleStruct*, TextManager* mgr, int) { return (mgr->valueLookup[4] == 1) ? 0 : 1; }
+int TextConditional_Value1Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[0] == 1) ? 0 : 1; }
+int TextConditional_Value2Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[1] == 1) ? 0 : 1; }
+int TextConditional_Value3Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[2] == 1) ? 0 : 1; }
+int TextConditional_Value4Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[3] == 1) ? 0 : 1; }
+int TextConditional_Value5Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[4] == 1) ? 0 : 1; }
 
 // Takes a string of form
 // .....[match]....[open]....[close]
@@ -263,7 +263,7 @@ struct ConditionProcessor
     };
 
     TagWordSet tagWordSets[4];
-    int (*callback)(BattleStruct*, TextManager*, int);
+    int (*callback)(GameState*, TextManager*, int);
 };
 typedef char TagWord[12];
 
@@ -291,7 +291,7 @@ void BuildConditionTag(const ConditionProcessor::TagWordSet& words, char* out)
 
 void TextManager::SubstituteConditionals(char *input, char *output, int fontType)
 {
-    BattleStruct* battle = GetBattleStruct();
+    GameState* gameState = GameState::GetInstance();
     while (true)
     {
         char nextChar = *input;
@@ -307,7 +307,7 @@ void TextManager::SubstituteConditionals(char *input, char *output, int fontType
                 BuildConditionTag(condition->tagWordSets[0], ifTag);
                 if (CaseInsensitiveDoesStringBeginWith(input, ifTag))
                 {
-                    int evaluation = condition->callback(battle, this, fontType);
+                    int evaluation = condition->callback(gameState, this, fontType);
                     char elseOrSecondTag[48] = {0};
                     char thirdTag[48] = {0};
                     char endifTag[48] = {0};

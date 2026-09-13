@@ -32,7 +32,10 @@ public:
     GameResources* pResources_;
     char unk_4[4];
     GameObject* objects_[0xe9];
-    int protagonistObjectIndex_;
+    // This is the index of the protagonist on the current physical cartridge,
+    // i.e. if you visit another player's world, this is still the index of
+    // your character. (The hero of that world is index 0)
+    int cartridgeProtagonistObjectIndex_;
     void* unknown_3b0_; // see func_020100bc, LightingManager::MaybeComputeHorizonPosition. Probably a high level camera
     unsigned int effectiveDeltaTimeMilliseconds_;
     unsigned int trueDeltaTimeMilliseconds_;
@@ -56,7 +59,12 @@ public:
     char unk_3f8[0x371c - 0x3f8];
 #endif
 
-    unsigned char unknownObjectIndex_397c_; // jpn: offset 0x731c instead
+
+    // The index of the character that you currently control. In single player
+    // this is the first living party member. In multiplayer as a guest this
+    // is your character's index (matching protagonistObjectIndex_), and as a host
+    // this is the first living party member from your own cartridge
+    unsigned char partyLeaderObjectIndex_;
     char unk_397d[0x63e0 - 0x397d];
 
     unsigned char* treasureMapLanguageData_;
@@ -76,9 +84,14 @@ public:
     // only disables wandering monsters, while keeping whistle spawns and grotto
     // bosses in tact
     GameObject* GetMaybeWanderingMonsterByIndex(int idx);
-    GameObject* GetProtagonist();
-    // Seems to also be the protagonist, checks the bit at 0x397c
-    GameObject* GetUnknownGameObject();
+    // If you're visiting another world, this is *your* main character, i.e. the
+    // person Stella talks to in battle records. The host's main character (hero)
+    // is index 0
+    GameObject* GetCartridgeProtagonist();
+    // The character that you currently control (first living party member in
+    // single player or as host, or your main/only character when you're visiting
+    // another world)
+    GameObject* GetPartyLeader();
     // Like GetCombatantByIndex() but checks for bitmask 0x800 instead.
     GameObject* GetPartyMemberByIndex(int idx);
     // Like GetCombatantByIndex() but checks for bitmask 0x20 instead. In practice

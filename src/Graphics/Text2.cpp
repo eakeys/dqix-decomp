@@ -13,9 +13,6 @@ extern "C"
     const char* func_020424ac(const char*);
     int func_02042658(int, int);
 
-    // make sequence of chars uppercase
-    void func_02067f5c(char*, int);
-
     // alternative strlen implementation
     int func_020d2ff0(const char*);
 }
@@ -58,6 +55,23 @@ extern char data_020f0988[]; // "//"
 extern char data_020f098c[]; // "[-]"
 extern char data_020f0990[]; // "-"
 extern char data_020f0992[]; // "\n" (the special character, not backslash and an n)
+
+void CapitalizeSection(char* str, int numChars)
+{
+    if (str == NULL)
+        return;
+    for (int i = 0; i < numChars; i++)
+    {
+        if (*str == 0)
+            break;
+
+        int c = *str;
+        if (c >= 'a' && c <= 'z')
+            c -= ('a' - 'A');
+        *str = c;
+        str++;
+    }
+}
 
 int GetNextNumberInString(const char* str)
 {
@@ -188,7 +202,7 @@ void TextManager::SubstituteUnsupportedCharacters(const char* input, char* outpu
             if (tagEnd != NULL)
             {
                 memcpy(output, input, tagEnd - input + 1);
-                func_02067f5c(output, tagEnd - input + 1);
+                CapitalizeSection(output, tagEnd - input + 1);
                 int copyLength = tagEnd - input;
                 input += copyLength + 1;
                 output += copyLength + 1;
@@ -357,4 +371,39 @@ void TextManager::SubstituteConditionals(char *input, char *output, int fontType
     }
 
     *output = '\0';
+}
+
+void TextManager::SubstituteCaps(char *input, char *output, int fontType)
+{
+    while (true)
+    {
+        if (*input == 0)
+            break;
+
+        if (*input == '<')
+        {
+            const char* tagEnd = func_020424ac(input);
+            if (tagEnd != NULL && memcmp(input + 1, data_020f0916, 4) == 0)
+            {
+                input = (char*)tagEnd + 1;
+                FontIndexFile::CharacterEntry* charEntry = GetNextFontCharacterEntry(input, fontType);
+                if (charEntry != NULL && charEntry->unk_5_bit_7)
+                {
+                    int tagLength = charEntry->tagLength;
+                    memcpy(output, input, tagLength);
+                    CapitalizeSection(output, tagLength);
+                    input += tagLength;
+                    output += tagLength;
+                }
+
+                continue;
+            }
+        }
+
+        *output = *input;
+        output++;
+        input++;
+    }
+
+    *output = 0;
 }

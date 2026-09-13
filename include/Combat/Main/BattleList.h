@@ -17,7 +17,7 @@ struct PrimaryCombatStats {
 };
 
 struct BaseCombatStats {
-    char unk[0x2C];
+    char unk[0x2C]; // part of this seems to the the (generic) name
     struct PrimaryCombatStats primaryStats;
 };
 

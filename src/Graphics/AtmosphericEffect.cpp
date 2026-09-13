@@ -751,7 +751,7 @@ void AtmosphericEffectSet::DetermineVisibilityFromTimeOfDay()
 
 void AtmosphericEffectSet::DetermineVisibilityFromUnknown()
 {
-    bool inputShouldHide = func_0204be20(func_02033fa0(GameState::GetInstance()->GetUnknownGameObject()));
+    bool inputShouldHide = func_0204be20(func_02033fa0(GameState::GetInstance()->GetPartyLeader()));
 
     if (inputShouldHide != unknown_14_bit_2_ || visibilityDirty_)
     {

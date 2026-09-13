@@ -19,6 +19,8 @@ struct FontIndexFile
         const char* tag;
         char unk_4;
         char tagLength : 6;
+        char unk_5_bit_6 : 1;
+        char unk_5_bit_7 : 1;
         char unk_6[2];
     };
 
@@ -53,6 +55,38 @@ struct Glyph
     // and item pickup in overland
     void Draw(int color, void* unknown, int alpha);
 };
+
+namespace StringBuilders
+{
+    int AddXTag(char* buffer, int x);
+    int AddYTag(char* buffer, int y);
+    int AddXYTag(char* buffer, int x, int y);
+    int AddWidthTag(char* buffer, int w);
+    int AddHeightTag(char* buffer, int h);
+    int AddWidthHeightTag(char* buffer, int w, int h);
+    // missing function? that uses <ENC=%d>
+    int AddIndexedTag(char* buffer, int index, const char* value);
+    int AddSolidRectTag(char* buffer, int col, int x, int y, int width, int height);
+    // missing function? using <SOLID=%d,%d>
+    int AddFrameTag(char* buffer, int col, int x, int y, int width, int height);
+    int AddWireTag(char* buffer, int col, int x, int y, int width, int height);
+    int AddLineTag(char* buffer, int y);
+    int AddLineXTag(char* buffer, int col, int left, int right, int y);
+    int AddLineYTag(char* buffer, int col, int x, int top, int bottom);
+    int AddSizeTag(char* buffer, int size);
+    int AddReducedPaletteTag(char* buffer, int reducedEnum);
+    int AddPaletteTag(char* buffer, int palette);
+    int AddCursorTag(char* buffer, int cursorPos);
+    int AddUATag(char* buffer, int arg1, int arg2, int arg3);
+    // missing AddUBTag, AddDATag?
+    int AddDBTag(char* buffer, int arg1, int arg2, int arg3);
+    int AddTenTag(char* buffer, int x, int y);
+    int AddTitleTag(char* buffer, const char* text, int index);
+    int AddTalkTag(char* buffer, const char* text);
+    int AddXRightTag(char* buffer, const char* text, int xright);
+    int AddText(char* buffer, const char* text);
+    int AddCenteredText(char* buffer, const char* text, int containerWidth, int fontIndex);
+}
 
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 
@@ -151,6 +185,12 @@ public:
     // func_02068dbc	<IF_LAST_LETTER_S_DE_ACTOR><ELSE_NOT_LAST_LETTER_S_DE_ACTOR><ENDIF_LAST_LETTER_S_DE_ACTOR>
     // func_02068dec	<IF_LAST_LETTER_S_DE_TARGET><ELSE_NOT_LAST_LETTER_S_DE_TARGET><ENDIF_LAST_LETTER_S_DE_TARGET>
     void SubstituteConditionals(char* input, char* output, int fontType);
+
+    // missing processing step 02069234 that handles tags like <LEADER>
+    // or <TMAP_SEC_1>, as well as some unknown stuff involving articles?
+
+    // Replaces e.g. "<CAP>hello" with "Hello"
+    void SubstituteCaps(char* input, char* output, int fontType);
 };
 
 // usa: func_0204254c

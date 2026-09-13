@@ -259,7 +259,7 @@ bool DetailedTreasureMapData::UpdateFollowingCompletion(bool levelledUp, unsigne
 #ifndef jpn
     // Based on how the jpn version works, I would guess this is undoing the
     // custom text encoding (e.g. lowercase a is 0x2A vs ascii 0x61)
-    void* playerRelatedPtr = *(void**)((intptr_t)GameState::GetInstance()->GetProtagonist() + 0x134);
+    void* playerRelatedPtr = *(void**)((intptr_t)GameState::GetInstance()->GetCartridgeProtagonist() + 0x134);
     char asciiName[10] = { 0 };
     func_020426bc(playerRelatedPtr, asciiName, 1);
 #else

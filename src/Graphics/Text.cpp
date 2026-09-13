@@ -15,6 +15,41 @@ struct Struct_02107800
     FontDataFile* pFontDataFiles[2];
 } extern data_02107800;
 
+extern char data_020efe78[]; // "<X=%d>"
+extern char data_020efe7f[]; // "<Y=%d>"
+extern char data_020efe86[]; // "<XY=%d,%d>"
+extern char data_020efe91[]; // "<W=%d>"
+extern char data_020efe98[]; // "<H=%d>"
+extern char data_020efe9f[]; // "<WH=%d,%d>"
+extern char data_020efeaa[]; // "<ENC=%d>"
+extern char data_020efeb3[]; // "<N=%d>%s</N>"
+extern char data_020efec0[]; // "<SDRC=%d,%d,%d,%d,%d>"
+extern char data_020efed6[]; // "<SOLID=%d,%d>"
+extern char data_020efee4[]; // "<FRAME=%d,%d,%d,%d,%d>"
+extern char data_020efefb[]; // "<WIRE=%d,%d,%d,%d,%d>"
+extern char data_020eff11[]; // "<LINE=%d>"
+extern char data_020eff1b[]; // "<LINEX=%d,%d,%d,%d>"
+extern char data_020eff2f[]; // "<LINEY=%d,%d,%d,%d>"
+extern char data_020eff43[]; // "<SIZE=%d>"
+extern char data_020eff4d[]; // "<PLTT=15>"
+extern char data_020eff57[]; // "<PLTT=11>"
+extern char data_020eff61[]; // "<PLTT=13>"
+extern char data_020eff6b[]; // "<PLTT=9>"
+extern char data_020eff74[]; // "<PLTT=%d>"
+extern char data_020eff7e[]; // "<SLT=%d>"
+extern char data_020eff87[]; // "<CURSOR=%d>"
+extern char data_020eff93[]; // "<UA=%d,%d,%d>"
+extern char data_020effa1[]; // "<UB=%d,%d,%d>"
+extern char data_020effaf[]; // "<DA=%d,%d,%d>"
+extern char data_020effbd[]; // "<DB=%d,%d,%d>"
+extern char data_020effcb[]; // "<TEN=%d,%d>"
+extern char data_020effd7[]; // "<TITLE=%d>%s</TITLE>"
+extern char data_020effec[]; // "<TALK>%s</TALK>"
+extern char data_020efffc[]; // "<XR=%d>%s</XR>"
+extern char data_020f000b[]; // "/data/ani/windata3.bncg"
+extern char data_020f0023[]; // "/data/pack_lv5/font_lv5.gp2"
+extern char data_020f003f[]; // "f8.mes"
+extern char data_020f0046[]; // "%d"
 extern char data_020f0049[]; // "data/pack_lv5/fi_%s.bin"
 extern char data_020f0061[]; // "data/pack_lv5/fd_%s.bin"
 extern char data_020f0079[]; // "s7"
@@ -22,7 +57,11 @@ extern char data_020f007c[]; // "me"
 
 extern "C"
 {
+    // measure text width
+    int func_020420e8(const char*, int);
 
+    // alternative strlen
+    int func_020d2ff0(const char*);
 }
 
 static inline void WriteVertex16(unsigned short x, fix32_t y, unsigned short z)
@@ -124,6 +163,197 @@ void WriteTexCoords(fix32_t x, fix32_t y)
     short yFixed4 = y >> 8;
 
     GXFIFO_VERTEX_TEXCOORD = (unsigned short)xFixed4 | ((unsigned short)yFixed4 << 16);
+}
+
+namespace StringBuilders
+{
+int AddXTag(char* buffer, int x)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efe78, x) - buffer;
+}
+
+int AddYTag(char* buffer, int y)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efe7f, y) - buffer;
+}
+
+int AddXYTag(char* buffer, int x, int y)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efe86, x, y) - buffer;
+}
+
+int AddWidthTag(char* buffer, int w)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efe91, w) - buffer;
+}
+
+int AddHeightTag(char* buffer, int h)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efe98, h) - buffer;
+}
+
+int AddWidthHeightTag(char* buffer, int w, int h)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efe9f, w, h) - buffer;
+}
+
+// missing function? that uses <ENC=%d>
+
+int AddIndexedTag(char* buffer, int index, const char* value)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efeb3, index, value) - buffer;
+}
+
+int AddSolidRectTag(char* buffer, int col, int x, int y, int width, int height)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efec0, col, x, y, width, height) - buffer;
+}
+
+// missing function? using <SOLID=%d,%d>
+
+// Couldn't find a call site in game, but there's a bunch in overlay 2
+int AddFrameTag(char* buffer, int col, int x, int y, int width, int height)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efee4, col, x, y, width, height) - buffer;
+}
+
+// called twice in overlay 2
+int AddWireTag(char* buffer, int col, int x, int y, int width, int height)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efefb, col, x, y, width, height) - buffer;
+}
+
+// used to draw a horizontal line in skill point menu, parameter is y coordinate relative to container?
+int AddLineTag(char* buffer, int y)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff11, y) - buffer;
+}
+
+// horizontal line segment, not sure about first argument
+int AddLineXTag(char* buffer, int col, int left, int right, int y)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff1b, col, left, right, y) - buffer;
+}
+
+int AddLineYTag(char* buffer, int col, int x, int top, int bottom)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff2f, col, x, top, bottom) - buffer;
+}
+
+int AddSizeTag(char* buffer, int size)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff43, size) - buffer;
+}
+
+int AddReducedPaletteTag(char* buffer, int reducedEnum)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    switch (reducedEnum)
+    {
+    case 0:
+        writePos += sprintf(writePos, data_020eff4d); // PLTT=15
+        break;
+    case 5:
+        writePos += sprintf(writePos, data_020eff57); // PLTT=11, orange?
+        break;
+    case 4:
+        writePos += sprintf(writePos, data_020eff61); // PLTT=13, yellow?
+        break;
+    case 6:
+        writePos += sprintf(writePos, data_020eff6b); // PLTT=9, red?
+        break;
+    }
+    return writePos - buffer;
+}
+
+int AddPaletteTag(char* buffer, int palette)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff74, palette) - buffer;
+}
+
+// missing <SLT=%d> function?
+
+int AddCursorTag(char* buffer, int cursorPos)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff87, cursorPos) - buffer;
+}
+
+// not sure of purpose, but used in bank when depositing/withdrawing.
+// removing it doesn't get rid of the arrows though
+int AddUATag(char* buffer, int arg1, int arg2, int arg3)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020eff93, arg1, arg2, arg3) - buffer;
+}
+
+// unused functions? <UB=%d,%d,%d>, <DA=%d,%d,%d>
+
+// same call site as UA (bank)
+int AddDBTag(char* buffer, int arg1, int arg2, int arg3)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020effbd, arg1, arg2, arg3) - buffer;
+}
+
+// used once in overlay 17 with args 3,2, not sure of purpose
+int AddTenTag(char* buffer, int x, int y)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020effcb, x, y) - buffer;
+}
+
+// used for e.g. "Whose?" when assigning skill points out of battle
+int AddTitleTag(char* buffer, const char* text, int index)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020effd7, index, text) - buffer;
+}
+
+// used somewhere in overlay 3 (shops, inn, bank?) but I couldn't find it
+int AddTalkTag(char* buffer, const char* text)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020effec, text) - buffer;
+}
+
+// used for percentages in battle records to right-align them, number
+// is offset from its (invisible) container
+int AddXRightTag(char* buffer, const char* text, int xright)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, data_020efffc, xright, text) - buffer;
+}
+
+int AddText(char* buffer, const char* text)
+{
+    char* writePos = buffer + func_020d2ff0(buffer);
+    return writePos + sprintf(writePos, text) - buffer;
+}
+
+int AddCenteredText(char* buffer, const char* text, int containerWidth, int fontIndex)
+{
+    int requiredWidth = func_020420e8(text, fontIndex);
+    sprintf(buffer + func_020d2ff0(buffer), data_020efe91, ((containerWidth - requiredWidth) >> 1) + 1);
+    sprintf(buffer + func_020d2ff0(buffer), text);
+    return func_020d2ff0(buffer);
+}   
+
 }
 
 TextManager* TextManager::GetInstance()

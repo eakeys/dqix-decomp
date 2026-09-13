@@ -23,14 +23,14 @@ GameObject* GameState::GetMaybeWanderingMonsterByIndex(int idx)
     return objects_[idx];
 }
 
-GameObject* GameState::GetProtagonist()
+GameObject* GameState::GetCartridgeProtagonist()
 {
-    return GetGameObjectByIndex(protagonistObjectIndex_);
+    return GetGameObjectByIndex(cartridgeProtagonistObjectIndex_);
 }
 
-GameObject* GameState::GetUnknownGameObject()
+GameObject* GameState::GetPartyLeader()
 {
-    return GetGameObjectByIndex(unknownObjectIndex_397c_);
+    return GetGameObjectByIndex(partyLeaderObjectIndex_);
 }
 
 GameObject* GameState::GetPartyMemberByIndex(int idx)

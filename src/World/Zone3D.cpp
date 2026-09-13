@@ -100,7 +100,7 @@ void Zone3D::SwitchZone(unsigned short newID)
 
     void* uVar3 = func_02011584(gameState);
     (void)func_ov017_0218b5b0();
-    GameObject* iVar4 = gameState->GetUnknownGameObject();
+    GameObject* iVar4 = gameState->GetPartyLeader();
 
     pAllocator_68_ = pAllocator_4c_;
     pAllocator_68_->Reset();
@@ -154,7 +154,7 @@ void Zone3D::SwitchZone(unsigned short newID)
     unknown_4_ = pUnknownStruct_8_->unknown_2_;
     if (pUnknownStruct_8_->unknown_c_low_ == 0)
     {
-        GameObject* iVar5 = gameState->GetProtagonist();
+        GameObject* iVar5 = gameState->GetCartridgeProtagonist();
         if (iVar5 != NULL)
         {
             void* iVar6 = func_02053c6c(iVar5);

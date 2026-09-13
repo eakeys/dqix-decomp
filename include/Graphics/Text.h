@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Memory/SafeAllocator.h"
+#include "std_library_functions.h"
 
 // note for posterity: be careful if porting this to 64-bit, the file is loaded
 // by memcpy where all pointers hold 32-bit offsets from the start of the file
@@ -9,23 +10,32 @@ struct FontIndexFile
 {
     unsigned int maybeSignature; // seems to hold "1.1\0"
     unsigned int numCharEntries;
-    unsigned int numUnknownEntries;
+    unsigned int numKerningEntries;
 
-    struct CharacterEntry
+    struct KerningEntry
+    {
+        // low 8 bits: first (left) glyph, high 8 bits: second (right) glyph
+        uint16_t glyphPair;
+        // negative: move closer together, positive: move further apart
+        int8_t kerningAmount;
+        char pad_3[1];
+    };
+
+    struct Glyph
     {
         // usually a single character, but can be e.g. "<1>". Most likely when
         // this is found in a string, the corresponding glyph is rendered. Points
         // into the tag pool (after setup is done)
         const char* tag;
-        char unk_4;
-        char tagLength : 6;
-        char unk_5_bit_6 : 1;
-        char unk_5_bit_7 : 1;
+        int8_t width;
+        int8_t tagLength : 6;
+        int8_t unk_5_bit_6 : 1;
+        int8_t unk_5_bit_7 : 1;
         char unk_6[2];
     };
 
-    int* unknownEntries;
-    CharacterEntry* characters;
+    KerningEntry* kerning;
+    Glyph* glyphs;
     const char* tagPool; // pool of all null-terminated tags
 };
 
@@ -37,9 +47,9 @@ struct FontDataFile
 };
 
 // sizeof == 0x1c.
-struct Glyph
+struct RenderGlyph
 {
-    char unk_0[4];
+    int unknown_0;
     unsigned int textureVRAMOffset;
     int unknown_8;
     int drawX;
@@ -88,12 +98,59 @@ namespace StringBuilders
     int AddCenteredText(char* buffer, const char* text, int containerWidth, int fontIndex);
 }
 
+// usa: func_02041fe8
+int MeasureTextWidth(const char* text, int fontType);
+// usa: func_02042190
+// converts size 12 to 1 (fd_me.bin), all others to 0 (fd_s7.bin)
+int GetFontIDBySize(int size);
+
+// usa: func_020424ac
+// returns a pointer to the '>' closing all open tags. (i.e. add 1 to go past
+// the tag entirely)
+char* GetTextTagEnd(char*);
+// usa: func_020424e4
+int GetNextFontGlyphIndex(const char* tag, int fontType);
+// usa: func_0204254c
+// fontType = 0: s7 (small font), 1: me (regular font, size 12)
+FontIndexFile::Glyph* GetNextFontGlyph(const char* tag, int fontType);
+// usa: func_020425b4
+FontIndexFile::Glyph* GetFontGlyphByIndex(int glyph, int fontType);
+// usa: func_020425e4
+int GetFontGlyphKerning(int leftGlyph, int rightGlyph, int fontType);
+// usa: func_02042638
+FontDataFile* GetFontDataFile(int fontType);
+// usa: func_02042648
+int GetFontSpaceSize(int fontType);
+// usa: func_02042658
+int MeasureNumberTextWidth(int fontType, int num);
+// usa: func_020426a4
+int MeasureNumberTextWidthGivenSize(int fontSize, int num);
+// Converts a normal string with glyph tags into the DQ9 encoding (e.g.
+// with A = 0x12, <66> = 0x50)
+int EncodeDQ9Text(char* decoded, unsigned char* output, int fontType);
+// Converts from the DQ9 encoding (where e.g. A = 0x12) to the glyphs for
+// that font type.
+void DecodeDQ9Text(const unsigned char* encoded, char* output, int fontType);
+// usa: func_02042804
+// loads a font fron the data in data/pack_lv5/fi_%s.bin and
+// data/pack_lv5/fd_%s.bin
+void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIndex, FontDataFile** ppData);
+// usa: func_02042944
+// loads both the s7 and me font from data/pack_lv5
+void LoadCustomFonts(SafeAllocator* alloc);
+
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 
 class TextManager
 {
 public:
-    char unk_0[0x48];
+    char unk_0[0x30];
+    char unknown_30_;
+    char unknown_31_;
+    char unk_32[0x38 - 0x32];
+    int unknown_38_;
+    int unknown_3c_;
+    char unk_40[0x48 - 0x40];
     void* ptr_48;
     void* ptr_4c;
     void* ptr_50;
@@ -101,22 +158,122 @@ public:
     void* ptr_5c;
     void* ptr_60;
     void* ptr_64;
-    char unk_68[0x8b0 - 0x68];
-
+    char unk_68[0x8c - 0x68];
+    int unknown_8c_;
+    char substruct_90_[0x238]; // func_0205c790
+    int unknown_2c8_;
+    char substruct_2cc_[4];
+    int unknown_2d0_;
+    char unk_2d4[4];
+    int unknown_2d8_;
+    int unknown_2dc_;
+    int unknown_2e0_;
+    short unknown_2e4_;
+    char unknown_2e6_;
+    char unknown_2e7_;
+    int unknown_2e8_;
+    char unk_2ec[0x4ac - 0x2ec];
+    char substructOrArray_4ac_[0x400];
+    int unknown_8ac_;
     // not sure about size. Text can have markers <val_1>, <val_2> or similar
     // which get replaced by game quantities e.g. amount of gold, this array
     // stores the replacement values
-    int valueLookup[16];
+    int valueLookup[16]; // @ 0x8b0
     char unk_8f0[1];
     unsigned char maybeValuePaddingModes[16];
     char unk_901[1];
     unsigned char valueUnknownArray[16];
-
-    char unk_912[0x9b8 - 0x912];
-    Glyph glyphs_[0x80];
-    char unk_17b8[0x1e2c - 0x17b8];
+    char unknown_912_;
+    char unk_913[1];
+    char substruct_914_[0x1c]; // func_02042fcc
+    char substruct_930_[0x1c]; // same as above
+    char unk_94c[0x954 - 0x94c];
+    int unknown_954_;
+    int unknown_958_;
+    char substructOrArray_95c_[0x20];
+    char substructOrArray_97c_[0x10];
+    char unk_98c[0x990 - 0x98c];
+    int unknown_990_;
+    int unknown_994_;
+    char unk_998[4];
+    int unknown_99c_;
+    int unknown_9a0_;
+    int unknown_9a4_;
+    char unk_9a8[0x9b0 - 0x9a8];
+    int unknown_9b0_;
+    int unknown_9b4_;
+    RenderGlyph glyphs_[0x80];
+    char unknown_17b8_; // probably num glyphs
+    char unk_17b9[0x1838 - 0x17b9];
+    int unknown_1838_;
+    int unknown_183c_;
+    char unk_1840[0x1848 - 0x1840];
+    int unknown_1848_[4]; // probably viewport, and probably a struct
+    int unknown_1858_;
+    int unknown_185c_;
+    int unknown_1860_;
+    int unknown_1864_;
+    int unknown_1868_;
+    int unknown_array_186c_[4]; // func_02045824
+    short unknown_187c_;
+    char unk_187e[0x1882 - 0x187e];
+    char buffer_1882_[0x80];
+    char buffer_1902_[0x40];
+    short unknown_1942_;
+    short unknown_1944_;
+    char unk_1946[2];
+    short unknown_1948_;
+    char unknown_194a_;
+    char unknown_194b_;
+    char unknown_194c_;
+    char unknown_194d_;
+    char unk_194e[0x5a - 0x4e];
+    char unknown_195a_;
+    char unknown_195b_;
+    char unk_195c[0x62 - 0x5c];
+    char unknown_1962_;
+    char unk_1963[1];
+    char substruct_1964_[0x24]; // func_020e2bd8
+    char substruct_1988_[0x24]; // same as previous
+    char unknown_19ac_;
+    char unknown_19ad_;
+    char unknown_19ae_;
+    char unknown_19af_;
+    char unk_19b0[0x19b1 - 0x19b0];
+    char unknown_19b1_;
+    char unknown_19b2_;
+    char unknown_19b3_;
+    char unknown_19b4_;
+    char unknown_19b5_;
+    char unk_19b6[2];
+    char unknown_19b8_;
+    char unknown_19b9_;
+    char unk_19ba[0x19bb - 0x19ba];
+    char unknown_19bb_;
+    char unknown_19bc_;
+    char unk_19bd[1];
+    char unknown_19be_;
+    char unknown_19bf_;
+    char unk_19c0[2];
+    char unknown_19c2_;
+    char unk_19c3[0x19cb - 0x19c3];
+    char unknown_19cb_;
+    char unknown_19cc_;
+    char unk_19cd[1];
+    char unknown_19ce_;
+    char unknown_19cf_;
+    char unknown_19d0_;
+    char unk_19d1[0xa - 0x1];
+    short unknown_19da_;
+    char unknown_19dc_;
+    char unk_19dd[0xe0 - 0xdd];
+    char substruct_19e0_[0x448]; // func_0202f1a4. At 0x440 contains a pointer to this+0x914, position of textbox?
+    int unknown_1e28_;
 
     static TextManager* GetInstance();
+
+    // usa: func_02042c68
+    void Reset();
 
     // usa: func_0206831c
     void SubstituteValueTags(const char* input, char* output);
@@ -192,16 +349,3 @@ public:
     // Replaces e.g. "<CAP>hello" with "Hello"
     void SubstituteCaps(char* input, char* output, int fontType);
 };
-
-// usa: func_0204254c
-// fontType = 0: s7, 1: me
-FontIndexFile::CharacterEntry* GetNextFontCharacterEntry(const char* tag, int fontType);
-
-
-// usa: func_02042804
-// loads a font fron the data in data/pack_lv5/fi_%s.bin and
-// data/pack_lv5/fd_%s.bin
-void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIndex, FontDataFile** ppData);
-// usa: func_02042944
-// loads both the s7 and me font from data/pack_lv5
-void LoadCustomFonts(SafeAllocator* alloc);

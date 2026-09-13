@@ -15,6 +15,12 @@ struct Struct_02107800
     FontDataFile* pFontDataFiles[2];
 } extern data_02107800;
 
+extern const unsigned char data_020e7a50[]; // probably multiple separate things. We only use stuff at offset 8
+extern const int data_020e7a94[]; // { 2, 3 }
+extern const char data_020e7a9c[]; // { 1, 1, 1, 1, 1, 1, 1, 1, 15 }
+extern const short data_020e7aa6[]; // { 1, 2, 2, 3, 2 }
+extern const short data_020e7ab0[]; // { 2, 1, 3, 2, 2 }
+
 extern char data_020efe78[]; // "<X=%d>"
 extern char data_020efe7f[]; // "<Y=%d>"
 extern char data_020efe86[]; // "<XY=%d,%d>"
@@ -57,8 +63,12 @@ extern char data_020f007c[]; // "me"
 
 extern "C"
 {
-    // measure text width
-    int func_020420e8(const char*, int);
+    // get next glyph index
+    int func_020424e4(const char*, int);
+    // get character entry from (glyph index, font type)
+    FontIndexFile::Glyph* func_020425b4(int, int);
+    // get glyph kerning
+    int func_020425e4(int leftGlyph, int rightGlyph, int font);
 
     // alternative strlen
     int func_020d2ff0(const char*);
@@ -77,7 +87,7 @@ static inline int Foo(float x)
 
 void WriteTexCoords(fix32_t x, fix32_t y); // can be made static
 
-void Glyph::Draw(int color, void *unknown, int alpha)
+void RenderGlyph::Draw(int color, void *unknown, int alpha)
 {
     if (unknown_8 < 0 || unk_16_low || alpha == 0)
         return;
@@ -348,7 +358,7 @@ int AddText(char* buffer, const char* text)
 
 int AddCenteredText(char* buffer, const char* text, int containerWidth, int fontIndex)
 {
-    int requiredWidth = func_020420e8(text, fontIndex);
+    int requiredWidth = MeasureTextWidth(text, fontIndex);
     sprintf(buffer + func_020d2ff0(buffer), data_020efe91, ((containerWidth - requiredWidth) >> 1) + 1);
     sprintf(buffer + func_020d2ff0(buffer), text);
     return func_020d2ff0(buffer);
@@ -356,12 +366,84 @@ int AddCenteredText(char* buffer, const char* text, int containerWidth, int font
 
 }
 
+int MeasureTextWidth(const char* text, int fontType)
+{
+    if (text == NULL)
+        return 0;
+
+    unsigned char spaceSize = data_020e7a94[fontType];
+    unsigned char lastGlyphIndex = 0xff;
+    unsigned char thisGlyphIndex;
+    int totalWidth = 0;
+
+    while (true)
+    {
+        if (*text == 0)
+            break;
+
+        int thisCharWidth = spaceSize + 1;
+        int glyph = func_020424e4(text, fontType);
+        if (glyph < 0)
+        {
+            lastGlyphIndex = 0xff;
+            text++;
+        }
+        else
+        {
+            thisGlyphIndex = glyph;
+            const FontIndexFile::Glyph* entry = func_020425b4(glyph, fontType);
+            int kerning = func_020425e4(lastGlyphIndex, thisGlyphIndex, fontType);
+            thisCharWidth = entry->width + 1 + kerning;
+            text += entry->tagLength;
+            lastGlyphIndex = thisGlyphIndex;
+        }
+        totalWidth += thisCharWidth;
+    }
+    return totalWidth - 1;
+}
+
+int GetFontIDBySize(int size)
+{
+    int id = 0; // s7
+    if (size == 12)
+        id = 1; // me
+    return id;
+}
+
 TextManager* TextManager::GetInstance()
 {
     return data_02107800.manager;
 }
 
-FontIndexFile::CharacterEntry* GetNextFontCharacterEntry(const char* tag, int fontType)
+char* GetTextTagEnd(char* input)
+{
+    if (input != NULL)
+    {
+        while (*input != 0)
+        {
+            if (input[0] == '>' && input[1] != '>')
+                return input;
+            input++;
+        }
+    }
+    return NULL;
+}
+
+int GetNextFontGlyphIndex(const char* tag, int fontType)
+{
+    if (tag == NULL)
+        return -1;
+    const FontIndexFile* file = data_02107800.pFontIndexFiles[fontType];
+    for (unsigned int i = 0; i < file->numCharEntries; i++)
+    {
+        const FontIndexFile::Glyph& glyph = file->glyphs[i];
+        if (memcmp(glyph.tag, tag, glyph.tagLength) == 0)
+            return i;
+    }
+    return -1;
+}
+
+FontIndexFile::Glyph* GetNextFontGlyph(const char* tag, int fontType)
 {
     if (tag == NULL)
         return NULL;
@@ -369,12 +451,139 @@ FontIndexFile::CharacterEntry* GetNextFontCharacterEntry(const char* tag, int fo
     FontIndexFile* indexFile = data_02107800.pFontIndexFiles[fontType];
     for (unsigned int i = 0; i < indexFile->numCharEntries; i++)
     {
-        FontIndexFile::CharacterEntry* entry = &indexFile->characters[i];
-        if (memcmp(entry->tag, tag, entry->tagLength) == 0)
-            return entry;
+        FontIndexFile::Glyph* glyph = &indexFile->glyphs[i];
+        if (memcmp(glyph->tag, tag, glyph->tagLength) == 0)
+            return glyph;
     }
 
     return NULL;
+}
+
+FontIndexFile::Glyph* GetFontGlyphByIndex(int glyph, int fontType)
+{
+    FontIndexFile* file = data_02107800.pFontIndexFiles[fontType];
+    if (glyph >= 0 && glyph < file->numCharEntries)
+        return &file->glyphs[glyph];
+    return NULL;
+}
+
+int GetFontGlyphKerning(int leftGlyph, int rightGlyph, int fontType)
+{
+    FontIndexFile* file = data_02107800.pFontIndexFiles[fontType];
+    unsigned int numKerningEntries = file->numKerningEntries;
+
+    FontIndexFile::KerningEntry* loopEntry = file->kerning;
+    uint16_t targetPair = (leftGlyph & 0xff) | ((rightGlyph & 0xff) << 8);
+    for (unsigned int i = 0; i < numKerningEntries; i++)
+    {
+        if (loopEntry->glyphPair == targetPair)
+            return loopEntry->kerningAmount;
+        loopEntry++;
+    }
+    return 0;
+}
+
+FontDataFile* GetFontDataFile(int fontType)
+{
+    return data_02107800.pFontDataFiles[fontType];
+}
+
+int GetFontSpaceSize(int fontType)
+{
+    return data_020e7a94[fontType];
+}
+
+int MeasureNumberTextWidth(int fontType, int num)
+{
+    char buffer[32] = {0};
+    if (num < 0)
+        num = -num;
+    sprintf(buffer, data_020f0046, num);
+    return MeasureTextWidth(buffer, fontType);
+}
+
+int MeasureNumberTextWidthGivenSize(int fontSize, int num)
+{
+    return MeasureNumberTextWidth(GetFontIDBySize(fontSize), num);
+}
+
+int EncodeDQ9Text(char* decoded, unsigned char* output, int fontType)
+{
+    if (output == NULL)
+        return 0;
+    if (decoded == NULL)
+    {
+        if (output != NULL)
+            output[0] = '\0';
+        return 0;
+    }
+
+    int outputLength = 0;
+    while (true)
+    {
+        char decodedChar = *decoded;
+        if (decodedChar == '\0')
+        {
+            *output = '\0';
+            break;
+        }
+
+        int tagLength = 1;
+        unsigned char outByte = 0;
+
+        FontIndexFile::Glyph* glyph = GetNextFontGlyph(decoded, fontType);
+        if (glyph != NULL)
+        {
+            tagLength = glyph->tagLength;
+        }
+        if (decodedChar == ' ')
+            outByte = 0xff;
+        int lookupGlyphIndex = GetNextFontGlyphIndex(decoded, fontType);
+        if (lookupGlyphIndex > 0)
+            outByte = lookupGlyphIndex;
+
+        *output = outByte;
+        output++;
+        decoded += tagLength;
+        outputLength++;
+    }
+    return outputLength;
+}
+
+void DecodeDQ9Text(const unsigned char* encoded, char* output, int fontType)
+{
+    if (output == NULL)
+        return;
+
+    if (encoded == NULL)
+    {
+        if (output != NULL)
+            output[0] = '\0';
+        return;
+    }
+    
+    while (true)
+    {
+        unsigned char encodedByte = *encoded;
+        if (encodedByte == '\0')
+        {
+            *output = '\0';
+            return;
+        }
+        const unsigned char fallback[] = { data_020e7a50[8], data_020e7a50[9] };
+        const void* copySource = fallback;
+        int copyLength = 1;
+        FontIndexFile::Glyph* glyph = GetFontGlyphByIndex(encodedByte, fontType);
+        if (glyph != NULL)
+        {
+            copySource = glyph->tag;
+            copyLength = glyph->tagLength;
+        }
+
+        memcpy(output, copySource, copyLength);
+        encoded++;
+        output += copyLength;
+    }
 }
 
 void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIndex, FontDataFile** ppData)
@@ -391,14 +600,14 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
         FontIndexFile* basePtr = *ppIndex;
         intptr_t baseAddr = (intptr_t)basePtr;
         // convert stored offsets into legitimate pointers
-        basePtr->unknownEntries = (int*)(baseAddr + (intptr_t)basePtr->unknownEntries);
-        basePtr->characters = (FontIndexFile::CharacterEntry*)(baseAddr + (intptr_t)basePtr->characters);
+        basePtr->kerning = (FontIndexFile::KerningEntry*)(baseAddr + (intptr_t)basePtr->kerning);
+        basePtr->glyphs = (FontIndexFile::Glyph*)(baseAddr + (intptr_t)basePtr->glyphs);
         basePtr->tagPool = (const char*)(baseAddr + (intptr_t)basePtr->tagPool);
 
-        FontIndexFile::CharacterEntry* entry;
+        FontIndexFile::Glyph* entry;
         for (unsigned int i = 0; i < basePtr->numCharEntries; i++)
         {
-            entry = basePtr->characters + i;
+            entry = basePtr->glyphs + i;
             entry->tag = (const char*)(baseAddr + (intptr_t)entry->tag);
         }
     }

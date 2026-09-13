@@ -186,10 +186,10 @@ void TextManager::SubstituteUnsupportedCharacters(const char* input, char* outpu
             continue;
         }
 
-        FontIndexFile::CharacterEntry* charEntry = GetNextFontCharacterEntry(input, fontType);
-        if (charEntry != NULL)
+        FontIndexFile::Glyph* glyph = GetNextFontGlyph(input, fontType);
+        if (glyph != NULL)
         {
-            int tagLength = charEntry->tagLength;
+            int tagLength = glyph->tagLength;
             memcpy(output, input, tagLength);
             input += tagLength;
             output += tagLength;
@@ -386,10 +386,10 @@ void TextManager::SubstituteCaps(char *input, char *output, int fontType)
             if (tagEnd != NULL && memcmp(input + 1, data_020f0916, 4) == 0)
             {
                 input = (char*)tagEnd + 1;
-                FontIndexFile::CharacterEntry* charEntry = GetNextFontCharacterEntry(input, fontType);
-                if (charEntry != NULL && charEntry->unk_5_bit_7)
+                FontIndexFile::Glyph* glyph = GetNextFontGlyph(input, fontType);
+                if (glyph != NULL && glyph->unk_5_bit_7)
                 {
-                    int tagLength = charEntry->tagLength;
+                    int tagLength = glyph->tagLength;
                     memcpy(output, input, tagLength);
                     CapitalizeSection(output, tagLength);
                     input += tagLength;

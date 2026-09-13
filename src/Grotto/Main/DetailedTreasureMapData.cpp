@@ -5,6 +5,7 @@
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"
 #include "System/Memory.h"
+#include "Graphics/Text.h"
 #include "std_library_functions.h"
 #include <asmhacks.h>
 
@@ -24,9 +25,6 @@ extern "C"
 {
     void func_020a1df8(unsigned int);
     void func_020a1e54(unsigned int);
-
-    // copies character name into the buffer? (not used in jpn version)
-    void func_020426bc(void*, char* buffer, int);
 
     // Based on where it's called, this is probably returning a language-
     // dependent string for "Lv. " (at least, if called with 1011 as arg).
@@ -259,18 +257,18 @@ bool DetailedTreasureMapData::UpdateFollowingCompletion(bool levelledUp, unsigne
 #ifndef jpn
     // Based on how the jpn version works, I would guess this is undoing the
     // custom text encoding (e.g. lowercase a is 0x2A vs ascii 0x61)
-    void* playerRelatedPtr = *(void**)((intptr_t)GameState::GetInstance()->GetCartridgeProtagonist() + 0x134);
-    char asciiName[10] = { 0 };
-    func_020426bc(playerRelatedPtr, asciiName, 1);
+    char* playerRelatedPtr = *(char**)((intptr_t)GameState::GetInstance()->GetCartridgeProtagonist() + 0x134);
+    unsigned char encodedName[10] = { 0 };
+    EncodeDQ9Text(playerRelatedPtr, encodedName, 1);
 #else
     // 0200fc28 is the address in the japanese version
-    char* asciiName = *(char**)((intptr_t)GameState::GetInstance()->GetProtagonist() + 0x134);
+    char* encodedName = *(char**)((intptr_t)GameState::GetInstance()->GetCartridgeProtagonist() + 0x134);
 #endif
 
     discoveryState_ = DiscoveryState_Cleared;
 
     VectorizedMemset(clearedBy_, 0, 12);
-    VectorizedInvertedMemcpy(asciiName, clearedBy_, 10);
+    VectorizedInvertedMemcpy(encodedName, clearedBy_, 10);
 
     if (levelledUp && legacy_.stats_.newDropListAtNextLevel)
     {

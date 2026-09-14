@@ -26,6 +26,20 @@
 #define BG2CNTSUB (*(volatile unsigned short*)(0x0400100c))
 #define BG3CNTSUB (*(volatile unsigned short*)(0x0400100e))
 
+#define WIN0X (*(volatile unsigned short*)0x04000040)
+#define WIN1X (*(volatile unsigned short*)0x04000042)
+#define WIN0Y (*(volatile unsigned short*)0x04000044)
+#define WIN1Y (*(volatile unsigned short*)0x04000046)
+#define WININ (*(volatile unsigned short*)0x04000048)
+#define WINOUT (*(volatile unsigned short*)0x0400004a)
+
+#define WIN0XSUB (*(volatile unsigned short*)0x04001040)
+#define WIN1XSUB (*(volatile unsigned short*)0x04001042)
+#define WIN0YSUB (*(volatile unsigned short*)0x04001044)
+#define WIN1YSUB (*(volatile unsigned short*)0x04001046)
+#define WININSUB (*(volatile unsigned short*)0x04001048)
+#define WINOUTSUB (*(volatile unsigned short*)0x0400104a)
+
 #define GX_FOG_COLOR (*(volatile unsigned int*)0x04000358)
 #define GX_FOG_OFFSET (*(volatile unsigned int*)0x0400035c)
 

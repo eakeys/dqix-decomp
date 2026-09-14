@@ -6052,26 +6052,26 @@ func_020e2910 kind:function(arm,size=0x8) addr:0x020e2910
 func_020e2918 kind:function(arm,size=0x6c) addr:0x020e2918
 func_020e2984 kind:function(arm,size=0x24) addr:0x020e2984
 func_020e29a8 kind:function(arm,size=0x10) addr:0x020e29a8
-func_020e29b8 kind:function(arm,size=0x34) addr:0x020e29b8
-func_020e29ec kind:function(arm,size=0x34) addr:0x020e29ec
-func_020e2a20 kind:function(arm,size=0x34) addr:0x020e2a20
-func_020e2a54 kind:function(arm,size=0x34) addr:0x020e2a54
-func_020e2a88 kind:function(arm,size=0x28) addr:0x020e2a88
-func_020e2ab0 kind:function(arm,size=0x28) addr:0x020e2ab0
-func_020e2ad8 kind:function(arm,size=0x28) addr:0x020e2ad8
-func_020e2b00 kind:function(arm,size=0x28) addr:0x020e2b00
-func_020e2b28 kind:function(arm,size=0x28) addr:0x020e2b28
-func_020e2b50 kind:function(arm,size=0x28) addr:0x020e2b50
-func_020e2b78 kind:function(arm,size=0x1c) addr:0x020e2b78
-func_020e2b94 kind:function(arm,size=0x18) addr:0x020e2b94
-func_020e2bac kind:function(arm,size=0x18) addr:0x020e2bac
-func_020e2bc4 kind:function(arm,size=0x14) addr:0x020e2bc4
-func_020e2bd8 kind:function(arm,size=0x5c) addr:0x020e2bd8
-func_020e2c34 kind:function(arm,size=0x48) addr:0x020e2c34
-func_020e2c7c kind:function(arm,size=0x48) addr:0x020e2c7c
-func_020e2cc4 kind:function(arm,size=0x60) addr:0x020e2cc4
-func_020e2d24 kind:function(arm,size=0x8) addr:0x020e2d24
-func_020e2d2c kind:function(arm,size=0x20) addr:0x020e2d2c
+_Z19SetSubWindow1Boundsiiii kind:function(arm,size=0x34) addr:0x020e29b8 local
+_Z19SetSubWindow0Boundsiiii kind:function(arm,size=0x34) addr:0x020e29ec local
+_Z20SetMainWindow1Boundsiiii kind:function(arm,size=0x34) addr:0x020e2a20 local
+_Z20SetMainWindow0Boundsiiii kind:function(arm,size=0x34) addr:0x020e2a54 local
+_Z15SetSubWindow1Inii kind:function(arm,size=0x28) addr:0x020e2a88 local
+_Z15SetSubWindow0Inii kind:function(arm,size=0x28) addr:0x020e2ab0 local
+_Z16SetMainWindow1Inii kind:function(arm,size=0x28) addr:0x020e2ad8 local
+_Z16SetMainWindow0Inii kind:function(arm,size=0x28) addr:0x020e2b00 local
+_Z15SetSubWindowOutii kind:function(arm,size=0x28) addr:0x020e2b28 local
+_Z16SetMainWindowOutii kind:function(arm,size=0x28) addr:0x020e2b50 local
+_Z20SetSubEnabledWindowsi kind:function(arm,size=0x1c) addr:0x020e2b78 local
+_Z21SetMainEnabledWindowsi kind:function(arm,size=0x18) addr:0x020e2b94 local
+_Z20GetSubEnabledWindowsv kind:function(arm,size=0x18) addr:0x020e2bac local
+_Z21GetMainEnabledWindowsv kind:function(arm,size=0x14) addr:0x020e2bc4 local
+_ZN10ClipWindow10InitializeEii kind:function(arm,size=0x5c) addr:0x020e2bd8
+_ZN10ClipWindow5ApplyEv kind:function(arm,size=0x48) addr:0x020e2c34
+_ZN10ClipWindow12UpdateLayersEv kind:function(arm,size=0x48) addr:0x020e2c7c
+_ZN10ClipWindow10SetEnabledEb kind:function(arm,size=0x60) addr:0x020e2cc4
+_ZN10ClipWindow17ConfigureInteriorEii kind:function(arm,size=0x8) addr:0x020e2d24
+_ZN10ClipWindow13SetBoundsXYWHEiiii kind:function(arm,size=0x20) addr:0x020e2d2c
 func_020e2d4c kind:function(arm,size=0x8) addr:0x020e2d4c
 func_020e2d54 kind:function(arm,size=0x254) addr:0x020e2d54
 func_020e2fa8 kind:function(arm,size=0x8) addr:0x020e2fa8
@@ -7554,11 +7554,11 @@ data_020f2b78 kind:data(any) addr:0x020f2b78
 data_020f2b90 kind:data(any) addr:0x020f2b90
 data_020f2ba2 kind:data(any) addr:0x020f2ba2
 data_020f2bb0 kind:data(any) addr:0x020f2bb0
-data_020f2bdc kind:data(any) addr:0x020f2bdc
-data_020f2be4 kind:data(any) addr:0x020f2be4
-data_020f2bec kind:data(any) addr:0x020f2bec
-data_020f2bf4 kind:data(any) addr:0x020f2bf4
-data_020f2c04 kind:data(any) addr:0x020f2c04
+s_getEnabledWindows kind:data(any) addr:0x020f2bdc local
+s_setWindowOut kind:data(any) addr:0x020f2be4 local
+s_setEnabledWindows kind:data(any) addr:0x020f2bec local
+s_setWindowBounds kind:data(any) addr:0x020f2bf4 local
+s_setWindowIn kind:data(any) addr:0x020f2c04 local
 data_020f2c14 kind:data(any) addr:0x020f2c14
 data_020f2c5c kind:data(any) addr:0x020f2c5c
 data_020f2ca4 kind:data(any) addr:0x020f2ca4

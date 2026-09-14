@@ -2,6 +2,7 @@
 
 #include "../Memory/SafeAllocator.h"
 #include "std_library_functions.h"
+#include "ClipWindow.h"
 
 // note for posterity: be careful if porting this to 64-bit, the file is loaded
 // by memcpy where all pointers hold 32-bit offsets from the start of the file
@@ -141,6 +142,7 @@ void LoadCustomFonts(SafeAllocator* alloc);
 
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 
+// Initialized by func_02042c68, get member types from here
 class TextManager
 {
 public:
@@ -185,8 +187,8 @@ public:
     unsigned char valueUnknownArray[16];
     char unknown_912_;
     char unk_913[1];
-    char substruct_914_[0x1c]; // func_02042fcc
-    char substruct_930_[0x1c]; // same as above
+    char substruct_914_[0x1c]; // func_02042fcc, seems related to main text box in 3d render mode 
+    char substruct_930_[0x1c]; // same as above, seems related to speaker name box
     char unk_94c[0x954 - 0x94c];
     int unknown_954_;
     int unknown_958_;
@@ -233,8 +235,7 @@ public:
     char unk_195c[0x62 - 0x5c];
     char unknown_1962_;
     char unk_1963[1];
-    char substruct_1964_[0x24]; // func_020e2bd8
-    char substruct_1988_[0x24]; // same as previous
+    ClipWindow windows_[2];
     char unknown_19ac_;
     char unknown_19ad_;
     char unknown_19ae_;
@@ -348,4 +349,45 @@ public:
 
     // Replaces e.g. "<CAP>hello" with "Hello"
     void SubstituteCaps(char* input, char* output, int fontType);
+
+    // func_0206973c: "PAGE_T="
+    // func_02069790: "PAGE>"
+    // func_020697b8: "AUTO="
+    // func_0206980c: "ADD>"
+    // func_02069834: "TIME="
+    // func_02069884: "PAD_WAIT>"
+    // func_020698ac: "PAD_T="
+    // func_020698fc: "PAD_WAIT_NOCUR>"
+    // func_02069924: "WIN_ON>"
+    // func_0206994c: "WIN_OFF>"
+    // func_02069974: "CEN_ON>"
+    // func_0206999c: "CEN_OFF>"
+    // func_020699c4: "ALL_RECOVER="
+    // func_02069a4c: "ST="
+    // func_02069ae4: "YESNO>"
+    // func_02069b0c: "NOYES>"
+    // func_02069b34: "YESNO_NOTSE>"
+    // func_02069b5c: "YESNO_NOTSE_IIE>"
+    // func_02069b84: "UKEYAME>"
+    // func_02069bac: "LB_"
+    // func_02069be4: "JP_"
+    // func_02069c1c: "TURN="
+    // func_02069ce0: "QUEST_SE>"
+    // func_02069d08: "QUEST="
+    // func_02069d6c: "QUEST_HAN>"
+    // func_02069d94: "QUEST_FAILED>"
+    // func_02069dbc: "/QUEST>"
+    // func_02069de4: "N_TURN>"
+    // func_02069e0c: "END_R_TURN>"
+    // func_02069e34: "R_TURN>"
+    // func_02069e5c: "TURN_P>"
+    // func_02069e84: "EXC>"
+    // func_02069eac: "QES>"
+    // func_02069ed4: "YES>"
+    // func_02069efc: "NO>"
+    // func_02069f24: "UKE>"
+    // func_02069f4c: "YAME>"
+    // func_02069f74: "END>"
+    // func_02069f9c: "CLOSE>"
+    // func_02069fc4: "SHAKE>"
 };

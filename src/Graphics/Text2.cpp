@@ -8,10 +8,19 @@ extern "C"
 {
     // probably atoi
     int func_02005a94(const char*);
+    // probably atof
+    double func_020055d4(const char*);
 
     // advance to end of tag
     const char* func_020424ac(const char*);
     int func_02042658(int, int);
+
+    void func_020457e8(TextManager*, int);
+
+    // probably get quest manager instance or something?
+    void* func_02094d6c();
+    // maybe convert quest ID to real quest ID?
+    unsigned char func_020965c0(void*, unsigned char);
 
     // alternative strlen implementation
     int func_020d2ff0(const char*);
@@ -406,4 +415,411 @@ void TextManager::SubstituteCaps(char *input, char *output, int fontType)
     }
 
     *output = 0;
+}
+
+int ReadNumbersInTag(const char* text, int* output, int readCount)
+{
+    for (int i = 0; i < readCount; i++)
+    {
+        // if this sees anything that isn't a number the loop just ends without
+        // doing anything else
+        if (*text != 0 && ((*text >= '0' && *text <= '9') || *text == '-'))
+        {
+            output[i] = func_02005a94(text);
+            while (true)
+            {
+                if (*text == 0)
+                    break;
+                if (*text == ',' || *text == '>')
+                {
+                    text++;
+                    break;
+                }
+                text++;
+            }
+        }
+    }
+    return 0;
+}
+
+int ConvertPageTTag(char** ppOutput, char* tagExtras)
+{
+    int duration;
+    ReadNumbersInTag(tagExtras, &duration, 1);
+    TextManager::GetInstance()->pageTValue_1960_ = duration;
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_PageT;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertPageTag(char** ppOutput, char* tageExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Page;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertAutoTag(char** ppOutput, char* tagExtras)
+{
+    int value;
+    ReadNumbersInTag(tagExtras, &value, 1);
+    TextManager::GetInstance()->autoValue_195e_ = value;
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Auto;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertAddTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Add;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertTimeTag(char** ppOutput, char* tagExtras)
+{
+    int duration;
+    ReadNumbersInTag(tagExtras, &duration, 1);
+    func_020457e8(TextManager::GetInstance(), duration);
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Time;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertPadWaitTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_PadWait;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertPadTTag(char** ppOutput, char* tagExtras)
+{
+    int duration;
+    ReadNumbersInTag(tagExtras, &duration, 1);
+    func_020457e8(TextManager::GetInstance(), duration);
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_PadT;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertPadWaitNoCursorTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_PadWaitNoCursor;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertWinOnTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_WinOn;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertWinOffTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_WinOff;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertCenOnTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_CenOn;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertCenOffTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_CenOff;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertAllRecoverTag(char** ppOutput, char* tagExtras)
+{
+    int params[3];
+    ReadNumbersInTag(tagExtras, params, 3);
+    TextManager* mgr = TextManager::GetInstance();
+    unsigned short healAmount = params[2];
+    bool firstBool = (bool)params[0];
+    bool secondBool = (bool)params[1];
+    mgr->recoveryParam_19c6_ = firstBool;
+    mgr->recoveryParam_19c7_ = secondBool;
+    mgr->recoveryAmount_ = healAmount;
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_AllRecover;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertSTTag(char** ppOutput, char* tagExtras)
+{
+    int params[2];
+    ReadNumbersInTag(tagExtras, params, 2);
+    TextManager* mgr = TextManager::GetInstance();
+    int secondArg = params[1];
+    mgr->tagSTArrayIndex_1956_ %= 4;
+    mgr->tagSTArray1_194e_[mgr->tagSTArrayIndex_1956_] = params[0];
+    mgr->tagSTArray2_1952_[mgr->tagSTArrayIndex_1956_] = secondArg;
+    mgr->tagSTArrayIndex_1956_++;
+
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_ST;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertYesNoTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_YesNo;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertNoYesTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_NoYes;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertYesNoNotSeTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_YesNo_NotSe;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertYesNoNotSeIIETag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_YesNo_NotSe_IIE;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertUkeYameTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_UkeYame;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertLBTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_LBBase;
+    controlWord += (unsigned short)(tagExtras[0] - 0x40);
+    unsigned short copySource = controlWord;
+    memcpy(dest, &copySource, 2);
+    return 2;
+}
+
+int ConvertJPTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_JPBase;
+    controlWord += (unsigned short)(tagExtras[0] - 0x40);
+    unsigned short copySource = controlWord;
+    memcpy(dest, &copySource, 2);
+    return 2;
+}
+
+int ConvertTurnTag(char** ppOutput, char* tagExtras)
+{
+    float angles[1];
+
+    for (int i = 0; i < 1; i++)
+    {
+        if (*tagExtras != 0 && *tagExtras >= '0' && *tagExtras <= '9')
+        {
+            angles[i] = (float)func_020055d4(tagExtras);
+
+            while (true)
+            {
+                if (*tagExtras == 0)
+                    break;
+                if (*tagExtras == ',' || *tagExtras == '>')
+                {
+                    tagExtras++;
+                    break;
+                }
+                tagExtras++;
+            }
+        }
+    }
+
+    TextManager* mgr = TextManager::GetInstance();
+    mgr->turnAngle_1840_ = 4096.0f * angles[0];
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Turn;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertQuestSETag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_QuestSE;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertQuestTag(char** ppOutput, char* tagExtras)
+{
+    int internalQuestNumber;
+    ReadNumbersInTag(tagExtras, &internalQuestNumber, 1);
+    unsigned char converted = func_020965c0(func_02094d6c(), internalQuestNumber);
+    TextManager::GetInstance()->questIndex_1948_ = converted;
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Quest;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertQuestHanTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_QuestHan;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertQuestFailedTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_QuestFailed;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertSlashQuestTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_SlashQuest;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertNTurnTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_NTurn;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertEndRTurnTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_EndRTurn;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertRTurnTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_RTurn;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertTurnPTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_TurnP;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertExclamationTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Exclamation;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertQuestionTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Question;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertYesTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Yes;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertNoTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_No;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertUkeTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Uke;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertYameTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Yame;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertEndTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_End;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertCloseTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Close;
+    memcpy(dest, &controlWord, 2);
+    return 2;
+}
+
+int ConvertShakeTag(char** ppOutput, char* tagExtras)
+{
+    char* dest = *ppOutput;
+    unsigned short controlWord = ControlWord_Shake;
+    memcpy(dest, &controlWord, 2);
+    return 2;
 }

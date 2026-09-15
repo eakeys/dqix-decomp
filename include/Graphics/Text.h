@@ -2,6 +2,7 @@
 
 #include "../Memory/SafeAllocator.h"
 #include "std_library_functions.h"
+#include "Vector.h"
 #include "ClipWindow.h"
 
 // note for posterity: be careful if porting this to 64-bit, the file is loaded
@@ -65,6 +66,54 @@ struct RenderGlyph
     // Not used in all text rendering, only certain NPCs, combat text
     // and item pickup in overland
     void Draw(int color, void* unknown, int alpha);
+};
+
+// 16-bit value to put in a string representing a special functionality
+enum ControlWord
+{
+    ControlWord_End = 0xff01,
+    ControlWord_EndRTurn = 0xff02,
+    ControlWord_Close = 0xff03, // closes quest? used alongside </QUEST>
+    ControlWord_YesNo = 0xff04,
+    ControlWord_NoYes = 0xff05,
+    ControlWord_YesNo_NotSe = 0xff06,
+    ControlWord_YesNo_NotSe_IIE = 0xff07,
+    ControlWord_UkeYame = 0xff08,
+
+    ControlWord_Add = 0xff0a,
+    ControlWord_Auto = 0xff0b,
+    ControlWord_PageT = 0xff0c,
+    ControlWord_Page = 0xff0d,
+    ControlWord_Shake = 0xff0e,
+    ControlWord_QuestSE = 0xff0f, 
+    ControlWord_Quest = 0xff10,
+    ControlWord_QuestHan = 0xff11,
+    ControlWord_SlashQuest = 0xff12, // "/QUEST" tag
+    ControlWord_QuestFailed = 0xff13,
+    ControlWord_Yes = 0xff14,
+    ControlWord_No = 0xff15,
+    ControlWord_Uke = 0xff16,
+    ControlWord_Yame = 0xff17,
+    ControlWord_Time = 0xff1a,
+    ControlWord_AllRecover = 0xff1b,
+    ControlWord_ST = 0xff1c,
+    ControlWord_PadWait = 0xff1d,
+    ControlWord_PadT = 0xff1e,
+    ControlWord_PadWaitNoCursor = 0xff1f,
+
+    ControlWord_WinOn = 0xff26,
+    ControlWord_WinOff = 0xff27,
+    ControlWord_CenOn = 0xff28,
+    ControlWord_CenOff = 0xff29,
+    ControlWord_Turn = 0xff2a,
+    ControlWord_NTurn = 0xff2b,
+    ControlWord_RTurn = 0xff2c,
+    ControlWord_TurnP = 0xff2d,
+    ControlWord_Exclamation = 0xff2e,
+    ControlWord_Question = 0xff2f,
+
+    ControlWord_LBBase = 0xffd0, // A character value is added to this
+    ControlWord_JPBase = 0xffe0, // A character value is added to this
 };
 
 namespace StringBuilders
@@ -209,30 +258,39 @@ public:
     char unk_17b9[0x1838 - 0x17b9];
     int unknown_1838_;
     int unknown_183c_;
-    char unk_1840[0x1848 - 0x1840];
+    fix32_t turnAngle_1840_;
+    char unk_1844[0x1848 - 0x1844];
     int unknown_1848_[4]; // probably viewport, and probably a struct
     int unknown_1858_;
     int unknown_185c_;
     int unknown_1860_;
     int unknown_1864_;
     int unknown_1868_;
-    int unknown_array_186c_[4]; // func_02045824
+    int waitTimeLengths_[4]; // func_02045824, used by <TIME=..> tag
     short unknown_187c_;
-    char unk_187e[0x1882 - 0x187e];
+    unsigned short recoveryAmount_; // @187e. amount of HP and MP to restore (usually 999)
+    char unk_187e[0x1882 - 0x1880];
     char buffer_1882_[0x80];
     char buffer_1902_[0x40];
     short unknown_1942_;
     short unknown_1944_;
     char unk_1946[2];
-    short unknown_1948_;
+    short questIndex_1948_;
     char unknown_194a_;
     char unknown_194b_;
     char unknown_194c_;
     char unknown_194d_;
-    char unk_194e[0x5a - 0x4e];
+    char tagSTArray1_194e_[4];
+    char tagSTArray2_1952_[4];
+    char tagSTArrayIndex_1956_;
+    char unk_1957[0x5a - 0x57];
     char unknown_195a_;
     char unknown_195b_;
-    char unk_195c[0x62 - 0x5c];
+    char unk_195c[0x5e - 0x5c];
+    char autoValue_195e_; // populated by <AUTO=__> tags, I couldn't find any though
+    char unk_195f[1];
+    char pageTValue_1960_; // seems to be time until dialogue advances automatically?
+    char unk_1961[1];
     char unknown_1962_;
     char unk_1963[1];
     ClipWindow windows_[2];
@@ -257,7 +315,10 @@ public:
     char unknown_19bf_;
     char unk_19c0[2];
     char unknown_19c2_;
-    char unk_19c3[0x19cb - 0x19c3];
+    char unk_19c3[0x19c6 - 0x19c3];
+    bool recoveryParam_19c6_;
+    bool recoveryParam_19c7_; 
+    char unk_19c8[0xcb - 0xc8];
     char unknown_19cb_;
     char unknown_19cc_;
     char unk_19cd[1];
@@ -350,14 +411,14 @@ public:
     // Replaces e.g. "<CAP>hello" with "Hello"
     void SubstituteCaps(char* input, char* output, int fontType);
 
-    // func_0206973c: "PAGE_T="
-    // func_02069790: "PAGE>"
-    // func_020697b8: "AUTO="
-    // func_0206980c: "ADD>"
-    // func_02069834: "TIME="
-    // func_02069884: "PAD_WAIT>"
-    // func_020698ac: "PAD_T="
-    // func_020698fc: "PAD_WAIT_NOCUR>"
+    // func_0206973c: "PAGE_T=" // declare page end, auto-advance after given time
+    // func_02069790: "PAGE>" // declare page end
+    // func_020697b8: "AUTO=" // ???
+    // func_0206980c: "ADD>" // maybe prevents box disappearing during cutscene? see e.g. Grand Lizzier
+    // func_02069834: "TIME=" // used to add a delay/block input for a time (used for quest completion)
+    // func_02069884: "PAD_WAIT>" // await input?
+    // func_020698ac: "PAD_T=" // ???
+    // func_020698fc: "PAD_WAIT_NOCUR>" // await input, don't show cursor/down arrow
     // func_02069924: "WIN_ON>"
     // func_0206994c: "WIN_OFF>"
     // func_02069974: "CEN_ON>"
@@ -368,26 +429,26 @@ public:
     // func_02069b0c: "NOYES>"
     // func_02069b34: "YESNO_NOTSE>"
     // func_02069b5c: "YESNO_NOTSE_IIE>"
-    // func_02069b84: "UKEYAME>"
+    // func_02069b84: "UKEYAME>" // seems to be a variant of yes/no? used in quests
     // func_02069bac: "LB_"
     // func_02069be4: "JP_"
     // func_02069c1c: "TURN="
-    // func_02069ce0: "QUEST_SE>"
-    // func_02069d08: "QUEST="
-    // func_02069d6c: "QUEST_HAN>"
+    // func_02069ce0: "QUEST_SE>" // accepting a quest?
+    // func_02069d08: "QUEST=" // makes quest appear on top screen?
+    // func_02069d6c: "QUEST_HAN>" // complete quest?
     // func_02069d94: "QUEST_FAILED>"
     // func_02069dbc: "/QUEST>"
-    // func_02069de4: "N_TURN>"
+    // func_02069de4: "N_TURN>" // might mean 'don't turn'? (normally character turns toward player and stays that way)
     // func_02069e0c: "END_R_TURN>"
     // func_02069e34: "R_TURN>"
-    // func_02069e5c: "TURN_P>"
-    // func_02069e84: "EXC>"
-    // func_02069eac: "QES>"
+    // func_02069e5c: "TURN_P>" // probably turn to player?
+    // func_02069e84: "EXC>" // exclamation/alert
+    // func_02069eac: "QES>" // question/confused
     // func_02069ed4: "YES>"
     // func_02069efc: "NO>"
     // func_02069f24: "UKE>"
     // func_02069f4c: "YAME>"
     // func_02069f74: "END>"
     // func_02069f9c: "CLOSE>"
-    // func_02069fc4: "SHAKE>"
+    // func_02069fc4: "SHAKE>" // shakes the text box (see e.g. heavy hatchet quest)
 };

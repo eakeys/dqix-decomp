@@ -51,7 +51,7 @@ struct FontDataFile
 // sizeof == 0x1c.
 struct RenderGlyph
 {
-    int unknown_0;
+    const void* textureData;
     unsigned int textureVRAMOffset;
     int unknown_8;
     int drawX;
@@ -60,12 +60,21 @@ struct RenderGlyph
     unsigned char unk_16_low : 1;
     unsigned char unk_16_1 : 1;
     unsigned char unk_16_2 : 1;
-    char unk_17[1];
-    void* unknown_18;
+    unsigned char unk_16_3 : 1;
+    char unknown_17;
+    const FontIndexFile::Glyph* indexGlyph;
+
+    void Reset();
+    void Reset2();
+
+    const char* GetGlyphTag() const;
+
+    void UploadToVRAM();
 
     // Not used in all text rendering, only certain NPCs, combat text
     // and item pickup in overland
     void Draw(int color, void* unknown, int alpha);
+    
 };
 
 // 16-bit value to put in a string representing a special functionality
@@ -94,13 +103,20 @@ enum ControlWord
     ControlWord_No = 0xff15,
     ControlWord_Uke = 0xff16,
     ControlWord_Yame = 0xff17,
+    ControlWord_LineBreak = 0xff18,
+
     ControlWord_Time = 0xff1a,
     ControlWord_AllRecover = 0xff1b,
     ControlWord_ST = 0xff1c,
     ControlWord_PadWait = 0xff1d,
     ControlWord_PadT = 0xff1e,
     ControlWord_PadWaitNoCursor = 0xff1f,
-
+    ControlWord_Unknown_ff20 = 0xff20,
+    ControlWord_Unknown_ff21 = 0xff21,
+    ControlWord_Unknown_ff22 = 0xff22,
+    ControlWord_Unknown_ff23 = 0xff23,
+    ControlWord_Unknown_ff24 = 0xff24,
+    ControlWord_Unknown_ff25 = 0xff25,
     ControlWord_WinOn = 0xff26,
     ControlWord_WinOff = 0xff27,
     ControlWord_CenOn = 0xff28,
@@ -111,6 +127,12 @@ enum ControlWord
     ControlWord_TurnP = 0xff2d,
     ControlWord_Exclamation = 0xff2e,
     ControlWord_Question = 0xff2f,
+
+    ControlWord_MEBase = 0xff34,
+
+    ControlWord_SEBase = 0xff4b,
+
+    ControlWord_VoiceVolumeBase = 0xff4d, 
 
     ControlWord_LBBase = 0xffd0, // A character value is added to this
     ControlWord_JPBase = 0xffe0, // A character value is added to this
@@ -195,7 +217,13 @@ void LoadCustomFonts(SafeAllocator* alloc);
 class TextManager
 {
 public:
-    char unk_0[0x30];
+    void* actors_0_[2];
+    void* actions_8_[2];
+    void* targets_10_[2];
+    void* items_18_[2];
+    void* monsters_20_[2];
+    char unk_28[4];
+    void* reflex_2c_;
     char unknown_30_;
     char unknown_31_;
     char unk_32[0x38 - 0x32];
@@ -209,7 +237,8 @@ public:
     void* ptr_5c;
     void* ptr_60;
     void* ptr_64;
-    char unk_68[0x8c - 0x68];
+    int length_68_;
+    char unk_6c[0x8c - 0x6c];
     int unknown_8c_;
     char substruct_90_[0x238]; // func_0205c790
     int unknown_2c8_;
@@ -249,44 +278,44 @@ public:
     char unk_998[4];
     int unknown_99c_;
     int unknown_9a0_;
-    int unknown_9a4_;
+    int gyouParameter_9a4_;
     char unk_9a8[0x9b0 - 0x9a8];
     int unknown_9b0_;
     int unknown_9b4_;
+    // holds data about glyphs that are used in the current message
     RenderGlyph glyphs_[0x80];
-    char unknown_17b8_; // probably num glyphs
-    char unk_17b9[0x1838 - 0x17b9];
-    int unknown_1838_;
-    int unknown_183c_;
+    // number of times a glyph is used within message
+    char glyphRefcounts_17b8_[0x80];
+    int npcID_1838_;
+    fix32_t npcPriorRotation_183c_;
     fix32_t turnAngle_1840_;
-    char unk_1844[0x1848 - 0x1844];
+    fix32_t npcAngleToUse_1844_;
     int unknown_1848_[4]; // probably viewport, and probably a struct
     int unknown_1858_;
     int unknown_185c_;
-    int unknown_1860_;
-    int unknown_1864_;
+    int mojiArg1_1860_;
+    int mojiArg2_1864_;
     int unknown_1868_;
     int waitTimeLengths_[4]; // func_02045824, used by <TIME=..> tag
-    short unknown_187c_;
-    unsigned short recoveryAmount_; // @187e. amount of HP and MP to restore (usually 999)
+    unsigned short color_187c_;
+    unsigned short recoveryAmount_187e_; // amount of HP and MP to restore (usually 999)
     char unk_187e[0x1882 - 0x1880];
     char buffer_1882_[0x80];
     char buffer_1902_[0x40];
     short unknown_1942_;
     short unknown_1944_;
-    char unk_1946[2];
+    short unknown_1946_;
     short questIndex_1948_;
-    char unknown_194a_;
-    char unknown_194b_;
-    char unknown_194c_;
-    char unknown_194d_;
+    char voiceVolumeLookup_194a_[4];
     char tagSTArray1_194e_[4];
     char tagSTArray2_1952_[4];
     char tagSTArrayIndex_1956_;
-    char unk_1957[0x5a - 0x57];
+    char unk_1957[0x59 - 0x57];
+    char maybeSoundDuration_1959_;
     char unknown_195a_;
     char unknown_195b_;
-    char unk_195c[0x5e - 0x5c];
+    char unknown_195c_;
+    char unk_195d[1];
     char autoValue_195e_; // populated by <AUTO=__> tags, I couldn't find any though
     char unk_195f[1];
     char pageTValue_1960_; // seems to be time until dialogue advances automatically?
@@ -299,16 +328,17 @@ public:
     char unknown_19ae_;
     char unknown_19af_;
     char unk_19b0[0x19b1 - 0x19b0];
-    char unknown_19b1_;
+    char winTag_19b1_;
     char unknown_19b2_;
     char unknown_19b3_;
     char unknown_19b4_;
     char unknown_19b5_;
-    char unk_19b6[2];
-    char unknown_19b8_;
+    char maybeDoesNPCTurn_19b6_;
+    char maybeDoesSoundPlay_19b7_;
+    char cenTag_19b8_;
     char unknown_19b9_;
     char unk_19ba[0x19bb - 0x19ba];
-    char unknown_19bb_;
+    char skipTag_19bb_;
     char unknown_19bc_;
     char unk_19bd[1];
     char unknown_19be_;
@@ -325,9 +355,11 @@ public:
     char unknown_19ce_;
     char unknown_19cf_;
     char unknown_19d0_;
-    char unk_19d1[0xa - 0x1];
+    char unk_19d1[0x4 - 0x1];
+    char unknown_19d4_;
+    char unk_19d5[0xa - 0x5];
     short unknown_19da_;
-    char unknown_19dc_;
+    unsigned char fontIndex_19dc_;
     char unk_19dd[0xe0 - 0xdd];
     char substruct_19e0_[0x448]; // func_0202f1a4. At 0x440 contains a pointer to this+0x914, position of textbox?
     int unknown_1e28_;
@@ -338,11 +370,11 @@ public:
     void Reset();
 
     // usa: func_0206831c
-    void SubstituteValueTags(const char* input, char* output);
+    void SubstituteValueTags(char* input, char* output);
     // substitute any character that is not: 1) within a <tag>; 2) a special character
     // such as ' ', '/' or '\n', or the literal R"\n"; or 3) a recognized tag
     // of the font; with the tag "< >"
-    void SubstituteUnsupportedCharacters(const char* input, char* output, int fontType);
+    void SubstituteUnsupportedCharacters(char* input, char* output, int fontType);
     // usa: func_02068f40
     // handle things like <IF_HOST_MALE>he<ELSE_HOST_NOT_MALE>she<ENDIF_HOST_MALE>
     // by evaluating the relevant condition.
@@ -451,4 +483,19 @@ public:
     // func_02069f74: "END>"
     // func_02069f9c: "CLOSE>"
     // func_02069fc4: "SHAKE>" // shakes the text box (see e.g. heavy hatchet quest)
+    void SubstituteControlTags(char* input, char* output);
+    
+    // Handles tags like <EXC> (play exclamation/alert), <COLOR=r,g,b> (presumably
+    // sets text color but I've never seen it) that can be processed immediately, and
+    // returns a pointer past the processed tags. (Stops as soon as it sees a tag
+    // that can't be processed here)
+    char* HandleImmediateTags(char* input);
+
+    // usa: func_0206abf8
+    int GetControlWordNumExtraWords(const char* input) const;
+    // usa: func_0206ac6c
+    bool IsNextCharacterControl(const char* input) const;
+    // usa: func_0206ac94
+    // might be supposed to take unsigned char* input
+    char* FindControlCharacter(unsigned short control, char* input) const;
 };

@@ -3,6 +3,7 @@
 #include "Graphics/Vector.h"
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"
+#include "Graphics/VRAMStaging.h"
 #include <globaldefs.h>
 
 extern unsigned int data_021077fc; // palette VRAM offset for glyphs
@@ -86,6 +87,45 @@ static inline int Foo(float x)
 }
 
 void WriteTexCoords(fix32_t x, fix32_t y); // can be made static
+
+void RenderGlyph::Reset()
+{
+    textureData = NULL;
+    textureVRAMOffset = 0;
+    unknown_8 = -1;
+    drawX = 0;
+    drawY = 0;
+    drawZ = 0;
+    indexGlyph = NULL;
+    unk_16_low = 0;
+    unk_16_1 = 0;
+    unk_16_2 = 0;
+    unk_16_3 = 0;
+    unknown_17 = 0;
+}
+
+void RenderGlyph::Reset2()
+{
+    Reset();
+}
+
+const char* RenderGlyph::GetGlyphTag() const
+{
+    if (indexGlyph != NULL)
+        return indexGlyph->tag;
+    return NULL;
+}
+
+void RenderGlyph::UploadToVRAM()
+{
+    if (unknown_8 < 0)
+        return;
+    if (unk_16_low && textureData != NULL)
+    {
+        StageMemoryToVRAM(VRAMSubregion_TextureImage, textureData, textureVRAMOffset, 0x80, true, true);
+        unk_16_low = false;
+    }
+}
 
 void RenderGlyph::Draw(int color, void *unknown, int alpha)
 {

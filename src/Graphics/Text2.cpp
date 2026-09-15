@@ -11,11 +11,17 @@ extern "C"
     // probably atof
     double func_020055d4(const char*);
 
-    // advance to end of tag
-    const char* func_020424ac(const char*);
-    int func_02042658(int, int);
+    void* func_0203dce4(void*, int);
+    void* func_0203cf4c();
+    Vector3fix func_020406f8(void*);
 
+    // set textbox dimensions?
+    void func_02042b98(TextManager*, int, int, int, int);
+    bool func_02044494(const TextManager*, const void*);
     void func_020457e8(TextManager*, int);
+
+    // play sound effect?
+    void func_0205eaa0(void*, int effect, int);
 
     // probably get quest manager instance or something?
     void* func_02094d6c();
@@ -26,6 +32,8 @@ extern "C"
     int func_020d2ff0(const char*);
 }
 
+extern char data_02108760[]; // sound effect system?
+
 template<class FuncPtr>
 struct TextProcessingCallback
 {
@@ -33,6 +41,59 @@ struct TextProcessingCallback
     FuncPtr callback;
 };
 
+struct Struct_020e7e04
+{
+    char unk_0[0x24];
+    short array_24[2];
+} extern const data_020e7e04;
+
+extern const char* data_020e7e74[6];
+
+extern char data_020f0746[]; // "<INN="
+extern char data_020f074c[]; // "<SHOP"
+extern char data_020f0752[]; // "TURN="
+extern char data_020f0758[]; // "TIME="
+extern char data_020f075e[]; // "SIZE="
+extern char data_020f0764[]; // "ACTOR"
+extern char data_020f076a[]; // "PAGE>"
+extern char data_020f0770[]; // "AUTO="
+extern char data_020f0776[]; // "PAD_T="
+extern char data_020f077d[]; // "CLOSE>"
+extern char data_020f0784[]; // "SHAKE>"
+extern char data_020f078b[]; // "/TITLE"
+extern char data_020f0792[]; // "YESNO>"
+extern char data_020f0799[]; // "NOYES>"
+extern char data_020f07a0[]; // "<BANK>"
+extern char data_020f07a7[]; // "RENKIN"
+extern char data_020f07ae[]; // "LEADER"
+extern char data_020f07b5[]; // "QUEST="
+extern char data_020f07bc[]; // "INDEF_"
+extern char data_020f07c3[]; // "I_NAME"
+extern char data_020f07ca[]; // "M_NAME"
+extern char data_020f07d1[]; // "TARGET"
+extern char data_020f07d8[]; // "ACTION"
+extern char data_020f07df[]; // "REFLEX"
+extern char data_020f07e6[]; // "WIN_ON>"
+extern char data_020f07ee[]; // "CEN_ON>"
+extern char data_020f07f6[]; // "/QUEST>"
+extern char data_020f07fe[]; // "N_TURN>"
+extern char data_020f0806[]; // "R_TURN>"
+extern char data_020f080e[]; // "TURN_P>"
+extern char data_020f0816[]; // "PAGE_T="
+extern char data_020f081e[]; // "WIN_OFF>"
+extern char data_020f0827[]; // "CEN_OFF>"
+extern char data_020f0830[]; // "<CHURCH="
+extern char data_020f0839[]; // "UKEYAME>"
+extern char data_020f0842[]; // "TMAP_SEC"
+extern char data_020f084b[]; // "PAD_WAIT>"
+extern char data_020f0855[]; // "QUEST_SE>"
+extern char data_020f085f[]; // "ADDRESSEE"
+extern char data_020f0869[]; // "QUEST_HAN>"
+extern char data_020f0874[]; // "END_R_TURN>"
+extern char data_020f0880[]; // "ALL_RECOVER="
+extern char data_020f088d[]; // "YESNO_NOTSE>"
+extern char data_020f089a[]; // "QUEST_FAILED>"
+extern char data_020f08a8[]; // "PAD_WAIT_NOCUR>"
 extern char data_020f08df[]; // "%d<W=%d>"
 extern char data_020f08e8[]; // "<W=%d>%d"
 extern char data_020f08f1[]; // "%d"
@@ -103,7 +164,7 @@ void ProcessVALTag(const char* input, char** ppOutput, TextManager* manager, int
 
     if (unknownThing != 0)
     {
-        int W = unknownThing * 8 - func_02042658(0, value);
+        int W = unknownThing * 8 - MeasureNumberTextWidth(0, value);
         switch (paddingMode)
         {
         case 0: // pad on the right?
@@ -125,7 +186,7 @@ void ProcessVALTag(const char* input, char** ppOutput, TextManager* manager, int
 typedef void(*PFNProcessVALTag)(const char*, char**, TextManager*, int);
 extern const TextProcessingCallback<PFNProcessVALTag> data_020e7e5c[];
 
-void TextManager::SubstituteValueTags(const char *input, char *argOutput)
+void TextManager::SubstituteValueTags(char *input, char *argOutput)
 {
     if (input == NULL || argOutput == NULL)
         return;
@@ -138,12 +199,12 @@ void TextManager::SubstituteValueTags(const char *input, char *argOutput)
         
         if (*input == '<')
         {
-            const char* tagEnd = func_020424ac(input);
+            char* tagEnd = GetTextTagEnd(input);
             if (tagEnd != NULL)
             {
                 bool processedTag = false;
                 const TextProcessingCallback<PFNProcessVALTag>* candidate;
-                const char* tagInterior = input + 1;
+                char* tagInterior = input + 1;
                 
                 for (candidate = data_020e7e5c; candidate->tag != NULL; candidate++)
                 {
@@ -175,7 +236,7 @@ void TextManager::SubstituteValueTags(const char *input, char *argOutput)
     *output = *input;
 }
 
-void TextManager::SubstituteUnsupportedCharacters(const char* input, char* output, int fontType)
+void TextManager::SubstituteUnsupportedCharacters(char* input, char* output, int fontType)
 {
     if (input == NULL || output == NULL)
         return;
@@ -207,7 +268,7 @@ void TextManager::SubstituteUnsupportedCharacters(const char* input, char* outpu
 
         if (nextInputChar == '<')
         {
-            const char* tagEnd = func_020424ac(input);
+            const char* tagEnd = GetTextTagEnd(input);
             if (tagEnd != NULL)
             {
                 memcpy(output, input, tagEnd - input + 1);
@@ -321,7 +382,7 @@ void TextManager::SubstituteConditionals(char *input, char *output, int fontType
         if (nextChar == '\0')
             break;
         
-        if (nextChar == '<' && CaseInsensitiveDoesStringBeginWith(input, data_020f08ff) && func_020424ac(input) != NULL)
+        if (nextChar == '<' && CaseInsensitiveDoesStringBeginWith(input, data_020f08ff) && GetTextTagEnd(input) != NULL)
         {
             char* inputNoSkip = input;
             for (const ConditionProcessor* condition = data_020e833c; condition->callback != NULL; condition++)
@@ -391,7 +452,7 @@ void TextManager::SubstituteCaps(char *input, char *output, int fontType)
 
         if (*input == '<')
         {
-            const char* tagEnd = func_020424ac(input);
+            const char* tagEnd = GetTextTagEnd(input);
             if (tagEnd != NULL && memcmp(input + 1, data_020f0916, 4) == 0)
             {
                 input = (char*)tagEnd + 1;
@@ -560,7 +621,7 @@ int ConvertAllRecoverTag(char** ppOutput, char* tagExtras)
     bool secondBool = (bool)params[1];
     mgr->recoveryParam_19c6_ = firstBool;
     mgr->recoveryParam_19c7_ = secondBool;
-    mgr->recoveryAmount_ = healAmount;
+    mgr->recoveryAmount_187e_ = healAmount;
     char* dest = *ppOutput;
     unsigned short controlWord = ControlWord_AllRecover;
     memcpy(dest, &controlWord, 2);
@@ -822,4 +883,503 @@ int ConvertShakeTag(char** ppOutput, char* tagExtras)
     unsigned short controlWord = ControlWord_Shake;
     memcpy(dest, &controlWord, 2);
     return 2;
+}
+
+struct ControlTagProc
+{
+    const char* tag;
+    int (*callback)(char**, char*);
+};
+extern const ControlTagProc data_020e7f84[];
+
+void TextManager::SubstituteControlTags(char *argInput, char *argOutput)
+{
+    if (argInput == NULL || argOutput == NULL)
+        return;
+
+    char* output = argOutput; // create local copy so can pass by reference
+    char* input = HandleImmediateTags(argInput);
+    unknown_19d4_ = true;
+    unsigned short voiceVolumeIdx = 0;
+    unsigned short finalControlWord;
+
+    while (true)
+    {
+        if (*input == 0)
+            break;
+
+        if ((input[0] == '\\' && input[1] == 'n') || (input[0] == '\r' && input[1] == '\n'))
+        {
+            unsigned short controlWord = ControlWord_LineBreak;
+            memcpy(output, &controlWord, 2);
+            output += 2;
+            input += 2;
+            continue;
+        }
+
+        if (input[0] == '\n')
+        {
+            unsigned short controlWord = ControlWord_LineBreak;
+            memcpy(output, &controlWord, 2);
+            output += 2;
+            input += 1;
+            continue;
+        }
+
+        if (input[0] == '<')
+        {
+            char* tagEnd = GetTextTagEnd(input);
+            if (tagEnd != NULL)
+            {
+                char* comparison = input + 1;
+                bool matchedTag = false;
+                for (const ControlTagProc* proc = data_020e7f84; proc->tag != NULL && proc->callback != NULL; proc++)
+                {
+                    if (!CaseInsensitiveDoesStringBeginWith(comparison, proc->tag))
+                        continue;
+                    char* tagParams = comparison + func_020d2ff0(proc->tag);
+                    int writeLength = proc->callback(&output, tagParams);
+                    output += writeLength;
+                    input = tagEnd + 1;
+                    matchedTag = true;
+                    break;
+                }
+
+                if (matchedTag)
+                    continue;
+
+                const char* facilities[6]; // inn, church, bank, shop, renkin, ""
+                COPY_ARRAY(facilities, data_020e7e74);
+                for (const char** loopFacility = facilities; *loopFacility != NULL; loopFacility++)
+                {
+                    if (!DoesStringBeginWith(input, *loopFacility))
+                        continue;
+                    while (*input != '>')
+                        input++;
+                    input++;
+                    break;
+                }
+
+                if (DoesStringBeginWith(input, data_020f091b))
+                {
+                    int tagLength = 14;
+                    int voiceVolume = func_02005a94(input + 14);
+                    
+                    while (input[tagLength] != '>')
+                    {
+                        if (input[tagLength] == 0)
+                            return;
+                        tagLength++;
+                    }
+                    voiceVolumeLookup_194a_[voiceVolumeIdx] = voiceVolume;
+                    unsigned short controlWord = ControlWord_VoiceVolumeBase + voiceVolumeIdx;
+                    memcpy(output, &controlWord, 2);
+                    input += tagLength + 1;
+                    output += 2;
+                    voiceVolumeIdx++;
+                    voiceVolumeIdx &= 3;
+                    continue;
+                }
+
+                if (DoesStringBeginWith(input, data_020f092a)) // <ME_
+                {
+                    int tagLength = 4;
+                    int meParam = func_02005a94(input + 4);
+                    while (input[tagLength] != '>')
+                    {
+                        if (input[tagLength] == 0)
+                            return;
+                        tagLength++;
+                    }
+                    unsigned short controlWord = ControlWord_MEBase + meParam;
+                    memcpy(output, &controlWord, 2);
+                    input += tagLength + 1;
+                    output += 2;
+                    continue;
+                }
+
+                if (DoesStringBeginWith(input, data_020f092f)) // <SE_
+                {
+                    int tagLength = 4;
+                    int meParam = func_02005a94(input + 4);
+                    while (input[tagLength] != '>')
+                    {
+                        if (input[tagLength] == 0)
+                            return;
+                        tagLength++;
+                    }
+                    unsigned short controlWord = ControlWord_SEBase;
+                    short local_44[2];
+                    unsigned short i = 0;
+                    COPY_ARRAY(local_44, data_020e7e04.array_24);
+                    
+                    for (; local_44[i] >= 0; i++)
+                    {
+                        if (meParam == local_44[i])
+                        {
+                            controlWord += i;
+                            break;
+                        }
+                    }
+                    unsigned short localControlWord = controlWord;
+                    memcpy(output, &localControlWord, 2);
+                    input += tagLength + 1;
+                    output += 2;
+                    continue;
+                }
+            }
+        }
+
+        *output = *input;
+        input++;
+        output++;
+    }
+
+    finalControlWord = ControlWord_End;
+    memcpy(output, &finalControlWord, 2);
+    output += 2;
+    *output = '\0';
+}
+
+char* TextManager::HandleImmediateTags(char* input)
+{
+    bool moreTagsToGo = true;
+    maybeDoesNPCTurn_19b6_ = true;
+    GameObject* leader = GameState::GetInstance()->GetPartyLeader();
+    void* maybeNPC = func_0203dce4(func_0203cf4c(), npcID_1838_);
+    if (leader != NULL && maybeNPC != NULL)
+    {
+        Vector3fix playerPos = leader->obj3D_.position_;
+        Vector3fix npcPos = func_020406f8(maybeNPC);
+        
+        npcAngleToUse_1844_ = fix32ReduceAngle0To2Pi(
+            fix32_Atan2(playerPos.x - npcPos.x, playerPos.z - npcPos.z)
+        );
+        maybeDoesNPCTurn_19b6_ = true;
+    }
+    maybeSoundDuration_1959_ = 0;
+    maybeDoesSoundPlay_19b7_ = false;
+    while (moreTagsToGo)
+    {
+        if (DoesStringBeginWith(input, data_020f0934)) // <N_TURN>
+        {
+            npcAngleToUse_1844_ = npcPriorRotation_183c_;
+            maybeDoesNPCTurn_19b6_ = false;
+            input += 8;
+            continue;
+        }
+
+        if (DoesStringBeginWith(input, data_020f093d)) // <EXC>
+        {
+            maybeSoundDuration_1959_ = 60;
+            maybeDoesSoundPlay_19b7_ = true;
+            unknown_195c_ = 0;
+            input += 5;
+            func_0205eaa0(data_02108760, 6, 0);
+            continue;
+        }
+
+        if (DoesStringBeginWith(input, data_020f0943)) // <QES>
+        {
+            maybeSoundDuration_1959_ = 60;
+            maybeDoesSoundPlay_19b7_ = true;
+            unknown_195c_ = 1;
+            input += 5;
+            func_0205eaa0(data_02108760, 28, 0);
+            continue;
+        }
+
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f0949)) // <RECT=
+        {
+            bool outOfTagParameters = false;
+            
+            int argReadOffset = 6;
+            int totalTagLength = 6;
+            
+            while (input[totalTagLength] != '>')
+            {
+                if (input[totalTagLength] == 0)
+                    return input + totalTagLength;
+                totalTagLength++;
+            }
+
+            int rectX = func_02005a94(input + argReadOffset);
+            while (input[argReadOffset] != ',')
+            {
+                if (input[argReadOffset] == '>')
+                {
+                    input += argReadOffset + 1;
+                    outOfTagParameters = true;
+                    break;
+                }
+                argReadOffset++;
+            }
+            if (outOfTagParameters)
+                return input;
+
+            argReadOffset++; // skip over the comma
+            int rectY = func_02005a94(input + argReadOffset);
+            while (input[argReadOffset] != ',')
+            {
+                if (input[argReadOffset] == '>')
+                {
+                    input += argReadOffset + 1;
+                    outOfTagParameters = true;
+                    break;
+                }
+                argReadOffset++;
+            }
+            if (outOfTagParameters)
+                return input;
+
+            argReadOffset++; // skip over the comma
+            int rectWidth = func_02005a94(input + argReadOffset);
+            while (input[argReadOffset] != ',')
+            {
+                if (input[argReadOffset] == '>')
+                {
+                    input += argReadOffset + 1;
+                    outOfTagParameters = true;
+                    break;
+                }
+                argReadOffset++;
+            }
+            if (outOfTagParameters)
+                return input;
+
+            argReadOffset++; // skip over the comma
+            int rectHeight = func_02005a94(input + argReadOffset);
+
+            if (rectX < 0)
+                rectX = 0;
+            if (rectX > 256)
+                rectX = 256;
+            if (rectY < 0)
+                rectY = 0;
+            if (rectY > 192)
+                rectY = 192;
+            
+            if (rectWidth < 0)
+                rectWidth = 256 - rectX;
+            if (rectWidth > 256)
+                rectWidth = 256 - rectX;
+            if (rectHeight < 0)
+                rectHeight = 192 - rectY;
+            if (rectHeight > 192)
+                rectHeight = 192 - rectY;
+
+            func_02042b98(this, rectX, rectY, rectWidth, rectHeight);
+            input += totalTagLength + 1;
+            continue;
+        }
+
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f0950)) // <WIN>
+        {
+            winTag_19b1_ = 0;
+            input += 5;
+            continue;
+        }
+
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f0956)) // <CEN>
+        {
+            cenTag_19b8_ = 1;
+            input += 5;
+            continue;
+        }
+
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f095c)) // <GYOU=
+        {
+            int tagLength = 6;
+            int argument = func_02005a94(input + 6);
+            while (input[tagLength] != '>')
+            {
+                if (input[tagLength] == 0)
+                    return input + tagLength;
+                tagLength++;
+            }
+            if (argument < 1)
+                argument = 1;
+            gyouParameter_9a4_ = argument;
+            input += tagLength + 1;
+            continue;
+        }
+
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f0963)) // <MOJI=
+        {
+            int argReadOffset = 6;
+            int totalTagLength = 6;
+            while (input[totalTagLength] != '>')
+            {
+                if (input[totalTagLength] == 0)
+                    return input + totalTagLength;
+                totalTagLength++;
+            }
+
+            int arg1 = func_02005a94(input + argReadOffset);
+            if (arg1 <= 0)
+                arg1 = 12;
+            while (input[argReadOffset] != ',')
+            {
+                if (input[argReadOffset] == '>')
+                {
+                    input += argReadOffset + 1;
+                    break;
+                }
+                argReadOffset++;
+            }
+
+            argReadOffset++;
+            int arg2 = func_02005a94(input + argReadOffset);
+            if (arg2 <= 0)
+                arg2 = 16;
+
+            mojiArg1_1860_ = arg1;
+            mojiArg2_1864_ = arg2;
+            input += totalTagLength + 1;
+            continue;
+        }
+        
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f096a)) // <COLOR=
+        {
+            int argReadOffset = 7;
+            int totalTagLength = 7;
+            while (input[totalTagLength] != '>')
+            {
+                if (input[totalTagLength] == 0)
+                    return input + totalTagLength;
+                totalTagLength++;
+            }
+
+            bool outOfTagParameters = false;
+            int argRed = func_02005a94(input + argReadOffset);
+            if (argRed < 0)
+                argRed = 255;
+            if (argRed > 255)
+                argRed = 255;
+
+            while (input[argReadOffset] != ',')
+            {
+                if (input[argReadOffset] == '>')
+                {
+                    input += argReadOffset + 1;
+                    outOfTagParameters = true;
+                    break;
+                }
+                argReadOffset++;
+            }
+
+            if (outOfTagParameters)
+                continue;
+            argReadOffset++;
+            int argGreen = func_02005a94(input + argReadOffset);
+            if (argGreen < 0)
+                argGreen = 255;
+            if (argGreen > 255)
+                argGreen = 255;
+
+            while (input[argReadOffset] != ',')
+            {
+                if (input[argReadOffset] == '>')
+                {
+                    input += argReadOffset + 1;
+                    outOfTagParameters = true;
+                    break;
+                }
+                argReadOffset++;
+            }
+
+            if (outOfTagParameters)
+                continue;
+            argReadOffset++;
+            int argBlue = func_02005a94(input + argReadOffset);
+            if (argBlue < 0)
+                argBlue = 255;
+            if (argBlue > 255)
+                argBlue = 255;
+            color_187c_ = (argRed >> 3) | ((argGreen >> 3) << 5) | ((argBlue >> 3) << 10);
+            input += totalTagLength + 1;
+            continue;
+        }
+
+        if (CaseInsensitiveDoesStringBeginWith(input, data_020f0972)) // <SKIP>
+        {
+            skipTag_19bb_ = false;
+            input += 6;
+            continue;
+        }
+
+        moreTagsToGo = false;
+    }
+    return input;
+}
+
+int TextManager::GetControlWordNumExtraWords(const char *input) const
+{
+    int numExtra = 0;
+    unsigned short controlWord;
+    memcpy(&controlWord, input, 2);
+    if (!func_02044494(this, &controlWord))
+        return 0;
+
+    switch (controlWord)
+    {
+    case ControlWord_Unknown_ff20:
+    case ControlWord_Unknown_ff21:
+    case ControlWord_Unknown_ff23:
+    case ControlWord_Unknown_ff24:
+        numExtra = 1;
+        break;
+    case ControlWord_Unknown_ff22:
+    case ControlWord_Unknown_ff25:
+        numExtra = 2;
+        break;
+    }
+    return numExtra;
+}
+
+bool TextManager::IsNextCharacterControl(const char* input) const
+{
+    unsigned short word;
+    memcpy(&word, input, 2);
+    if ((word & 0xff00) == 0xff00)
+        return true;
+    return false;
+}
+
+char* TextManager::FindControlCharacter(unsigned short control, char* input) const
+{
+    if (input == NULL)
+        return NULL;
+    if (!func_02044494(this, &control))
+        return NULL;
+
+    unsigned int bytesSearched = 0;
+    while (true)
+    {
+        if (*(unsigned char*)input == 0)
+            break;
+
+        if (IsNextCharacterControl(input))
+        {
+            if (memcmp(&control, input, 2) == 0)
+                return input;
+            int skipLength = 2 * GetControlWordNumExtraWords(input) + 2;
+            input += skipLength;
+            bytesSearched += skipLength;
+            continue;
+        }
+
+        int glyphMarkupLength = 1;
+        const FontIndexFile::Glyph* glyph = GetNextFontGlyph(input, fontIndex_19dc_);
+        if (glyph != NULL)
+            glyphMarkupLength = glyph->tagLength;
+        
+        bytesSearched += glyphMarkupLength;
+        input += glyphMarkupLength;
+        
+        if (length_68_ < bytesSearched)
+            break;
+    }
+
+    return NULL;
 }

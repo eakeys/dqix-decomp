@@ -10,8 +10,8 @@ ARM int GetAttackBaseDamage(int* param_1, int attackerId, int defenderId, int* p
     RNG = (unsigned int*)param_1[4];
     if (param_5 == NULL) {
         float defendersDefense;
-        GameObject* attacker = GetCombatantByID((int)RNG, attackerId);
-        GameObject* defender = GetCombatantByID(param_1[4], attackerId);
+        Combatant* attacker = GetCombatantByID((int)RNG, attackerId);
+        Combatant* defender = GetCombatantByID(param_1[4], attackerId);
         if (attacker == NULL || defender == NULL) {
             return 0;
         }

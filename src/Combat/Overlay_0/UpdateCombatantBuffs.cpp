@@ -6,7 +6,7 @@
 ARM void UpdateCombatantAttack(int unused, int combatantId) {
     int maxAttack;
     GameState* gameState;
-    GameObject* combatant;
+    Combatant* combatant;
     int combatantIsPlayer;
     unsigned int attack;
     unsigned short buffedAttack;
@@ -36,7 +36,7 @@ ARM void UpdateCombatantAttack(int unused, int combatantId) {
 ARM void UpdateCombatantDefense(int unused, int combatantId) {
     int maxDefense;
     struct GameState* gameState;
-    GameObject* combatant;
+    Combatant* combatant;
     int combatantIsPlayer;
     unsigned int defense;
     unsigned short buffedDefense;
@@ -65,7 +65,7 @@ ARM void UpdateCombatantDefense(int unused, int combatantId) {
 
 ARM void UpdateCombatantAgility(int unused, int combatantId) {
     GameState* gameState;
-    GameObject* combatant;
+    Combatant* combatant;
     unsigned int agility;
     float agilityMultiplier;
     unsigned short agilityBuffed;
@@ -87,7 +87,7 @@ ARM void UpdateCombatantAgility(int unused, int combatantId) {
 
 ARM void UpdateCombatantCharm(int unused, int combatantId) {
     GameState *gameState = GameState::GetInstance();
-    GameObject* combatant = gameState->GetCombatantByIndex(combatantId);
+    Combatant* combatant = gameState->GetCombatantByIndex(combatantId);
     float charmMultiplier;
     unsigned short charm;
     unsigned short charmBuffed;
@@ -114,7 +114,7 @@ ARM void UpdateCombatantMagicalMight(int unused, int combatantId) {
     const short maxMagicalMight = 999;
     float buffMultiplier;
     struct GameState *gameState = GameState::GetInstance();
-    GameObject* combatant = gameState->GetCombatantByIndex(combatantId);
+    Combatant* combatant = gameState->GetCombatantByIndex(combatantId);
     if (combatant == NULL) {
         return;
     }
@@ -136,7 +136,7 @@ ARM void UpdateCombatantMagicalMending(int unused, int combatantId) {
     const short maxMagicalMending = 999;
     float buffMultiplier;
     struct GameState *gameState = GameState::GetInstance();
-    GameObject*combatant = gameState->GetCombatantByIndex(combatantId);
+    Combatant* combatant = gameState->GetCombatantByIndex(combatantId);
     if (combatant == NULL) {
         return;
     }

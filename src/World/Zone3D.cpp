@@ -100,7 +100,7 @@ void Zone3D::SwitchZone(unsigned short newID)
 
     void* uVar3 = func_02011584(gameState);
     (void)func_ov017_0218b5b0();
-    GameObject* iVar4 = gameState->GetPartyLeader();
+    PartyMember* leader = gameState->GetPartyLeader();
 
     pAllocator_68_ = pAllocator_4c_;
     pAllocator_68_->Reset();
@@ -154,10 +154,10 @@ void Zone3D::SwitchZone(unsigned short newID)
     unknown_4_ = pUnknownStruct_8_->unknown_2_;
     if (pUnknownStruct_8_->unknown_c_low_ == 0)
     {
-        GameObject* iVar5 = gameState->GetCartridgeProtagonist();
-        if (iVar5 != NULL)
+        PartyMember* protagonist = gameState->GetCartridgeProtagonist();
+        if (protagonist != NULL)
         {
-            void* iVar6 = func_02053c6c(iVar5);
+            void* iVar6 = func_02053c6c(protagonist);
             if (iVar6 != NULL)
                 *(unsigned short*)((int)iVar6 + 0x566) = pUnknownStruct_8_->unknown_0_;
         }
@@ -195,8 +195,8 @@ void Zone3D::SwitchZone(unsigned short newID)
         if (currentGrottoFloor_23ba_ != -1)
         {
             copyOfCurrentGrottoFloor_23bb_ = currentGrottoFloor_23ba_;
-            position_23c0_ = iVar4->obj3D_.position_;
-            unknown_23cc_ = *(short*)((int)iVar4 + 0xae);
+            position_23c0_ = leader->position_;
+            unknown_23cc_ = *(short*)((int)leader + 0xae);
         }
         isInMainGrottoFloor_23b8_ = false;
         currentGrottoFloor_23ba_ = -1;

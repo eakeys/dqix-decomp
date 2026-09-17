@@ -17,7 +17,8 @@ struct PrimaryCombatStats {
 };
 
 struct BaseCombatStats {
-    char unk[0x2C]; // part of this seems to the the (generic) name
+    char name[0x2c]; // might be 0x30 and currHP, currMP aren't in this struct?
+                     // currHP and currMP both zero when getting into a fight
     struct PrimaryCombatStats primaryStats;
 };
 

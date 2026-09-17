@@ -1,7 +1,7 @@
 #include <globaldefs.h>
 #include "GameState/GameState.h"
 
-GameObject* GameState::GetGameObjectByIndex(int idx)
+Object3D* GameState::GetGameObjectByIndex(int idx)
 {
     if (idx < 0)
         return NULL;
@@ -10,30 +10,7 @@ GameObject* GameState::GetGameObjectByIndex(int idx)
     return objects_[idx];
 }
 
-GameObject* GameState::GetMaybeWanderingMonsterByIndex(int idx)
-{
-    if (idx < 0)
-        return NULL;
-    if (idx >= 0xe9)
-        return NULL;
-    if (objects_[idx] == NULL)
-        return NULL;
-    if (!(objects_[idx]->obj3D_.unknown_0_ & 2))
-        return NULL;
-    return objects_[idx];
-}
-
-GameObject* GameState::GetCartridgeProtagonist()
-{
-    return GetGameObjectByIndex(cartridgeProtagonistObjectIndex_);
-}
-
-GameObject* GameState::GetPartyLeader()
-{
-    return GetGameObjectByIndex(partyLeaderObjectIndex_);
-}
-
-GameObject* GameState::GetPartyMemberByIndex(int idx)
+Object3D* GameState::GetMaybeWanderingMonsterByIndex(int idx)
 {
     if (idx < 0)
         return NULL;
@@ -41,12 +18,22 @@ GameObject* GameState::GetPartyMemberByIndex(int idx)
         return NULL;
     if (objects_[idx] == NULL)
         return NULL;
-    if (!(objects_[idx]->obj3D_.unknown_0_ & 0x800))
+    if (!(objects_[idx]->unknown_0_ & 2))
         return NULL;
     return objects_[idx];
 }
 
-GameObject* GameState::GetMaybeFieldMonsterByIndex(int idx)
+PartyMember* GameState::GetCartridgeProtagonist()
+{
+    return (PartyMember*)GetGameObjectByIndex(cartridgeProtagonistObjectIndex_);
+}
+
+PartyMember* GameState::GetPartyLeader()
+{
+    return (PartyMember*)GetGameObjectByIndex(partyLeaderObjectIndex_);
+}
+
+PartyMember* GameState::GetPartyMemberByIndex(int idx)
 {
     if (idx < 0)
         return NULL;
@@ -54,12 +41,12 @@ GameObject* GameState::GetMaybeFieldMonsterByIndex(int idx)
         return NULL;
     if (objects_[idx] == NULL)
         return NULL;
-    if (!(objects_[idx]->obj3D_.unknown_0_ & 0x20))
+    if (!(objects_[idx]->unknown_0_ & 0x800))
         return NULL;
-    return objects_[idx];
+    return (PartyMember*)objects_[idx];
 }
 
-GameObject* GameState::GetCombatantByIndex(int idx)
+Object3D* GameState::GetMaybeFieldMonsterByIndex(int idx)
 {
     if (idx < 0)
         return NULL;
@@ -67,7 +54,33 @@ GameObject* GameState::GetCombatantByIndex(int idx)
         return NULL;
     if (objects_[idx] == NULL)
         return NULL;
-    if (!(objects_[idx]->obj3D_.unknown_0_ & 0x80))
+    if (!(objects_[idx]->unknown_0_ & 0x20))
         return NULL;
     return objects_[idx];
+}
+
+Combatant* GameState::GetCombatantByIndex(int idx)
+{
+    if (idx < 0)
+        return NULL;
+    if (idx >= 0xe9)
+        return NULL;
+    if (objects_[idx] == NULL)
+        return NULL;
+    if (!(objects_[idx]->unknown_0_ & 0x80))
+        return NULL;
+    return (Combatant*)objects_[idx];
+}
+
+CombatEnemy* GameState::GetEnemyByIndex(int idx)
+{
+    if (idx < 0)
+        return NULL;
+    if (idx >= 0xe9)
+        return NULL;
+    if (objects_[idx] == NULL)
+        return NULL;
+    if (!(objects_[idx]->unknown_0_ & 0x400))
+        return NULL;
+    return (CombatEnemy*)objects_[idx];
 }

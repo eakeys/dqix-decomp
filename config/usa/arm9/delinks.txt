@@ -11,7 +11,7 @@ src/GameState/GameStateInstance.cpp:
 
 src/GameState/GameStateObjects.cpp:
 	complete
-	.text start:0x0200fd70 end:0x0200fea4
+	.text start:0x0200fd70 end:0x0200fee0
 
 src/GameState/GameTime.cpp:
     complete
@@ -385,3 +385,6 @@ src/Graphics/ClipWindow.cpp:
     complete
     .text start:0x020e29b8 end:0x020e2d4c
     .data start:0x020f2bdc end:0x020f2c14
+
+src/Util/Grammar.cpp:
+    .text start:0x020e462c end:0x020e5728

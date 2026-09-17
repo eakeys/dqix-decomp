@@ -11,7 +11,7 @@ src/GameState/GameStateInstance.cpp:
 
 src/GameState/GameStateObjects.cpp:
 	complete
-	.text start:0x0200fbcc end:0x0200fd00
+	.text start:0x0200fbcc end:0x0200fd3c
 
 src/GameState/GameTime.cpp:
     complete

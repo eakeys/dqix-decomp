@@ -143,6 +143,49 @@ void CapitalizeSection(char* str, int numChars)
     }
 }
 
+CBool DoesTextStartWithVowel(const Noun* noun, const char* text, int fontType)
+{
+    if (noun != NULL && noun->startsWithVowel_)
+        return true;
+
+    if (text == NULL)
+        return false;
+
+    FontIndexFile::Glyph* glyph = GetNextFontGlyph(text, fontType);
+    if (glyph != NULL)
+        return glyph->isVowel;
+    else
+        return false;
+}
+
+CBool DoesTextStartWithFrenchVowel(const Noun* noun, const char* text, int fontType)
+{
+    if (noun != NULL && !noun->specialVowelBehavior_)
+        return noun->startsWithVowel_;
+
+    FontIndexFile::Glyph* glyph = GetNextFontGlyph(text, fontType);
+    if (glyph != NULL)
+    {
+        if (glyph->isVowel)
+            return true;
+        char ch = *text;
+        const char* nextText = text + glyph->tagLength;
+        if (ch == 'h')
+        {
+            FontIndexFile::Glyph* nextGlyph = GetNextFontGlyph(nextText, fontType);
+            if (nextGlyph != NULL && nextGlyph->isVowel)
+            {
+                return !DoesTextStartWithVowel(noun, nextText + nextGlyph->tagLength, fontType);
+            }
+        }
+        else if (ch == 'y')
+        {
+            return !DoesTextStartWithVowel(noun, nextText, fontType);
+        }
+    }
+    return false;
+}
+
 int GetNextNumberInString(const char* str)
 {
     while (*str != 0)
@@ -299,6 +342,234 @@ int TextConditional_Value2Single(GameState*, TextManager* mgr, int) { return (mg
 int TextConditional_Value3Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[2] == 1) ? 0 : 1; }
 int TextConditional_Value4Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[3] == 1) ? 0 : 1; }
 int TextConditional_Value5Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[4] == 1) ? 0 : 1; }
+
+int TextConditional_HeroStartsWithFrenchVowel(GameState* state, TextManager*, int fontIndex)
+{
+    PartyMember* hero = state->GetPartyMemberByIndex(0);
+    if (hero != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(NULL, hero->baseStats_->name, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_CartridgeProtagonistStartsWithFrenchVowel(GameState* state, TextManager*, int fontIndex)
+{
+    PartyMember* protag = state->GetCartridgeProtagonist();
+    if (protag != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(NULL, protag->baseStats_->name, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_PartyLeaderStartsWithFrenchVowel(GameState* state, TextManager*, int fontIndex)
+{
+    PartyMember* leader = state->GetPartyLeader();
+    if (leader != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(NULL, leader->baseStats_->name, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_Item1StartsWithFrenchVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->items_18_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_Item2StartsWithFrenchVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->items_18_[1];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_MonsterStartsWithFrenchVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->monsters_20_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_VocationStartsWithFrenchVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->vocation_28_;
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_ActorStartsWithFrenchVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->actors_0_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_TargetStartsWithFrenchVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->targets_10_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithFrenchVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_Value1SingleFrench(GameState*, TextManager* mgr, int)
+{
+    if (mgr->valueLookup[0] != 0 && mgr->valueLookup[0] != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_Value2SingleFrench(GameState*, TextManager* mgr, int)
+{
+    if (mgr->valueLookup[1] != 0 && mgr->valueLookup[1] != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_Value3SingleFrench(GameState*, TextManager* mgr, int)
+{
+    if (mgr->valueLookup[2] != 0 && mgr->valueLookup[2] != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_Value4SingleFrench(GameState*, TextManager* mgr, int)
+{
+    if (mgr->valueLookup[3] != 0 && mgr->valueLookup[3] != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_Value5SingleFrench(GameState*, TextManager* mgr, int)
+{
+    if (mgr->valueLookup[4] != 0 && mgr->valueLookup[4] != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_HeroStartsWithVowel(GameState* state, TextManager*, int fontIndex)
+{
+    // is this a bug? I don't think this tag is ever used so it doesn't come up
+    PartyMember* hero = state->GetCartridgeProtagonist();
+    if (hero != NULL)
+    {
+        if (DoesTextStartWithVowel(NULL, hero->baseStats_->name, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_PartyLeaderStartsWithVowel(GameState* state, TextManager*, int fontIndex)
+{
+    PartyMember* leader = state->GetPartyLeader();
+    if (leader != NULL)
+    {
+        if (DoesTextStartWithVowel(NULL, leader->baseStats_->name, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_Item1StartsWithVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->items_18_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_MonsterStartsWithVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->monsters_20_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_VocationStartsWithVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->vocation_28_;
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_ActorStartsWithVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->actors_0_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_TargetStartsWithVowel(GameState*, TextManager* mgr, int fontIndex)
+{
+    Noun* noun = mgr->targets_10_[0];
+    if (noun != NULL)
+    {
+        if (DoesTextStartWithVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
 
 // Takes a string of form
 // .....[match]....[open]....[close]
@@ -1045,11 +1316,11 @@ char* TextManager::HandleImmediateTags(char* input)
 {
     bool moreTagsToGo = true;
     maybeDoesNPCTurn_19b6_ = true;
-    GameObject* leader = GameState::GetInstance()->GetPartyLeader();
+    PartyMember* leader = GameState::GetInstance()->GetPartyLeader();
     void* maybeNPC = func_0203dce4(func_0203cf4c(), npcID_1838_);
     if (leader != NULL && maybeNPC != NULL)
     {
-        Vector3fix playerPos = leader->obj3D_.position_;
+        Vector3fix playerPos = leader->position_;
         Vector3fix npcPos = func_020406f8(maybeNPC);
         
         npcAngleToUse_1844_ = fix32ReduceAngle0To2Pi(

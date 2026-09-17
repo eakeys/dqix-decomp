@@ -4,6 +4,7 @@
 #include "std_library_functions.h"
 #include "Vector.h"
 #include "ClipWindow.h"
+#include "../Util/Grammar.h"
 
 // note for posterity: be careful if porting this to 64-bit, the file is loaded
 // by memcpy where all pointers hold 32-bit offsets from the start of the file
@@ -31,7 +32,7 @@ struct FontIndexFile
         const char* tag;
         int8_t width;
         int8_t tagLength : 6;
-        int8_t unk_5_bit_6 : 1;
+        int8_t isVowel : 1;
         int8_t unk_5_bit_7 : 1;
         char unk_6[2];
     };
@@ -217,12 +218,12 @@ void LoadCustomFonts(SafeAllocator* alloc);
 class TextManager
 {
 public:
-    void* actors_0_[2];
-    void* actions_8_[2];
-    void* targets_10_[2];
-    void* items_18_[2];
-    void* monsters_20_[2];
-    char unk_28[4];
+    Noun* actors_0_[2];
+    Noun* actions_8_[2];
+    Noun* targets_10_[2];
+    Noun* items_18_[2];
+    Noun* monsters_20_[2];
+    Noun* vocation_28_;
     void* reflex_2c_;
     char unknown_30_;
     char unknown_31_;

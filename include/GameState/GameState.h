@@ -1,22 +1,12 @@
 #pragma once
 
-#include "Combat/Main/BattleList.h"
 #include "Resource/GameResources.h"
 #include "World/Object3D.h"
 #include "Filesystem/NitroVM.h"
 #include "GameState/TimeOfDay.h"
 #include "Grotto/Main/GrottoStruct.h"
-
-// Represents a party member, monster in battle, monster on the field
-// or grotto boss. 
-class GameObject
-{
-public:
-    Object3D obj3D_; // might be inherited instead
-    char unk_ac[0x134 - 0xac];
-    BaseCombatStats* baseStats_;
-    ModifiableCombatStats* currentStats_;
-};
+#include "PartyMember.h"
+#include "CombatEnemy.h"
 
 // sizeof is probably 0x7ff4 but could be 0x7ff8. (Definitely no lower/higher)
 // For lower bound, look at initialize/reset function func_0200f3a4
@@ -31,7 +21,7 @@ class GameState
 public:
     GameResources* pResources_;
     char unk_4[4];
-    GameObject* objects_[0xe9];
+    Object3D* objects_[0xe9];
     // This is the index of the protagonist on the current physical cartridge,
     // i.e. if you visit another player's world, this is still the index of
     // your character. (The hero of that world is index 0)
@@ -78,33 +68,35 @@ public:
 
     // -- GameStateObjects.cpp ---
 
-    GameObject* GetGameObjectByIndex(int idx);
+    Object3D* GetGameObjectByIndex(int idx);
     // Like GetCombatantByIndex() but checks for bitmask 0x2 instead. This is set
     // in the same cases as 0x20, but replacing this function to always return null
     // only disables wandering monsters, while keeping whistle spawns and grotto
     // bosses in tact
-    GameObject* GetMaybeWanderingMonsterByIndex(int idx);
+    Object3D* GetMaybeWanderingMonsterByIndex(int idx);
     // If you're visiting another world, this is *your* main character, i.e. the
     // person Stella talks to in battle records. The host's main character (hero)
     // is index 0
-    GameObject* GetCartridgeProtagonist();
+    PartyMember* GetCartridgeProtagonist();
     // The character that you currently control (first living party member in
     // single player or as host, or your main/only character when you're visiting
     // another world)
-    GameObject* GetPartyLeader();
+    PartyMember* GetPartyLeader();
     // Like GetCombatantByIndex() but checks for bitmask 0x800 instead.
-    GameObject* GetPartyMemberByIndex(int idx);
+    PartyMember* GetPartyMemberByIndex(int idx);
     // Like GetCombatantByIndex() but checks for bitmask 0x20 instead. In practice
     // this bit is set for monsters out of battle, and replacing this function to
     // always return null disables monster spawns, including through whistle, and
     // removes grotto bosses.
-    GameObject* GetMaybeFieldMonsterByIndex(int idx);
+    Object3D* GetMaybeFieldMonsterByIndex(int idx);
     // Index into the object array, but only return it if its obj3D.unk_0
     // has bit 0x80 set. In practice this seems to be for enemies in battle
     // and party members universally. In a fight with multiple enemies, you can
     // clear this bit on one enemy and kill the others, and the battle will end
     // prematurely.
-    GameObject* GetCombatantByIndex(int idx);
+    Combatant* GetCombatantByIndex(int idx);
+    // Tests for bitmask 0x400. Set for monsters in battle
+    CombatEnemy* GetEnemyByIndex(int idx);
 
     // --- GameTime.cpp ---
 

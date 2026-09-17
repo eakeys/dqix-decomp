@@ -84,3 +84,42 @@ CombatEnemy* GameState::GetEnemyByIndex(int idx)
         return NULL;
     return (CombatEnemy*)objects_[idx];
 }
+
+Object3D* GameState::GetObject200(int idx)
+{
+    if (idx < 0)
+        return NULL;
+    if (idx >= 0xe9)
+        return NULL;
+    if (objects_[idx] == NULL)
+        return NULL;
+    if (!(objects_[idx]->unknown_0_ & 0x200))
+        return NULL;
+    return objects_[idx];
+}
+
+Object3D* GameState::GetObject100(int idx)
+{
+    if (idx < 0)
+        return NULL;
+    if (idx >= 0xe9)
+        return NULL;
+    if (objects_[idx] == NULL)
+        return NULL;
+    if (!(objects_[idx]->unknown_0_ & 0x100))
+        return NULL;
+    return objects_[idx];
+}
+
+PartyMember* GameState::GetCompanionByIndex(int idx)
+{
+    if (idx < 0)
+        return NULL;
+    if (idx >= 0xe9)
+        return NULL;
+    if (objects_[idx] == NULL)
+        return NULL;
+    if (!(objects_[idx]->unknown_0_ & 0x1000))
+        return NULL;
+    return (PartyMember*)objects_[idx];
+}

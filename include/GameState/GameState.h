@@ -48,15 +48,18 @@ public:
 #elif defined(jpn)
     char unk_3f8[0x371c - 0x3f8];
 #endif
-
+    // substruct at offset 0x2a04, of size at least 0xf7c (contains partySize_)
 
     // The index of the character that you currently control. In single player
     // this is the first living party member. In multiplayer as a guest this
     // is your character's index (matching protagonistObjectIndex_), and as a host
     // this is the first living party member from your own cartridge
     unsigned char partyLeaderObjectIndex_;
-    char unk_397d[0x63e0 - 0x397d];
-
+    char unk_397d[3];
+    unsigned char partySize_; // doesn't count characters from multiplayer
+    char unk_3981[0x5721 - 0x3981];
+    unsigned char partySizeAndOtherPlayers_;
+    char unk_5722[0x63e0 - 0x5722];
     unsigned char* treasureMapLanguageData_;
     GrottoStruct grottoInfo_;
 
@@ -97,6 +100,12 @@ public:
     Combatant* GetCombatantByIndex(int idx);
     // Tests for bitmask 0x400. Set for monsters in battle
     CombatEnemy* GetEnemyByIndex(int idx);
+    Object3D* GetObject200(int idx);
+    // seems compatible with PartyMember (used to get vocation data for grotto quality)
+    Object3D* GetObject100(int idx);
+    // party member who is not a main character (i.e. not the host or any
+    // guest characters), checks flag 0x1000
+    PartyMember* GetCompanionByIndex(int idx);
 
     // --- GameTime.cpp ---
 

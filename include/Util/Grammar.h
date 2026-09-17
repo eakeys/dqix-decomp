@@ -23,12 +23,17 @@ public:
     // add 100 to this to get the index of the singular indefinite article, e.g.
     // to distinguish *a jar of* nectar vs *a lump of* densinium
     unsigned int indefiniteSingularOffset_ : 6;
+    // add 300 to this
     unsigned int indefinitePluralOffset_ : 6;
+    // add 0 to this
     unsigned int definiteSingularOffset_ : 6;
+    // add 200 to this
     unsigned int definitePluralOffset_ : 6;
     unsigned int gender_ : 2; // 0 = m, 1 = f, 2 = n
-    unsigned int bit_26 : 1;
-    unsigned int bit_27 : 1;
+    // https://en.wikipedia.org/wiki/Plurale_tantum 
+    // tl;dr nouns with no singular form, e.g. Infinity trousers
+    unsigned int pluraleTantum_ : 1;
+    unsigned int isPerson_ : 1;
     unsigned int startsWithVowel_ : 1;
     unsigned int bit_29 : 1;
     // if set, you can't be certain about startsWithVowel being correct
@@ -40,7 +45,8 @@ public:
 
     void Populate(char* singularName, char* pluralName, unsigned char indefSingOffset,
         unsigned char indefPluralOffset, unsigned char defSingOffset, unsigned char defPluralOffset,
-        unsigned char gender, unsigned char arg8, unsigned char arg9, unsigned char arg10, unsigned char arg11);
+        unsigned char gender, unsigned char pluraleTantum, unsigned char isPerson,
+        unsigned char startsWithVowel, unsigned char specialVowelBehavior);
 
     void PopulateFromPartyMember(int index);
     void PopulateFromPartyMember(PartyMember* member);

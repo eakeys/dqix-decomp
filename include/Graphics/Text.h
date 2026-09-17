@@ -358,7 +358,14 @@ public:
     char unknown_19d0_;
     char unk_19d1[0x4 - 0x1];
     char unknown_19d4_;
-    char unk_19d5[0xa - 0x5];
+    // Q: does this count for a group of enemies too?
+    // I couldn't find any uses of the <IF_TARGET_PARTY> tag anywhere...
+    bool targetIsParty_19d5_;
+    bool actorIsParty_19d6_;
+    bool multipleTargets_19d7_;
+    // used by <IF_TARGET_MIXED> but I see no usage of this tag
+    bool maybeTargetingMultipleGroups_19d8_;
+    char unk_19d9[1];
     short unknown_19da_;
     unsigned char fontIndex_19dc_;
     char unk_19dd[0xe0 - 0xdd];
@@ -500,3 +507,5 @@ public:
     // might be supposed to take unsigned char* input
     char* FindControlCharacter(unsigned short control, char* input) const;
 };
+
+void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);

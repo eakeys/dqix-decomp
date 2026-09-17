@@ -13,9 +13,9 @@ struct EnemyNamingData
     unsigned int definiteSingularOffset_ : 6;
     unsigned int definitePluralOffset_ : 6;
     unsigned int gender_ : 2; // 0 = m, 1 = f, 2 = n
-    unsigned int bit_26 : 1;
-    unsigned int bit_27 : 1;
-    unsigned int bit_28 : 1;
+    unsigned int pluraleTantum_ : 1;
+    unsigned int isPerson_ : 1;
+    unsigned int startsWithVowel_ : 1;
 };
 
 class CombatEnemy : public Combatant

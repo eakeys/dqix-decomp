@@ -11,6 +11,14 @@ extern "C"
     // probably atof
     double func_020055d4(const char*);
 
+    // get language
+    int func_0200fb08(GameState*);
+    // get party data struct?
+    unsigned char* func_02010828(GameState*);
+    // get total number of player characters, including companions
+    // and wifi players. (Q: Does this count Ivor?)
+    unsigned char func_02011538(GameState*);
+
     void* func_0203dce4(void*, int);
     void* func_0203cf4c();
     Vector3fix func_020406f8(void*);
@@ -19,6 +27,8 @@ extern "C"
     void func_02042b98(TextManager*, int, int, int, int);
     bool func_02044494(const TextManager*, const void*);
     void func_020457e8(TextManager*, int);
+
+    int func_020546a8(PartyMember*);
 
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
@@ -47,6 +57,8 @@ struct Struct_020e7e04
     short array_24[2];
 } extern const data_020e7e04;
 
+extern const char data_020e7e30[5];
+extern const char data_020e7e35[7];
 extern const char* data_020e7e74[6];
 
 extern char data_020f0746[]; // "<INN="
@@ -184,6 +196,51 @@ CBool DoesTextStartWithFrenchVowel(const Noun* noun, const char* text, int fontT
         }
     }
     return false;
+}
+
+// Checks if it ends with upper or lower case s, x, z or eszett
+CBool DoesGermanTextEndWithSLike(const char* text)
+{
+    if (func_0200fb08(GameState::GetInstance()) == 3)
+    {
+        char regularCharacters[7];
+        COPY_ARRAY(regularCharacters, data_020e7e35);
+
+        char eszett[5];
+        COPY_ARRAY(eszett, data_020e7e30);
+
+        int length = func_020d2ff0(text);
+        if (length != 0)
+        {
+            char lastChar = text[length - 1];
+            for (const char* regularChar = regularCharacters; *regularChar != 0; regularChar++)
+            {
+                char ch = *regularChar;
+                if (ch == 0)
+                    break;
+                if (ch == lastChar)
+                    return true;
+            }
+
+            if (length >= 4 && memcmp(text + (length - 4), eszett, 4) == 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+void CapitalizeFirstGlyph(const char *input, char *output, int fontIndex)
+{
+    if (input == NULL)
+        return;
+
+    sprintf(output, input);
+    if (*input == 0)
+        return;
+    FontIndexFile::Glyph* glyph = GetNextFontGlyph(input, fontIndex);
+    if (glyph == NULL || !glyph->unk_5_bit_7)
+        return;
+    CapitalizeSection(output, glyph->tagLength);
 }
 
 int GetNextNumberInString(const char* str)
@@ -337,11 +394,240 @@ void TextManager::SubstituteUnsupportedCharacters(char* input, char* output, int
     *output = *input;
 }
 
+int TextConditional_SinglePlayerMode(GameState* state, TextManager*, int)
+{
+    const unsigned char* partyData = func_02010828(state);
+    unsigned char totalSize = func_02011538(state);
+    if (partyData[0xf7c] == totalSize) // the party accounts for all chars: single player
+        return 0;
+    return 1;
+}
+
+int TextConditional_HostMale(GameState* state, TextManager*, int)
+{
+    PartyMember* hero = state->GetPartyMemberByIndex(0);
+    if (hero != NULL)
+    {
+        return hero->partyMemberStats_->gender_;
+    }
+    return 0;
+}
+
+int TextConditional_AddresseeMale(GameState* state, TextManager*, int)
+{
+    PartyMember* protag = state->GetCartridgeProtagonist();
+    if (protag != NULL)
+    {
+        return protag->partyMemberStats_->gender_;
+    }
+    return 0;
+}
+
+int TextConditional_HeroMale(GameState* state, TextManager*, int)
+{
+    PartyMember* hero = state->GetPartyMemberByIndex(0);
+    if (hero != NULL)
+    {
+        return hero->partyMemberStats_->gender_;
+    }
+    return 0;
+}
+
+int TextConditional_LeaderMale(GameState* state, TextManager*, int)
+{
+    PartyMember* leader = state->GetPartyLeader();
+    if (leader != NULL)
+    {
+        return leader->partyMemberStats_->gender_;
+    }
+    return 0;
+}
+
+int TextConditional_FemaleParty(GameState* state, TextManager*, int)
+{
+    const unsigned char* partyData = func_02010828(state);
+    for (int i = 0; i < partyData[0xf7c]; i++)
+    {
+        const unsigned char* memberList = partyData + 0xf78;
+        PartyMember* member = state->GetPartyMemberByIndex(memberList[i]);
+        if (member != NULL)
+        {
+            if (member->partyMemberStats_->gender_ == 0) // male
+                return 1; // not all-female
+        }
+    }
+    return 0;
+}
+
+int TextConditional_Solo(GameState* state, TextManager* mgr, int)
+{
+    char partySize = mgr->unknown_30_;
+    if (partySize < 0)
+        partySize = func_02010828(state)[0xf7c];
+    if (partySize != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_SoloHost(GameState* state, TextManager*, int)
+{
+    char hostPartySize = 0;
+    for (int i = 1; i < 4; i++)
+    {
+        PartyMember* companion = state->GetCompanionByIndex(i);
+        if (companion != NULL && func_020546a8(companion) == 0)
+            hostPartySize++;
+    }
+    hostPartySize++;
+    if (hostPartySize != 1)
+        return 1;
+    return 0;
+}
+
 int TextConditional_Value1Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[0] == 1) ? 0 : 1; }
 int TextConditional_Value2Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[1] == 1) ? 0 : 1; }
 int TextConditional_Value3Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[2] == 1) ? 0 : 1; }
 int TextConditional_Value4Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[3] == 1) ? 0 : 1; }
 int TextConditional_Value5Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[4] == 1) ? 0 : 1; }
+
+int TextConditional_Item1PluraleTantum(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->items_18_[0];
+    if (noun != NULL)
+    {
+        if (noun->pluraleTantum_)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_Monster1PluraleTantum(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->monsters_20_[0];
+    if (noun != NULL)
+    {
+        if (noun->pluraleTantum_)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_Item1Gender(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->items_18_[0];
+    if (noun != NULL)
+        return noun->gender_;
+    return 0;
+}
+
+int TextConditional_Monster1Gender(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->monsters_20_[0];
+    if (noun != NULL)
+        return noun->gender_;
+    return 0;
+}
+
+int TextConditional_Action1Gender(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->actions_8_[0];
+    if (noun != NULL)
+        return noun->gender_;
+    return 0;
+}
+
+int TextConditional_Actor1Gender_MF(GameState*, TextManager* mgr, int)
+{
+    // This is expected to be a binary predicate but in principle could be
+    // called on a neuter noun and still return 2. This might break something?
+    Noun* noun = mgr->actors_0_[0];
+    if (noun != NULL)
+        return noun->gender_;
+    return 0;
+}
+
+int TextConditional_Actor1Gender(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->actors_0_[0];
+    if (noun != NULL)
+        return noun->gender_;
+    return 0;
+}
+
+int TextConditional_Target1Gender(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->targets_10_[0];
+    if (noun != NULL)
+        return noun->gender_;
+    return 0;
+}
+
+int TextConditional_TargetParty(GameState*, TextManager* mgr, int)
+{
+    if (mgr->targetIsParty_19d5_)
+        return 0;
+    return 1;
+}
+
+int TextConditional_ActorParty(GameState*, TextManager* mgr, int)
+{
+    if (mgr->actorIsParty_19d6_)
+        return 0;
+    return 1;
+}
+
+int TextConditional_ActorIsTarget(GameState*, TextManager* mgr, int)
+{
+    Noun* actor = mgr->actors_0_[0];
+    Noun* target = mgr->targets_10_[0];
+    if (actor != NULL && target != NULL)
+    {
+        if (actor == target)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_ActorIsPerson(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->actors_0_[0];
+    if (noun != NULL)
+    {
+        if (noun->isPerson_)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_TargetIsPerson(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->targets_10_[0];
+    if (noun != NULL)
+    {
+        if (noun->isPerson_)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_TargetSingle(GameState*, TextManager* mgr, int)
+{
+    if (mgr->multipleTargets_19d7_)
+        return 1;
+    return 0;
+}
+
+int TextConditional_TargetMixed(GameState*, TextManager* mgr, int)
+{
+    if (mgr->maybeTargetingMultipleGroups_19d8_)
+        return 0;
+    return 1;
+}
 
 int TextConditional_HeroStartsWithFrenchVowel(GameState* state, TextManager*, int fontIndex)
 {
@@ -565,6 +851,54 @@ int TextConditional_TargetStartsWithVowel(GameState*, TextManager* mgr, int font
     if (noun != NULL)
     {
         if (DoesTextStartWithVowel(noun, noun->singularName_, fontIndex))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_ItemEndsInSLikeGerman(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->items_18_[0];
+    if (noun != NULL)
+    {
+        if (DoesGermanTextEndWithSLike(noun->singularName_))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_MonsterEndsInSLikeGerman(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->monsters_20_[0];
+    if (noun != NULL)
+    {
+        if (DoesGermanTextEndWithSLike(noun->singularName_))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_ActorEndsInSLikeGerman(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->actors_0_[0];
+    if (noun != NULL)
+    {
+        if (DoesGermanTextEndWithSLike(noun->singularName_))
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+int TextConditional_TargetEndsInSLikeGerman(GameState*, TextManager* mgr, int)
+{
+    Noun* noun = mgr->targets_10_[0];
+    if (noun != NULL)
+    {
+        if (DoesGermanTextEndWithSLike(noun->singularName_))
             return 0;
         return 1;
     }

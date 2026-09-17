@@ -25,40 +25,19 @@ void* func_02012fe4();
 unsigned short GenerateNewMapQuality()
 {
     GameState* gameState = GameState::GetInstance();
-    char* maybeMainCharDataPtr = func_0200ff1c(gameState, func_020100a8(gameState));
+    PartyMember* protag = (PartyMember*)gameState->GetObject100(func_020100a8(gameState));
     // Another pointless function call
     (void)func_02012fe4();
     GrottoStruct* grotto = gameState->GetGrottoStruct();
-
-#ifdef jpn
-    #define MAIN_CHAR_DATA_PTR_OFFSET 0x144
-#else
-    #define MAIN_CHAR_DATA_PTR_OFFSET 0x150
-#endif
 
     unsigned short maxCharLevel = 0;
     unsigned short maxNumRevocs = 0;
     for (int i = 0; i < 13; i++)
     {
-        // WARNING: This is a minefield!
-        // Even the slightest adjustments to this, while functionally irrelevant,
-        // cause the compiler to assign different registers. As it stands, the
-        // counter i is assigned to lr (weird choice).
-        //
-        // Also, decomp.me had this fully functional without declaring j as a
-        // separate variable (just using a manual cast in the definitions of
-        // level and revocCount) but on my machine my compiler didn't like that
-        // and proceeded to put i into a different register.
-        //
-        // That said, if we define structs along the lines of
-        // struct Inner { char unknown[0x16c]; unsigned short levels[13]; unsigned char revocs[13]; };
-        // struct Outer { char unknown[0x150]; Inner* inner; };
-        // and make maybeMainCharDataPtr of type Outer*, then we can use
-        // inner->levels[j] and inner->revocs[j] and it still works. 
+        // this cast is necessary lol
         unsigned char j = i;
-        // beware pointer trickery, this is really offset 0x16c + 2*j
-        unsigned short level = *(*(unsigned short**)(maybeMainCharDataPtr + MAIN_CHAR_DATA_PTR_OFFSET) + 0xb6 + j);  
-        unsigned short revocCount = *(*(unsigned char**)(maybeMainCharDataPtr + MAIN_CHAR_DATA_PTR_OFFSET) + 0x186 + j);
+        unsigned short level = protag->partyMemberStats_->vocationLevels[j];
+        unsigned short revocCount = protag->partyMemberStats_->revocationCounts[j];
         if (level > maxCharLevel)
             maxCharLevel = level;
         if (revocCount > maxNumRevocs)

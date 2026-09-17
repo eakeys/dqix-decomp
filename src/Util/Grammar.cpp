@@ -251,7 +251,8 @@ char* AddArticleAndDeclineNoun(char** ppOutput, Noun* noun, int indefinite, int 
 
 void Noun::Populate(char *singularName, char *pluralName, unsigned char indefSingOffset,
     unsigned char indefPluralOffset, unsigned char defSingOffset, unsigned char defPluralOffset,
-    unsigned char gender, unsigned char arg8, unsigned char arg9, unsigned char startsWithVowel, unsigned char arg11)
+    unsigned char gender, unsigned char pluraleTantum, unsigned char isPerson,
+    unsigned char startsWithVowel, unsigned char specialVowelBehavior)
 {
     memset(this, 0, sizeof(Noun));
     singularName_ = singularName;
@@ -262,10 +263,10 @@ void Noun::Populate(char *singularName, char *pluralName, unsigned char indefSin
     definiteSingularOffset_ = defSingOffset;
     definitePluralOffset_ = defPluralOffset;
     gender_ = gender;
-    bit_26 = arg8;
-    bit_27 = arg9;
+    pluraleTantum_ = pluraleTantum;
+    isPerson_ = isPerson;
     startsWithVowel = startsWithVowel;
-    specialVowelBehavior_ = arg11;
+    specialVowelBehavior_ = specialVowelBehavior;
 }
 
 void Noun::PopulateFromPartyMember(int index)
@@ -276,7 +277,11 @@ void Noun::PopulateFromPartyMember(int index)
         return;
     Populate(member->baseStats_->name, member->baseStats_->name,
         0, 0, 0, 0,
-        member->partyMemberStats_->gender_, 0, 1, 0, 1);
+        member->partyMemberStats_->gender_,
+        false, // not plurale tantum
+        true,  // is a person
+        false, // doesn't (automatically!) start with a vowel
+        true); // special vowel behavior, need to actually read the name
 }
 
 void Noun::PopulateFromPartyMember(PartyMember* member)
@@ -286,7 +291,11 @@ void Noun::PopulateFromPartyMember(PartyMember* member)
         return;
     Populate(member->baseStats_->name, member->baseStats_->name,
         0, 0, 0, 0,
-        member->partyMemberStats_->gender_, 0, 1, 0, 1);
+        member->partyMemberStats_->gender_,
+        false, // not plurale tantum
+        true,  // is a person
+        false, // doesn't (automatically!) start with a vowel
+        true); // special vowel behavior, need to actually read the name
 }
 
 void Noun::PopulateFromEnemy(CombatEnemy *enemy, int unknown)
@@ -299,7 +308,8 @@ void Noun::PopulateFromEnemy(CombatEnemy *enemy, int unknown)
     Populate(individual, namingData->pluralName, 
         namingData->indefiniteSingularOffset_, namingData->indefinitePluralOffset_,
         namingData->definiteSingularOffset_, namingData->definitePluralOffset_,
-        namingData->gender_, namingData->bit_26, namingData->bit_27, namingData->bit_28, 0);
+        namingData->gender_, namingData->pluraleTantum_, namingData->isPerson_,
+        namingData->startsWithVowel_, false); // no special vowel behavior
 
     int individualNameLength = func_020d2ff0(individual);
     char monsterIndex;
@@ -344,8 +354,8 @@ void Noun::CopyTo(Noun* output, int flags)
     }
 
     output->gender_ = gender_;
-    output->bit_26 = bit_26;
-    output->bit_27 = bit_27;
+    output->pluraleTantum_ = pluraleTantum_;
+    output->isPerson_ = isPerson_;
     output->startsWithVowel_ = startsWithVowel_;
     output->bit_31 = bit_31;
 }

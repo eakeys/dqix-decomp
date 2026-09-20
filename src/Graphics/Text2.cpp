@@ -1048,6 +1048,246 @@ void TextManager::SubstituteConditionals(char *input, char *output, int fontType
     *output = '\0';
 }
 
+void ConvertHeroTag(const char* input, char** output, TextManager* mgr, int num)
+{
+    PartyMember* hero = GameState::GetInstance()->GetPartyMemberByIndex(0);
+    if (hero == NULL)
+        return;
+    
+    // silly matching hack
+    BaseCombatStats* stats = *(BaseCombatStats* volatile*)&hero->baseStats_;
+    *output += sprintf(*output, stats->name);
+}
+
+void ConvertLeaderTag(const char* input, char** output, TextManager* mgr, int num)
+{
+    PartyMember* leader = GameState::GetInstance()->GetPartyLeader();
+    if (leader == NULL)
+        return;
+    
+    // silly matching hack
+    BaseCombatStats* stats = *(BaseCombatStats* volatile*)&leader->baseStats_;
+    *output += sprintf(*output, stats->name);
+}
+
+void ConvertAddresseeTag(const char* input, char** output, TextManager* mgr, int num)
+{
+    PartyMember* addressee = GameState::GetInstance()->GetCartridgeProtagonist();
+    if (addressee == NULL)
+        return;
+    
+    // silly matching hack
+    BaseCombatStats* stats = *(BaseCombatStats* volatile*)&addressee->baseStats_;
+    *output += sprintf(*output, stats->name);
+}
+
+void ConvertTmapSecTag(const char* input, char** output, TextManager* mgr, int)
+{
+    int index = GetNextNumberInString(input) - 1;
+    char* source = mgr->tmapSecStrings_2ec_[index];
+    if (source == NULL)
+        return;
+    *output += sprintf(*output, source);
+}
+
+void ConvertStrTag(const char* input, char** output, TextManager* mgr, int)
+{
+    int index = GetNextNumberInString(input) - 1;
+    char* source = mgr->customStrings_4ac_[index];
+    if (source == NULL)
+        return;
+    *output += sprintf(*output, source);
+}
+
+struct NameTagProcessor
+{
+    const char* tag;
+    void (*callback)(const char*, char**, TextManager*, int);
+};
+
+extern const NameTagProcessor data_020e7e8c[6];
+
+struct GrammarTagProcessingData
+{
+    const char* tag;
+    // 0 = definitiveness, 1 = article?, 2 = plural?, 3 = case, 
+    // 4 = use item data, 5 = use monster data, 6 = use actor data
+    // 7 = use target data, 8 = use action data, 9 = use reflex(?) data
+    char infoType;
+    // e.g. if infoType = 3, specifies which case to use
+    char infoValue;
+};
+
+extern const GrammarTagProcessingData data_020e7f04[16];
+
+void TextManager::SubstituteNamesAndArticles(char *input, char *argOutput, int fontType) 
+{
+    if (input == NULL || argOutput == NULL)
+        return;
+    char* output = argOutput;
+    while (true)
+    {
+        char ch = *input;
+        if (ch == 0)
+            break;
+
+        if (ch == '<')
+        {
+            char* tagEnd = GetTextTagEnd(input);
+            if (tagEnd != NULL)
+            {
+                bool matchedTag = false;
+                char* tagInterior = input + 1;
+                for (const NameTagProcessor* candidate = data_020e7e8c; candidate->tag != NULL; candidate++)
+                {
+                    if (!DoesStringBeginWith(tagInterior, candidate->tag))
+                        continue;
+                    if (candidate->callback != NULL)
+                    {
+                        int numeric = 0;
+                        int numberOffsetInTag = func_020d2ff0(candidate->tag);
+                        if (tagInterior[numberOffsetInTag] >= '1' && tagInterior[numberOffsetInTag] <= '9')
+                            numeric = func_02005a94(tagInterior + numberOffsetInTag) - 1;
+                        candidate->callback(tagInterior, &output, this, numeric);
+                    }
+                    input = tagEnd + 1;
+                    matchedTag = true;
+                    break;
+                }
+
+                if (matchedTag)
+                    continue;
+
+                int indefinite = -1;
+                int article = 0;
+                int plural = -1;
+                int gcase = -1;
+                Noun* noun = NULL;
+
+                GrammarTagProcessingData grammarTags[16];
+                COPY_ARRAY(grammarTags, data_020e7f04);
+
+                matchedTag = false;
+                const GrammarTagProcessingData* grammarPart = grammarTags;
+                for (;; grammarPart++)
+                {
+                    const char* candidateTag = grammarPart->tag;
+                    if (candidateTag == NULL)
+                        break;
+                    int tagLength = func_020d2ff0(candidateTag);
+                    if (memcmp(tagInterior, candidateTag, tagLength) != 0)
+                        continue;
+                    
+                    matchedTag = true;
+                    tagInterior += tagLength;
+                    int nounIndex = 0;
+                    
+                    if (grammarPart->infoValue < 0 && *tagInterior >= '1' && *tagInterior <= '9')
+                        nounIndex = func_02005a94(tagInterior) - 1;
+                    switch (grammarPart->infoType)
+                    {
+                    case 0:
+                        indefinite = grammarPart->infoValue;
+                        break;
+                    case 1:
+                        article = grammarPart->infoValue;
+                        break;
+                    case 2:
+                        plural = grammarPart->infoValue;
+                        break;
+                    case 3:
+                        gcase = grammarPart->infoValue;
+                        break;
+                    case 4:
+                        noun = items_18_[nounIndex];
+                        break;
+                    case 5:
+                        noun = monsters_20_[nounIndex];
+                        break;
+                    case 6:
+                        noun = actors_0_[nounIndex];
+                        break;
+                    case 7:
+                        noun = targets_10_[nounIndex];
+                        break;
+                    case 8:
+                        noun = actions_8_[nounIndex];
+                        break;
+                    case 9:
+                        noun = reflex_2c_;
+                        break;
+                    }
+                }
+
+                if (noun != NULL)
+                    output = AddArticleAndDeclineNoun(&output, noun, indefinite, article, plural, gcase);
+
+                if (matchedTag)
+                {
+                    input = tagEnd + 1;
+                    continue;
+                }
+            }
+        }
+        else if (ch == '[')
+        {
+            if (memcmp(input, data_020f0904, 4) == 0)
+            {
+                input += 4;
+                PartyMember* member = (PartyMember*)GameState::GetInstance()->GetObject100(partyMemberIndex_1880_);
+                if (member != NULL)
+                {
+                    intptr_t intptr_foo = (intptr_t)member->partyMemberStats_ + 0x294;
+                    struct Foo { 
+                        char unk_0[4];
+                        const char* weaponName;
+                        unsigned int thing_we_care_about : 4;
+                        unsigned int other_shit : 28;
+                        char unk_c[0xc];
+                        short other_thing_we_care_about;
+                    } *pFoo = (Foo*)intptr_foo;
+                    if (pFoo != NULL && pFoo->other_thing_we_care_about > 0 && pFoo->thing_we_care_about == 0)
+                    {
+                        output += sprintf(output, pFoo->weaponName);
+                    }
+                }
+            }
+            else if (memcmp(input, data_020f0909, 6) == 0) // [ACTER= [sic]
+            {
+                input += 6;
+                output += sprintf(output, tmapSecStrings_2ec_[3]);
+            }
+            else
+            {
+                input++;
+                *output = ch;
+                output++;
+                continue;
+            }
+            
+            while (*input != ']' && *input != 0)
+                input++;
+
+            if (*input == 0)
+            {
+                output += sprintf(output, data_020f0910);
+                break;
+            }
+            else
+            {
+                input++;
+                continue;
+            }
+
+        }
+
+        *output = *input;
+        output++;
+        input++;
+    }
+    *output = 0;
+}
+
 void TextManager::SubstituteCaps(char *input, char *output, int fontType)
 {
     while (true)

@@ -9,7 +9,12 @@
 extern unsigned int data_021077fc; // palette VRAM offset for glyphs
 struct Struct_02107800
 {
-    char unk_0[0x1c];
+    char unk_0[4];
+    unsigned char* windowBorderTiles;
+    char unk_8[4];
+    char* secondaryScratchBuffer;
+    char unk_10[8];
+    char* primaryScratchBuffer;
     TextManager* manager;
     char unk_20[0xc];
     FontIndexFile* pFontIndexFiles[2];
@@ -453,6 +458,11 @@ int GetFontIDBySize(int size)
 TextManager* TextManager::GetInstance()
 {
     return data_02107800.manager;
+}
+
+const unsigned char* GetWindowBorderTile(int id)
+{
+    return data_02107800.windowBorderTiles + (id * 32);
 }
 
 char* GetTextTagEnd(char* input)

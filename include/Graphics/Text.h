@@ -5,6 +5,7 @@
 #include "Vector.h"
 #include "ClipWindow.h"
 #include "../Util/Grammar.h"
+#include "Renderer2D.h"
 
 // note for posterity: be careful if porting this to 64-bit, the file is loaded
 // by memcpy where all pointers hold 32-bit offsets from the start of the file
@@ -135,8 +136,12 @@ enum ControlWord
 
     ControlWord_VoiceVolumeBase = 0xff4d, 
 
-    ControlWord_LBBase = 0xffd0, // A character value is added to this
-    ControlWord_JPBase = 0xffe0, // A character value is added to this
+    // These are used for control flow: write e.g. <LB_A> to create a label,
+    // and use <JP_A> to jump to that label. It appears that A to O are supported.
+    // Indeed <JP_[char]> has code JPBase + ([char] - 0x40). I guess technically
+    // JP_@ and LB_@ could be used too
+    ControlWord_LBBase = 0xffd0,
+    ControlWord_JPBase = 0xffe0,
 };
 
 namespace StringBuilders
@@ -176,6 +181,8 @@ int MeasureTextWidth(const char* text, int fontType);
 // usa: func_02042190
 // converts size 12 to 1 (fd_me.bin), all others to 0 (fd_s7.bin)
 int GetFontIDBySize(int size);
+// usa: func_020421b0
+const unsigned char* GetWindowBorderTile(int id);
 
 // usa: func_020424ac
 // returns a pointer to the '>' closing all open tags. (i.e. add 1 to go past
@@ -212,6 +219,7 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
 // loads both the s7 and me font from data/pack_lv5
 void LoadCustomFonts(SafeAllocator* alloc);
 
+
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 
 // Initialized by func_02042c68, get member types from here
@@ -224,20 +232,28 @@ public:
     Noun* items_18_[2];
     Noun* monsters_20_[2];
     Noun* vocation_28_;
-    void* reflex_2c_;
+    Noun* reflex_2c_;
     char unknown_30_;
     char unknown_31_;
-    char unk_32[0x38 - 0x32];
+    char unk_32[2];
+    // allocation of size 0xe0
+    void* ptr_34;
     int unknown_38_;
     int unknown_3c_;
     char unk_40[0x48 - 0x40];
+    // unknown pointer (copied from 02107814) of size 0x960
     void* ptr_48;
+    // unknown pointer (copied from 02107808) of size 0x280
     void* ptr_4c;
+    // unknown pointer (copied from 02107828) of size 0x280
     void* ptr_50;
     char unk_54[8];
+    // unknown pointer (copied from 02107824) of size 0x960
     void* ptr_5c;
-    void* ptr_60;
-    void* ptr_64;
+    // holds pointer at 02107818, size 0x960
+    char* scratchBuffer_60_;
+    // holds pointer at 0210780c, size 0x960
+    char* scratchBuffer_64_;
     int length_68_;
     char unk_6c[0x8c - 0x6c];
     int unknown_8c_;
@@ -245,7 +261,8 @@ public:
     int unknown_2c8_;
     char substruct_2cc_[4];
     int unknown_2d0_;
-    char unk_2d4[4];
+    // has 0x400 bytes allocated to it
+    SafeAllocator* pAllocator_2d4_;
     int unknown_2d8_;
     int unknown_2dc_;
     int unknown_2e0_;
@@ -253,8 +270,8 @@ public:
     char unknown_2e6_;
     char unknown_2e7_;
     int unknown_2e8_;
-    char unk_2ec[0x4ac - 0x2ec];
-    char substructOrArray_4ac_[0x400];
+    char tmapSecStrings_2ec_[7][0x40];
+    char customStrings_4ac_[16][0x40];
     int unknown_8ac_;
     // not sure about size. Text can have markers <val_1>, <val_2> or similar
     // which get replaced by game quantities e.g. amount of gold, this array
@@ -300,7 +317,8 @@ public:
     int waitTimeLengths_[4]; // func_02045824, used by <TIME=..> tag
     unsigned short color_187c_;
     unsigned short recoveryAmount_187e_; // amount of HP and MP to restore (usually 999)
-    char unk_187e[0x1882 - 0x1880];
+    char partyMemberIndex_1880_;
+    char unk_1881[1];
     char buffer_1882_[0x80];
     char buffer_1902_[0x40];
     short unknown_1942_;
@@ -311,7 +329,7 @@ public:
     char tagSTArray1_194e_[4];
     char tagSTArray2_1952_[4];
     char tagSTArrayIndex_1956_;
-    char unk_1957[0x59 - 0x57];
+    char unk_1957[2];
     char maybeSoundDuration_1959_;
     char unknown_195a_;
     char unknown_195b_;
@@ -328,7 +346,7 @@ public:
     char unknown_19ad_;
     char unknown_19ae_;
     char unknown_19af_;
-    char unk_19b0[0x19b1 - 0x19b0];
+    char unk_19b0[1];
     char winTag_19b1_;
     char unknown_19b2_;
     char unknown_19b3_;
@@ -338,7 +356,7 @@ public:
     char maybeDoesSoundPlay_19b7_;
     char cenTag_19b8_;
     char unknown_19b9_;
-    char unk_19ba[0x19bb - 0x19ba];
+    char unk_19ba[1];
     char skipTag_19bb_;
     char unknown_19bc_;
     char unk_19bd[1];
@@ -346,17 +364,17 @@ public:
     char unknown_19bf_;
     char unk_19c0[2];
     char unknown_19c2_;
-    char unk_19c3[0x19c6 - 0x19c3];
+    char unk_19c3[3];
     bool recoveryParam_19c6_;
     bool recoveryParam_19c7_; 
-    char unk_19c8[0xcb - 0xc8];
+    char unk_19c8[3];
     char unknown_19cb_;
     char unknown_19cc_;
     char unk_19cd[1];
     char unknown_19ce_;
     char unknown_19cf_;
     char unknown_19d0_;
-    char unk_19d1[0x4 - 0x1];
+    char unk_19d1[3];
     char unknown_19d4_;
     // Q: does this count for a group of enemies too?
     // I couldn't find any uses of the <IF_TARGET_PARTY> tag anywhere...
@@ -368,7 +386,7 @@ public:
     char unk_19d9[1];
     short unknown_19da_;
     unsigned char fontIndex_19dc_;
-    char unk_19dd[0xe0 - 0xdd];
+    char unk_19dd[3];
     char substruct_19e0_[0x448]; // func_0202f1a4. At 0x440 contains a pointer to this+0x914, position of textbox?
     int unknown_1e28_;
 
@@ -447,6 +465,7 @@ public:
 
     // missing processing step 02069234 that handles tags like <LEADER>
     // or <TMAP_SEC_1>, as well as some unknown stuff involving articles?
+    void SubstituteNamesAndArticles(char* input, char* output, int fontType);
 
     // Replaces e.g. "<CAP>hello" with "Hello"
     void SubstituteCaps(char* input, char* output, int fontType);

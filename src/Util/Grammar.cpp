@@ -265,7 +265,7 @@ void Noun::Populate(char *singularName, char *pluralName, unsigned char indefSin
     gender_ = gender;
     pluraleTantum_ = pluraleTantum;
     isPerson_ = isPerson;
-    startsWithVowel = startsWithVowel;
+    startsWithVowel_ = startsWithVowel;
     specialVowelBehavior_ = specialVowelBehavior;
 }
 

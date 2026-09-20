@@ -43,6 +43,8 @@ public:
     uint64_t mainTimestamp_; // current timestamp - this one is used for chest timer
     uint64_t altTimestamp_; // not sure about usage
 
+    // note: from looking at func_020108f0, see there's an array of 4 objects
+    // of size 0x964 each starting at offset 0x474. Looks to be party member data
 #if defined(usa)
     char unk_3f8[0x397c - 0x3f8];
 #elif defined(jpn)

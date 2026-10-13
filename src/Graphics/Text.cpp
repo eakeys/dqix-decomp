@@ -69,13 +69,6 @@ extern char data_020f007c[]; // "me"
 
 extern "C"
 {
-    // get next glyph index
-    int func_020424e4(const char*, int);
-    // get character entry from (glyph index, font type)
-    FontIndexFile::Glyph* func_020425b4(int, int);
-    // get glyph kerning
-    int func_020425e4(int leftGlyph, int rightGlyph, int font);
-
     // alternative strlen
     int func_020d2ff0(const char*);
 }
@@ -427,17 +420,17 @@ int MeasureTextWidth(const char* text, int fontType)
             break;
 
         int thisCharWidth = spaceSize + 1;
-        int glyph = func_020424e4(text, fontType);
-        if (glyph < 0)
+        int glyphIndex = GetNextFontGlyphIndex(text, fontType);
+        if (glyphIndex < 0)
         {
             lastGlyphIndex = 0xff;
             text++;
         }
         else
         {
-            thisGlyphIndex = glyph;
-            const FontIndexFile::Glyph* entry = func_020425b4(glyph, fontType);
-            int kerning = func_020425e4(lastGlyphIndex, thisGlyphIndex, fontType);
+            thisGlyphIndex = glyphIndex;
+            const FontIndexFile::Glyph* entry = GetFontGlyphByIndex(glyphIndex, fontType);
+            int kerning = GetFontGlyphKerning(lastGlyphIndex, thisGlyphIndex, fontType);
             thisCharWidth = entry->width + 1 + kerning;
             text += entry->tagLength;
             lastGlyphIndex = thisGlyphIndex;

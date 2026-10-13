@@ -153,6 +153,17 @@ bool TextManager::IsNextCharacterInteractionControl(const void *input) const
     return false;
 }
 
+bool TextManager::IsNextCharacterControlOrJump(const void* input) const
+{
+    unsigned short word;
+    memcpy(&word, input, 2);
+    if (word >= 0xff01 && word <= 0xff18)
+        return true;
+    if (IsControlWordJump(word))
+        return true;
+    return false;
+}
+
 void CapitalizeSection(char* str, int numChars)
 {
     if (str == NULL)
@@ -2173,6 +2184,22 @@ char* TextManager::HandleImmediateTags(char* input)
     return input;
 }
 
+void TextManager::LoadFirstPage(const char* inFullMsg, int boxWidth)
+{
+    if (inFullMsg == NULL)
+        return;
+    char* copyDest = fullMessage_48_;
+    length_68_ = func_020d2ff0(inFullMsg);
+    memcpy(copyDest, inFullMsg, length_68_);
+    unknown_54_ = unknown_58_ = fullMessage_48_;
+    memset(glyphIndexList_4c_, 0, 0x280);
+    memset(currentPageMessage_50_, 0, 0x280);
+    CopyPage();
+    CalculateNewlines(true, currentPageMessage_50_, pageScratchBuffer_60_, boxWidth, 0, true, 1);
+    int finalCopyLength = func_020d2ff0(pageScratchBuffer_60_);
+    memcpy(currentPageMessage_50_, pageScratchBuffer_60_, finalCopyLength);
+}
+
 void TextManager::CopyPage()
 {
     unknown_7c_ = 0;
@@ -2181,7 +2208,7 @@ void TextManager::CopyPage()
     unknown_74_ = 0;
     unknown_78_ = 0;
     char* source = unknown_54_;
-    char* dest = text_50_;
+    char* dest = currentPageMessage_50_;
     bool foundNormalGlyph = false;
     while (true)
     {
@@ -2195,7 +2222,7 @@ void TextManager::CopyPage()
             dest += controlWordByteCount;
             unknown_70_ += controlWordByteCount;
         }
-        if (length_68_ < (source - ptr_48))
+        if (length_68_ < (source - fullMessage_48_))
         {
             unknown_998_ = 0;
             break;
@@ -2221,7 +2248,7 @@ void TextManager::CopyPage()
             if (IsControlWordJump(control))
             {
                 control = GetJumpControlIndex(control) + 0xffd0;
-                source = FindControlCharacter(control, ptr_48);
+                source = FindControlCharacter(control, fullMessage_48_);
                 if (source == NULL)
                 {
                     unsigned char old = unknown_19cc_;
@@ -2322,7 +2349,7 @@ char* TextManager::FindControlCharacter(unsigned short control, char* input) con
 void TextManager::ComputeSpeaker()
 {
     int speakerLength = 0;
-    unknown_84_ = 0;
+    mainMessageStartOffset_84_ = 0;
     glyphIndexListMainMessageStart_88_ = 0;
     speakerNameWidth_1944_ = 0;
     unknown_1942_ = 0;
@@ -2335,7 +2362,7 @@ void TextManager::ComputeSpeaker()
     char speakerBuffer[64] = {0};
 
     char* speakerPtr;
-    char* textPtr = text_50_;
+    char* textPtr = currentPageMessage_50_;
     char* speakerStart = strstr(textPtr, data_020f08dc);
     char* noSpeakerStart = strstr(textPtr, data_020f0979);
     char* altNoSpeakerStart = strstr(textPtr, data_020f097c);
@@ -2422,13 +2449,13 @@ void TextManager::ComputeSpeaker()
         unknown_19c3_ = 0;
         if (unknown_1942_ != 0)
         {
-            unknown_84_ = unknown_1946_;
+            mainMessageStartOffset_84_ = unknown_1946_;
             glyphIndexListMainMessageStart_88_ = unknown_1942_ + numCharsAtStart + 3;
         }
     }
     else if (unknown_1942_ != 0)
     {
-        unknown_84_ = unknown_1946_;
+        mainMessageStartOffset_84_ = unknown_1946_;
         glyphIndexListMainMessageStart_88_ = unknown_1942_ + numCharsAtStart + 3;
         unknown_74_ = unknown_1942_ + numCharsAtStart + 3;
         unknown_78_ = unknown_1942_ + numCharsAtStart + 3;
@@ -2480,15 +2507,141 @@ void TextManager::ReleaseGlyphByIndex(unsigned short ch)
     }
 }
 
+int TextManager::MeasureLine(const char* text) const
+{
+    if (text == NULL)
+        return 0;
+    unsigned char defaultSpacing = GetFontSpaceSize(fontIndex_19dc_);
+    int currentGlyphIndex = 0xff;
+    
+    unsigned char lastGlyphIndex = currentGlyphIndex;
+    int tagLength;
+    
+    int totalWidth = 0;
+    while (!IsNextCharacterControlOrJump(text))
+    {
+        unsigned short control;
+        memcpy(&control, text, 2);
+        if (func_02044494(this, &control))
+        {
+            int numExtraWords = func_02044420(this, &control);
+            short extraWord;
+            switch (control)
+            {
+            case ControlWord_Unknown_ff19:
+                lastGlyphIndex = 0xff;
+                totalWidth += GetFontGlyphKerning(lastGlyphIndex, currentGlyphIndex, fontIndex_19dc_);
+                break;
+            case ControlWord_Unknown_ff20:
+                lastGlyphIndex = 0xff;
+                memcpy(&extraWord, text + 2, 2);
+                if (totalWidth < extraWord)
+                    totalWidth = extraWord;
+                break;
+            case ControlWord_Unknown_ff23:
+                lastGlyphIndex = 0xff;
+                memcpy(&extraWord, text + 2, 2);
+                totalWidth += extraWord;
+                break;
+            }
+            text = text + 2 + (2 * numExtraWords);
+        }
+        else
+        {
+            tagLength = 1;
+            int glyphWidth = defaultSpacing;
+            FontIndexFile::Glyph* glyph = GetNextFontGlyph(text, fontIndex_19dc_);
+            if (glyph != NULL)
+            {
+                currentGlyphIndex = (unsigned char)GetNextFontGlyphIndex(text, fontIndex_19dc_);
+                totalWidth += GetFontGlyphKerning(lastGlyphIndex, currentGlyphIndex, fontIndex_19dc_);
+                lastGlyphIndex = currentGlyphIndex;
+                currentGlyphIndex = 0xff;
+                tagLength = glyph->tagLength;
+                glyphWidth = glyph->width;
+            }
+            totalWidth += glyphWidth + 1;
+            text += tagLength;
+        }
+    }
+    return totalWidth;
+}
+
+void TextManager::GetLineCenteringOffsets(int* outXs, int* outYs) const
+{
+    int middle = centerX_990_;
+    int outIndex;
+    const char* textPtr = currentPageMessage_50_ + mainMessageStartOffset_84_;
+    
+    outXs[0] = middle - (MeasureLine(textPtr) >> 1);
+    outYs[0] = 0;
+
+    outIndex = 1;
+    while (true)
+    {
+        char nextChar = *textPtr;
+        if (nextChar == 0)
+            return;
+
+        if (IsNextCharacterControl(textPtr))
+        {
+            if (IsNextCharacterInteractionControl(textPtr))
+                return;
+            if (IsNextCharacterControlOrJump(textPtr))
+            {
+                textPtr += 2;
+                outXs[outIndex] = middle - (MeasureLine(textPtr) >> 1);
+                outYs[outIndex] = 0;
+                outIndex++;
+            }
+            else
+                textPtr = textPtr + 2 + GetControlWordNumExtraWords(textPtr) * 2;
+        }
+        else
+        {
+            int tagLength = 1;
+            FontIndexFile::Glyph* glyph = GetNextFontGlyph(textPtr, fontIndex_19dc_);
+            if (glyph != NULL)
+                tagLength = glyph->tagLength;
+            textPtr += tagLength;
+        }
+    }
+}
+
+void TextManager::AdvanceLine()
+{
+    bool moreChars = true;
+    int wordSkip = 0;
+    unsigned short* wordPtr = glyphIndexList_4c_ + unknown_74_;
+    while (moreChars)
+    {
+        if (IsNextCharacterControlOrJump(wordPtr))
+            moreChars = false;
+        if (func_02044494(this, wordPtr))
+        {
+            int numExtraWords = func_02044420(this, wordPtr);
+            wordPtr += numExtraWords;
+            wordSkip += numExtraWords;
+        }
+        else
+            ReleaseGlyphByIndex(*wordPtr);
+        wordPtr++;
+        wordSkip++;
+    }
+
+    unknown_74_ += wordSkip;
+    unknown_78_++;
+}
+
 struct NewlineCalculationTagProcessor
 {
     char* tag;
-    int (*proc)(char* input, int* pX, int fontIndex, int margin);
+    int (*proc)(char* input, int* pX, int fontIndex, int leftMargin);
 };
 
 extern const NewlineCalculationTagProcessor data_020e7ec4[];
 
-int NewlineCalculation_X(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_X(char* input, int* pX, int fontIndex, int leftMargin)
 {
     int value;
     ReadNumbersInTag(input, &value, 1);
@@ -2496,7 +2649,7 @@ int NewlineCalculation_X(char* input, int* pX, int fontIndex, int margin)
     return 0;
 }
 
-int NewlineCalculation_XY(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_XY(char* input, int* pX, int fontIndex, int leftMargin)
 {
     int value;
     ReadNumbersInTag(input, &value, 1);
@@ -2504,7 +2657,7 @@ int NewlineCalculation_XY(char* input, int* pX, int fontIndex, int margin)
     return 0;
 }
 
-int NewlineCalculation_W(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_W(char* input, int* pX, int fontIndex, int leftMargin)
 {
     int value;
     ReadNumbersInTag(input, &value, 1);
@@ -2512,7 +2665,7 @@ int NewlineCalculation_W(char* input, int* pX, int fontIndex, int margin)
     return 0;
 }
 
-int NewlineCalculation_WH(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_WH(char* input, int* pX, int fontIndex, int leftMargin)
 {
     int value;
     ReadNumbersInTag(input, &value, 1);
@@ -2520,13 +2673,13 @@ int NewlineCalculation_WH(char* input, int* pX, int fontIndex, int margin)
     return 0;
 }
 
-int NewlineCalculation_CloseTitle(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_CloseTitle(char* input, int* pX, int fontIndex, int leftMargin)
 {
     *pX = 0;
     return 0;
 }
 
-int NewlineCalculation_OpenXR(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_OpenXR(char* input, int* pX, int fontIndex, int leftMargin)
 {
     int value;
     ReadNumbersInTag(input, &value, 1);
@@ -2534,19 +2687,18 @@ int NewlineCalculation_OpenXR(char* input, int* pX, int fontIndex, int margin)
     return 1;
 }
 
-int NewlineCalculation_CloseXR(char* input, int* pX, int fontIndex, int margin)
+int NewlineCalculation_CloseXR(char* input, int* pX, int fontIndex, int leftMargin)
 {
     return 2;
 }
 
-// one instruction swap away from matching
 void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
-    int boxWidth, int margin, bool arg7, int fontType)
+    int boxWidth, int leftMargin, bool arg7, unsigned char fontType)
 {
-    int local_2c;
-    char* local_34 = NULL;
-    char* local_38 = NULL;
-    int local_3c = 0;
+    int currentX;
+    char* inputLastWordStart = NULL;
+    char* outputLastWordStart = NULL;
+    int lastWordStartX = 0;
     int extraWidthFromSpeaker = 0;
     
     char* noSpeakerStart = strstr(input, data_020f0979);
@@ -2555,10 +2707,10 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
     if (noSpeakerStart != NULL || altNoSpeakerStart != NULL)
         extraWidthFromSpeaker = 2;
     
-    local_2c = margin;
+    currentX = leftMargin;
     unsigned char lastGlyphIndex = 0xff;
     bool leftAligned = true;
-    bool iVar11 = 0;
+    bool shouldWriteHyphen = false;
     
     unsigned char defaultSpacing = GetFontSpaceSize(fontType);
 
@@ -2578,60 +2730,59 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             if (control == ControlWord_LineBreak)
             {
                 extraWidthFromSpeaker = 0;
-                local_2c = margin;
-                local_34 = input;
-                local_38 = output;
-                local_3c = margin;
+                currentX = leftMargin;
+                inputLastWordStart = input;
+                outputLastWordStart = output;
+                lastWordStartX = currentX;
                 lastGlyphIndex = 0xff;
-                iVar11 = 0;
+                shouldWriteHyphen = false;
             }
             continue;
         }
 
         if (nextChar == '\\' && input[1] == 'n')
         {
-            
             extraWidthFromSpeaker = 0;
-            local_2c = margin;
+            currentX = leftMargin;
             lastGlyphIndex = 0xff;
             
             memcpy(output, input, 2);
             input += 2;
             output += 2;
-            local_34 = input;
-            local_38 = output;
-            local_3c = local_2c;
-            iVar11 = 0;
+            inputLastWordStart = input;
+            outputLastWordStart = output;
+            lastWordStartX = currentX;
+            shouldWriteHyphen = false;
             continue;
         }
 
         if (nextChar == '\n')
         {
             extraWidthFromSpeaker = 0;
-            local_2c = margin;
+            currentX = leftMargin;
             lastGlyphIndex = 0xff;
             memcpy(output, input, 1);
             input += 1;
             output += 1;
-            local_34 = input;
-            local_38 = output;
-            local_3c = local_2c;
-            iVar11 = 0;
+            inputLastWordStart = input;
+            outputLastWordStart = output;
+            lastWordStartX = currentX;
+            shouldWriteHyphen = false;
             continue;
         }
 
         if (memcmp(input, data_020f0981, 6) == 0)
         {
             extraWidthFromSpeaker = 0;
-            local_2c = margin;
+            currentX = leftMargin;
             lastGlyphIndex = 0xff;
             memcpy(output, input, 6);
             input += 6;
             output += 6;
-            local_34 = input;
-            local_38 = output;
-            local_3c = local_2c;
-            iVar11 = 0;
+            inputLastWordStart = input;
+            outputLastWordStart = output;
+            lastWordStartX = currentX;
+            shouldWriteHyphen = false;
             continue;
         }
 
@@ -2640,7 +2791,7 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             char* speakerEnd = strstr(input, data_020f0988);
             if (speakerEnd != NULL)
             {
-                local_2c = NULL;
+                currentX = NULL;
                 int speakerLength = speakerEnd - input;
                 memcpy(output, input, speakerLength + 3);
                 input += speakerLength + 3;
@@ -2664,7 +2815,7 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
                     if (!CaseInsensitiveDoesStringBeginWith(tagInner, candidate->tag))
                         continue;
 
-                    int procRet = candidate->proc(tagInner + func_020d2ff0(candidate->tag), &local_2c, fontType, margin);
+                    int procRet = candidate->proc(tagInner + func_020d2ff0(candidate->tag), &currentX, fontType, leftMargin);
                     if (procRet != 1)
                     {
                         if (procRet == 2)
@@ -2687,17 +2838,17 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             }
         }
 
-        bool foundDash = false;
+        bool foundHyphen = false;
         int glyphSpacing = defaultSpacing + 1;
         int ioCopyLength = 1;
         if (control == ControlWord_Unknown_ff19)
         {
-            iVar11 = 1;
+            shouldWriteHyphen = true;
             ioCopyLength = 2;
         }
         if (nextChar == ' ')
         {
-            iVar11 = 0;
+            shouldWriteHyphen = false;
         }
         if (memcmp(input, data_020f098c, 3) == 0)
         {
@@ -2705,7 +2856,7 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             input += 3;
             glyphSpacing = 0;
             ioCopyLength = 0;
-            iVar11 = 1;
+            shouldWriteHyphen = true;
         }
         if (nextGlyphIndex >= 0)
         {
@@ -2716,21 +2867,21 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             lastGlyphIndex = nextGlyphUC;
             glyphSpacing = kerning + glyph->width;
             
-            foundDash = (glyph->tag[0] == '-');
-            if (foundDash)
-                iVar11 = 0;
+            foundHyphen = (glyph->tag[0] == '-');
+            if (foundHyphen)
+                shouldWriteHyphen = false;
 
-            if (local_34 != NULL && local_38 != NULL && leftAligned && 
-                (boxWidth + extraWidthFromSpeaker < local_2c + glyphSpacing))
+            if (inputLastWordStart != NULL && outputLastWordStart != NULL && leftAligned && 
+                (boxWidth + extraWidthFromSpeaker < currentX + glyphSpacing))
             {
-                local_2c -= local_3c;
-                local_2c += margin;
+                currentX -= lastWordStartX;
+                currentX += leftMargin;
                 extraWidthFromSpeaker = 0;
-                int copyLength = input - local_34;
-                int zeroLength = output - local_38;
-                output = local_38;
-                memset(local_38, 0, zeroLength);
-                if (iVar11 != 0)
+                int copyLength = input - inputLastWordStart;
+                int clearLength = output - outputLastWordStart;
+                output = outputLastWordStart;
+                memset(outputLastWordStart, 0, clearLength);
+                if (shouldWriteHyphen)
                 {
                     memcpy(output, data_020f0990, 1);
                     output += 1;
@@ -2745,9 +2896,9 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
                     memcpy(output, data_020f0992, 1);
                     output += 1;
                 }
-                memcpy(output, local_34, copyLength);
+                memcpy(output, inputLastWordStart, copyLength);
                 output += copyLength;
-                iVar11 = 0;
+                shouldWriteHyphen = false;
                 if (arg2)
                 {
                     unknown_70_++;
@@ -2756,16 +2907,16 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             glyphSpacing++;
         }
         if (leftAligned)
-            local_2c += glyphSpacing;
+            currentX += glyphSpacing;
 
         memcpy(output, input, ioCopyLength);
         input += ioCopyLength;
         output += ioCopyLength;
-        if (nextGlyphIndex < 0 || foundDash)
+        if (nextGlyphIndex < 0 || foundHyphen)
         {
-            local_34 = input;
-            local_38 = output;
-            local_3c = local_2c;
+            inputLastWordStart = input;
+            outputLastWordStart = output;
+            lastWordStartX = currentX;
         }
     }
 

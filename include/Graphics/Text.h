@@ -95,6 +95,7 @@ enum ControlWord
     ControlWord_Auto = 0xff0b,
     ControlWord_PageT = 0xff0c,
     ControlWord_Page = 0xff0d,
+
     ControlWord_Shake = 0xff0e,
     ControlWord_QuestSE = 0xff0f, 
     ControlWord_Quest = 0xff10,
@@ -106,6 +107,7 @@ enum ControlWord
     ControlWord_Uke = 0xff16,
     ControlWord_Yame = 0xff17,
     ControlWord_LineBreak = 0xff18,
+
     ControlWord_Unknown_ff19 = 0xff19,
     ControlWord_Time = 0xff1a,
     ControlWord_AllRecover = 0xff1b,
@@ -222,10 +224,16 @@ void LoadCustomFonts(SafeAllocator* alloc);
 // sizeof == 0x1c
 struct TextBox
 {
-    char unk_0[4];
+    short unknown_0;
+    short unknown_2;
     short width;
     short height;
-    char unk_8[0x14];
+    int unknown_8;
+    int unknown_c;
+    int unknown_10;
+    int unknown_14;
+    unsigned short unknown_18;
+    char pad_1a[2];
 };
 
 // sizeof == 0x1e2c == 7724.
@@ -266,20 +274,20 @@ public:
     int unknown_3c_;
     char unk_40[0x48 - 0x40];
     // unknown pointer (copied from 02107814) of size 0x960
-    char* ptr_48;
+    char* fullMessage_48_;
     // up to 0x80 different glyphs can be displayed at once (see the
     // RenderGlyph array below), this stores indices into that array
     // for each character of the message. Shared between speaker and
     // main message
     unsigned short* glyphIndexList_4c_;
     // unknown pointer (copied from 02107828) of size 0x280
-    char* text_50_;
+    char* currentPageMessage_50_;
     char* unknown_54_;
     char* unknown_58_;
     // unknown pointer (copied from 02107824) of size 0x960
     void* ptr_5c;
     // holds pointer at 02107818, size 0x960
-    char* scratchBuffer_60_;
+    char* pageScratchBuffer_60_;
     // holds pointer at 0210780c, size 0x960
     char* scratchBuffer_64_;
     unsigned int length_68_;
@@ -289,7 +297,7 @@ public:
     unsigned int unknown_78_;
     int unknown_7c_;
     char unk_80[4];
-    int unknown_84_;
+    int mainMessageStartOffset_84_;
     unsigned int glyphIndexListMainMessageStart_88_;
     int unknown_8c_;
     char substruct_90_[0x238]; // func_0205c790
@@ -326,7 +334,7 @@ public:
     char substructOrArray_95c_[0x20];
     char substructOrArray_97c_[0x10];
     char unk_98c[0x990 - 0x98c];
-    int unknown_990_;
+    int centerX_990_;
     int unknown_994_;
     int unknown_998_;
     int unknown_99c_;
@@ -369,7 +377,7 @@ public:
     char unknown_195a_;
     unsigned char unknown_195b_;
     char unknown_195c_;
-    char unk_195d[1];
+    unsigned char unknown_195d_;
     char autoValue_195e_; // populated by <AUTO=__> tags, I couldn't find any though
     char unk_195f[1];
     char pageTValue_1960_; // seems to be time until dialogue advances automatically?
@@ -438,6 +446,8 @@ public:
 
     // usa: func_02067a9c
     bool IsNextCharacterInteractionControl(const void* input) const;
+    // usa: func_02067ad8
+    bool IsNextCharacterControlOrJump(const void* input) const;
 
     // usa: func_0206831c
     void SubstituteValueTags(char* input, char* output);
@@ -562,6 +572,9 @@ public:
     // that can't be processed here)
     char* HandleImmediateTags(char* input);
 
+    // usa: func_0206a974
+    void LoadFirstPage(const char* fullMessage, int boxWidth);
+
     // usa: func_0206aa28
     void CopyPage();
     // usa: func_0206abf8
@@ -581,8 +594,15 @@ public:
     // decreases the refcount for a character (ascii or control)
     void ReleaseGlyphByIndex(unsigned short ch);
 
+    // usa: func_0206b37c
+    int MeasureLine(const char* text) const;
+    // usa: func_0206b528
+    void GetLineCenteringOffsets(int* outXs, int* outYs) const;
+    // usa: func_0206b61c
+    void AdvanceLine();
+
     // usa: func_0206b974
-    void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth, int margin, bool arg7, int fontType);
+    void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth, int margin, bool arg7, unsigned char fontType);
 };
 
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);

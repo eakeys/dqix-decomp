@@ -106,7 +106,7 @@ enum ControlWord
     ControlWord_Uke = 0xff16,
     ControlWord_Yame = 0xff17,
     ControlWord_LineBreak = 0xff18,
-
+    ControlWord_Unknown_ff19 = 0xff19,
     ControlWord_Time = 0xff1a,
     ControlWord_AllRecover = 0xff1b,
     ControlWord_ST = 0xff1c,
@@ -219,12 +219,36 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
 // loads both the s7 and me font from data/pack_lv5
 void LoadCustomFonts(SafeAllocator* alloc);
 
+// sizeof == 0x1c
+struct TextBox
+{
+    char unk_0[4];
+    short width;
+    short height;
+    char unk_8[0x14];
+};
 
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 
 // Initialized by func_02042c68, get member types from here
 class TextManager
 {
+public:
+    static inline bool IsControlWordJump(unsigned short ctrl)
+    {
+        return (ctrl & 0xffe0) == 0xffe0;
+    }
+
+    static inline bool IsControlWordLabel(unsigned short ctrl)
+    {
+        return (ctrl & 0xffd0) == 0xffd0;
+    }
+
+    static inline unsigned short GetJumpControlIndex(unsigned short ctrl)
+    {
+        return ctrl ^ 0xffe0;
+    }
+
 public:
     Noun* actors_0_[2];
     Noun* actions_8_[2];
@@ -242,20 +266,31 @@ public:
     int unknown_3c_;
     char unk_40[0x48 - 0x40];
     // unknown pointer (copied from 02107814) of size 0x960
-    void* ptr_48;
-    // unknown pointer (copied from 02107808) of size 0x280
-    void* ptr_4c;
+    char* ptr_48;
+    // up to 0x80 different glyphs can be displayed at once (see the
+    // RenderGlyph array below), this stores indices into that array
+    // for each character of the message. Shared between speaker and
+    // main message
+    unsigned short* glyphIndexList_4c_;
     // unknown pointer (copied from 02107828) of size 0x280
-    void* ptr_50;
-    char unk_54[8];
+    char* text_50_;
+    char* unknown_54_;
+    char* unknown_58_;
     // unknown pointer (copied from 02107824) of size 0x960
     void* ptr_5c;
     // holds pointer at 02107818, size 0x960
     char* scratchBuffer_60_;
     // holds pointer at 0210780c, size 0x960
     char* scratchBuffer_64_;
-    int length_68_;
-    char unk_6c[0x8c - 0x6c];
+    unsigned int length_68_;
+    unsigned int glyphIndexListLength_6c_;
+    unsigned int unknown_70_;
+    unsigned int unknown_74_;
+    unsigned int unknown_78_;
+    int unknown_7c_;
+    char unk_80[4];
+    int unknown_84_;
+    unsigned int glyphIndexListMainMessageStart_88_;
     int unknown_8c_;
     char substruct_90_[0x238]; // func_0205c790
     int unknown_2c8_;
@@ -281,10 +316,10 @@ public:
     unsigned char maybeValuePaddingModes[16];
     char unk_901[1];
     unsigned char valueUnknownArray[16];
-    char unknown_912_;
+    unsigned char unknown_912_; // 4 when current line has a speaker, 3 when not?
     char unk_913[1];
-    char substruct_914_[0x1c]; // func_02042fcc, seems related to main text box in 3d render mode 
-    char substruct_930_[0x1c]; // same as above, seems related to speaker name box
+    TextBox mainTextBox_914_; // func_02042fcc 
+    TextBox speakerTextBox_930_;
     char unk_94c[0x954 - 0x94c];
     int unknown_954_;
     int unknown_958_;
@@ -293,7 +328,7 @@ public:
     char unk_98c[0x990 - 0x98c];
     int unknown_990_;
     int unknown_994_;
-    char unk_998[4];
+    int unknown_998_;
     int unknown_99c_;
     int unknown_9a0_;
     int gyouParameter_9a4_;
@@ -303,7 +338,7 @@ public:
     // holds data about glyphs that are used in the current message
     RenderGlyph glyphs_[0x80];
     // number of times a glyph is used within message
-    char glyphRefcounts_17b8_[0x80];
+    unsigned char glyphRefcounts_17b8_[0x80];
     int npcID_1838_;
     fix32_t npcPriorRotation_183c_;
     fix32_t turnAngle_1840_;
@@ -319,10 +354,10 @@ public:
     unsigned short recoveryAmount_187e_; // amount of HP and MP to restore (usually 999)
     char partyMemberIndex_1880_;
     char unk_1881[1];
-    char buffer_1882_[0x80];
+    unsigned short indexBuffer_1882_[0x40];
     char buffer_1902_[0x40];
-    short unknown_1942_;
-    short unknown_1944_;
+    unsigned short unknown_1942_;
+    short speakerNameWidth_1944_;
     short unknown_1946_;
     short questIndex_1948_;
     char voiceVolumeLookup_194a_[4];
@@ -332,7 +367,7 @@ public:
     char unk_1957[2];
     char maybeSoundDuration_1959_;
     char unknown_195a_;
-    char unknown_195b_;
+    unsigned char unknown_195b_;
     char unknown_195c_;
     char unk_195d[1];
     char autoValue_195e_; // populated by <AUTO=__> tags, I couldn't find any though
@@ -346,7 +381,7 @@ public:
     char unknown_19ad_;
     char unknown_19ae_;
     char unknown_19af_;
-    char unk_19b0[1];
+    unsigned char unknown_19b0_;
     char winTag_19b1_;
     char unknown_19b2_;
     char unknown_19b3_;
@@ -363,13 +398,14 @@ public:
     char unknown_19be_;
     char unknown_19bf_;
     char unk_19c0[2];
-    char unknown_19c2_;
-    char unk_19c3[3];
+    unsigned char speakerDifference_19c2_;
+    unsigned char unknown_19c3_;
+    char unk_19c4[2];
     bool recoveryParam_19c6_;
     bool recoveryParam_19c7_; 
     char unk_19c8[3];
     char unknown_19cb_;
-    char unknown_19cc_;
+    unsigned char unknown_19cc_;
     char unk_19cd[1];
     char unknown_19ce_;
     char unknown_19cf_;
@@ -388,12 +424,20 @@ public:
     unsigned char fontIndex_19dc_;
     char unk_19dd[3];
     char substruct_19e0_[0x448]; // func_0202f1a4. At 0x440 contains a pointer to this+0x914, position of textbox?
-    int unknown_1e28_;
+    void* unknown_1e28_;
 
     static TextManager* GetInstance();
 
     // usa: func_02042c68
     void Reset();
+
+    // usa: func_02045c00
+    int GetGlyphIndex(const FontIndexFile::Glyph* glyph);
+    // usa: func_02045cac
+    void ReleaseAllGlyphs();
+
+    // usa: func_02067a9c
+    bool IsNextCharacterInteractionControl(const void* input) const;
 
     // usa: func_0206831c
     void SubstituteValueTags(char* input, char* output);
@@ -518,6 +562,8 @@ public:
     // that can't be processed here)
     char* HandleImmediateTags(char* input);
 
+    // usa: func_0206aa28
+    void CopyPage();
     // usa: func_0206abf8
     int GetControlWordNumExtraWords(const char* input) const;
     // usa: func_0206ac6c
@@ -525,6 +571,18 @@ public:
     // usa: func_0206ac94
     // might be supposed to take unsigned char* input
     char* FindControlCharacter(unsigned short control, char* input) const;
+
+    // usa: func_0206ad74
+    void ComputeSpeaker();
+
+    // usa: func_0206b104
+    void ReleaseMainMessageGlyphs();
+    // usa: func_0206b198
+    // decreases the refcount for a character (ascii or control)
+    void ReleaseGlyphByIndex(unsigned short ch);
+
+    // usa: func_0206b974
+    void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth, int margin, bool arg7, int fontType);
 };
 
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);

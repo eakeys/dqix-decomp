@@ -87,8 +87,8 @@ enum ControlWord
     ControlWord_Close = 0xff03, // closes quest? used alongside </QUEST>
     ControlWord_YesNo = 0xff04,
     ControlWord_NoYes = 0xff05,
-    ControlWord_YesNo_NotSe = 0xff06,
-    ControlWord_YesNo_NotSe_IIE = 0xff07,
+    ControlWord_YesNo_NotSe = 0xff06, // yes/no but doesn't play a sound effect when you press A
+    ControlWord_YesNo_NotSe_IIE = 0xff07, // yes/no but doesn't play a sound effect when you press A on 'No'
     ControlWord_UkeYame = 0xff08,
 
     ControlWord_Add = 0xff0a,
@@ -230,8 +230,8 @@ struct TextBox
     short height;
     int unknown_8;
     int unknown_c;
-    int unknown_10;
-    int unknown_14;
+    fix32_t scaleX;
+    fix32_t scaleY;
     unsigned short unknown_18;
     char pad_1a[2];
 };
@@ -267,23 +267,21 @@ public:
     Noun* reflex_2c_;
     char unknown_30_;
     char unknown_31_;
-    char unk_32[2];
-    // allocation of size 0xe0
-    void* ptr_34;
+    char pad_32[2];
+    Renderer2D* renderer2D_34_;
     int unknown_38_;
     int unknown_3c_;
-    char unk_40[0x48 - 0x40];
-    // unknown pointer (copied from 02107814) of size 0x960
+    int unknown_40_;
+    int unknown_44_;
     char* fullMessage_48_;
     // up to 0x80 different glyphs can be displayed at once (see the
     // RenderGlyph array below), this stores indices into that array
     // for each character of the message. Shared between speaker and
     // main message
     unsigned short* glyphIndexList_4c_;
-    // unknown pointer (copied from 02107828) of size 0x280
     char* currentPageMessage_50_;
     char* unknown_54_;
-    char* unknown_58_;
+    char* unknown_58_; // accessed as unsigned in 0206b224
     // unknown pointer (copied from 02107824) of size 0x960
     void* ptr_5c;
     // holds pointer at 02107818, size 0x960
@@ -328,7 +326,7 @@ public:
     char unk_913[1];
     TextBox mainTextBox_914_; // func_02042fcc 
     TextBox speakerTextBox_930_;
-    char unk_94c[0x954 - 0x94c];
+    char unk_94c[8];
     int unknown_954_;
     int unknown_958_;
     char substructOrArray_95c_[0x20];
@@ -338,9 +336,17 @@ public:
     int unknown_994_;
     int unknown_998_;
     int unknown_99c_;
-    int unknown_9a0_;
+    // should be an enum.
+    // 0 = waiting for A (no cursor),
+    // 1 = waiting for A (with cursor),
+    // 2 = similar to above, used by zoom,
+    // 3 = ?,
+    // 4 = auto-advance (<AUTO=...>),
+    // 5 = ?,
+    // 6 = awaiting yes/no or uke/yame choice
+    int pauseType_9a0_;
     int gyouParameter_9a4_;
-    char unk_9a8[0x9b0 - 0x9a8];
+    char unk_9a8[8];
     int unknown_9b0_;
     int unknown_9b4_;
     // holds data about glyphs that are used in the current message
@@ -377,9 +383,10 @@ public:
     char unknown_195a_;
     unsigned char unknown_195b_;
     char unknown_195c_;
+    // low 2 bits determine which offset among (-2, 0), (0, 0), (0, -3), (0, 0) to apply to speaker name
     unsigned char unknown_195d_;
-    char autoValue_195e_; // populated by <AUTO=__> tags, I couldn't find any though
-    char unk_195f[1];
+    char autoValue_195e_;
+    unsigned char autoRemainingTime_195f_;
     char pageTValue_1960_; // seems to be time until dialogue advances automatically?
     char unk_1961[1];
     char unknown_1962_;
@@ -390,7 +397,7 @@ public:
     char unknown_19ae_;
     char unknown_19af_;
     unsigned char unknown_19b0_;
-    char winTag_19b1_;
+    unsigned char showWindow_19b1_; // probably bool
     char unknown_19b2_;
     char unknown_19b3_;
     char unknown_19b4_;
@@ -408,16 +415,17 @@ public:
     char unk_19c0[2];
     unsigned char speakerDifference_19c2_;
     unsigned char unknown_19c3_;
-    char unk_19c4[2];
+    unsigned char unknown_19c4_;
+    char unk_19c5[1];
     bool recoveryParam_19c6_;
     bool recoveryParam_19c7_; 
     char unk_19c8[3];
     char unknown_19cb_;
     unsigned char unknown_19cc_;
-    char unk_19cd[1];
+    unsigned char unknown_19cd_;
     char unknown_19ce_;
     char unknown_19cf_;
-    char unknown_19d0_;
+    unsigned char unknown_19d0_;
     char unk_19d1[3];
     char unknown_19d4_;
     // Q: does this count for a group of enemies too?
@@ -431,7 +439,12 @@ public:
     short unknown_19da_;
     unsigned char fontIndex_19dc_;
     char unk_19dd[3];
-    char substruct_19e0_[0x448]; // func_0202f1a4. At 0x440 contains a pointer to this+0x914, position of textbox?
+    struct Substruct_19e0
+    {
+        struct InnerElement { char unk_0[0x88]; } elements[8];
+        TextBox* pCurrentBox; 
+        char unk_444[4];
+    } substruct_19e0_; // func_0202f1a4
     void* unknown_1e28_;
 
     static TextManager* GetInstance();
@@ -443,6 +456,23 @@ public:
     int GetGlyphIndex(const FontIndexFile::Glyph* glyph);
     // usa: func_02045cac
     void ReleaseAllGlyphs();
+
+    // usa: func_020654b8
+    void RenderGlyph2D(Renderer2D* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
+
+    // usa: func_02065920
+    void AdvanceAutoTimer(unsigned int ticks);
+
+    // usa: func_02066a6c
+    // The bool probably has some deeper meaning
+    void DrawSpeakerName(bool noOffsets);
+
+    // usa: func_020678bc
+    // 0 = yes, 1 = no, -1 = undecided, -2 = cancelled (no)
+    void ProcessYesNoInput(int input);
+    // usa: func_020679d4
+    // 0 = yes, 1 = no, -1 = undecided, 2 = cancelled (no)
+    void ProcessUkeYameInput(int input);
 
     // usa: func_02067a9c
     bool IsNextCharacterInteractionControl(const void* input) const;
@@ -526,7 +556,7 @@ public:
 
     // func_0206973c: "PAGE_T=" // declare page end, auto-advance after given time
     // func_02069790: "PAGE>" // declare page end
-    // func_020697b8: "AUTO=" // ???
+    // func_020697b8: "AUTO=" // also auto-advances, used with 'but the enemy are too stunned to move'
     // func_0206980c: "ADD>" // maybe prevents box disappearing during cutscene? see e.g. Grand Lizzier
     // func_02069834: "TIME=" // used to add a delay/block input for a time (used for quest completion)
     // func_02069884: "PAD_WAIT>" // await input?
@@ -593,12 +623,18 @@ public:
     // usa: func_0206b198
     // decreases the refcount for a character (ascii or control)
     void ReleaseGlyphByIndex(unsigned short ch);
+    // usa: func_0206b224
+    void LoadNextPage();
+    // usa: func_0206b2c8
+    // Specify the response as a control word (e.g. 0xff14 for yes)
+    void SubmitQuestionResponse(unsigned short response, char* searchStart);
 
     // usa: func_0206b37c
     int MeasureLine(const char* text) const;
     // usa: func_0206b528
     void GetLineCenteringOffsets(int* outXs, int* outYs) const;
     // usa: func_0206b61c
+    // bit speculative as I haven't seen this called anywhere
     void AdvanceLine();
 
     // usa: func_0206b974

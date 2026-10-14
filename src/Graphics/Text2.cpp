@@ -4,6 +4,8 @@
 #include "GameState/GameState.h"
 #include <globaldefs.h>
 
+void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
+
 extern "C"
 {
     // probably atoi
@@ -19,12 +21,15 @@ extern "C"
     // and wifi players. (Q: Does this count Ivor?)
     unsigned char func_02011538(GameState*);
 
+    void func_0202f404(void*, int, int);
+
     void* func_0203dce4(void*, int);
     void* func_0203cf4c();
     Vector3fix func_020406f8(void*);
 
     // set textbox dimensions?
     void func_02042b98(TextManager*, int, int, int, int);
+    void func_02042c24(void*, short, short);
     void func_02043124(TextManager*);
     void func_02043204(TextManager*);
     int func_02044420(const TextManager*, const void*);
@@ -32,9 +37,12 @@ extern "C"
     void func_020457e8(TextManager*, int);
 
     int func_020546a8(PartyMember*);
-
+    void func_0205c840(void*);
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
+
+    void func_0206b804(void*, int*, int*);
+    void func_02066cc0(void*, short*, short*);
 
     // probably get quest manager instance or something?
     void* func_02094d6c();
@@ -64,6 +72,8 @@ struct Struct_020e7e04
 
 extern const char data_020e7e30[5];
 extern const char data_020e7e35[7];
+extern const short data_020e7e44[];
+extern const short data_020e7e4c[];
 extern const char* data_020e7e74[6];
 
 extern char data_020f0746[]; // "<INN="
@@ -143,6 +153,204 @@ extern char data_020f0988[]; // "//"
 extern char data_020f098c[]; // "[-]"
 extern char data_020f0990[]; // "-"
 extern char data_020f0992[]; // "\n" (the special character, not backslash and an n)
+
+void TextManager::RenderGlyph2D(Renderer2D *renderer, RenderGlyph *glyph, short x, short preShiftY, unsigned char colorIndex)
+{
+    if (glyph->indexGlyph == NULL)
+        return;
+
+    const char* str = glyph->indexGlyph->tag;
+    short y = preShiftY - (short)(renderer2D_34_->unknown_ae_ * 8);
+    
+    unsigned char effects = TextManager::GetInstance()->unknown_195b_;
+
+    short outX, outY;
+
+    if (effects & 0x80)
+    {
+        for (unsigned char i = 0; i < 4; i++)
+        {
+            renderer->RenderText(x + data_020e7e4c[i], y + data_020e7e44[i], str,
+                10, 1, &outX, &outY, fontIndex_19dc_);
+        }
+        renderer->RenderText(x + 1, y + 1, str, 10, colorIndex, &outX, &outY, fontIndex_19dc_);
+    } else if (effects & 2)
+    {
+        int shadowX = x + 1, shadowY = y + 1;
+        int mainX = x, mainY = y;
+        renderer->RenderText(shadowX, shadowY, str, 10, 1, &outX, &outY, fontIndex_19dc_);
+        renderer->RenderText(mainX, mainY, str, 10, colorIndex, &outX, &outY, fontIndex_19dc_);
+    } else
+    {
+        renderer->RenderText(x, y, str, 10, colorIndex, &outX, &outY, fontIndex_19dc_);
+    }
+}
+
+void TextManager::AdvanceAutoTimer(unsigned int ticks)
+{
+    if (unknown_19d0_ != 0 || pauseType_9a0_ != 4)
+        return;
+
+    unknown_912_ = 0;
+    if (ticks < autoRemainingTime_195f_)
+    {
+        autoRemainingTime_195f_ -= ticks;
+        return;
+    }
+
+    // timer ran out
+    autoRemainingTime_195f_ = 0;
+    unknown_19ae_ = 0;
+    unknown_19af_ = 0;
+    unknown_19cd_ = 1;
+    unknown_40_ = 0;
+    unknown_44_ = 0;
+
+    ReleaseMainMessageGlyphs();
+    pauseType_9a0_ = 5;
+    LoadNextPage();
+}
+
+void TextManager::DrawSpeakerName(bool noOffsets)
+{
+    if (!unknown_19c4_)
+        return;
+    Substruct_19e0* boxHandler = &substruct_19e0_;
+    int count;
+    unsigned short* indices;
+    RenderGlyph* glyph;
+    int i;
+    count = 0;
+    indices = NULL;
+    if (unknown_19c3_ != 0)
+    {
+        indices = indexBuffer_1882_;
+        count = unknown_1942_ & 255;
+    }
+    if (indices != NULL) {
+        int offsetX, offsetY;
+        
+        func_0206b804(this, &offsetX, &offsetY);
+        short x, y;
+        func_02066cc0(boxHandler, &x, &y);
+        y -= 19;
+        boxHandler->pCurrentBox = &speakerTextBox_930_;
+        if (boxHandler->pCurrentBox != NULL)
+        {
+            boxHandler->pCurrentBox->scaleX = 1 << 12;
+            boxHandler->pCurrentBox->scaleY = 1 << 12;
+        }
+        if (boxHandler->pCurrentBox != NULL)
+            boxHandler->pCurrentBox->unknown_8 = 2;
+        if (noOffsets)
+            func_02042c24(boxHandler, x, y);
+        else
+        {
+            func_02042c24(boxHandler, (x + offsetX), (y + offsetY));
+            func_0202f404(boxHandler, 1, 0);
+        }
+        short widthRounding = 8 - (speakerNameWidth_1944_ & 7);
+        x += (widthRounding + 18) >> 1;
+        y += 5;
+        unsigned char fontWidth = GetFontSpaceSize(fontIndex_19dc_);
+        for (i = 0; i < count; i++) {
+            unsigned short code = indices[i];
+            if ((code & 0xff00) == 0xff00)
+            {
+                if (code == ControlWord_End)
+                    break;
+                if (code == ControlWord_Unknown_ff19)
+                {
+                    x += fontWidth + 1;
+                    continue;
+                }
+            }
+            glyph = &glyphs_[code];
+            if (noOffsets)
+                RenderGlyph2D(renderer2D_34_, glyph, x, y, 15);
+            else
+            {
+                SetRenderGlyphPosition(glyph, x, y, 0);
+                glyph->Draw(color_187c_, 0, 31);
+            }
+            if (glyph->indexGlyph != NULL)
+                x += glyph->indexGlyph->width + 1;
+        }
+    }
+    boxHandler->pCurrentBox = &mainTextBox_914_;
+}
+
+void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z)
+{
+    glyph->drawX = x;
+    glyph->drawY = y;
+    glyph->drawZ = z;
+}
+
+void TextManager::ProcessYesNoInput(int input)
+{
+    unsigned short control = glyphIndexList_4c_[unknown_78_];
+    bool silentYesNo = (control == ControlWord_YesNo_NotSe);
+    bool silentNo = (control == ControlWord_YesNo_NotSe_IIE);
+
+    switch (input)
+    {
+    case 0: // yes
+        ReleaseMainMessageGlyphs();
+        if (!silentYesNo) {
+            func_0205eaa0(data_02108760, 1, 0);
+        }
+        SubmitQuestionResponse(ControlWord_Yes, unknown_58_);
+        func_0205c840(substruct_90_);
+        unknown_19cd_ = 1;
+        unknown_40_ = 0;
+        break;
+    case 1: // no
+        if (!silentYesNo && !silentNo)
+            func_0205eaa0(data_02108760, 1, 0);
+        // fallthrough
+    case -2: // cancel (no)
+        unknown_954_ = 1;
+        ReleaseMainMessageGlyphs();
+        SubmitQuestionResponse(ControlWord_No, unknown_58_);
+        func_0205c840(substruct_90_);
+        unknown_19cd_ = 1;
+        unknown_40_ = 0;
+        break;
+    default:
+        break;
+    }
+}
+
+void TextManager::ProcessUkeYameInput(int input)
+{
+    unsigned short control = glyphIndexList_4c_[unknown_78_];
+
+    switch (input)
+    {
+    case 0: // yes (uke)
+        ReleaseMainMessageGlyphs();
+        func_0205eaa0(data_02108760, 1, 0);
+        SubmitQuestionResponse(ControlWord_Uke, unknown_58_);
+        func_0205c840(substruct_90_);
+        unknown_19cd_ = 1;
+        unknown_40_ = 0;
+        break;
+    case 1: // no (yame)
+        func_0205eaa0(data_02108760, 1, 0);
+        // fallthrough
+    case -2: // cancel (no/yame)
+        unknown_954_ = 1;
+        ReleaseMainMessageGlyphs();
+        SubmitQuestionResponse(ControlWord_Yame, unknown_58_);
+        func_0205c840(substruct_90_);
+        unknown_19cd_ = 1;
+        unknown_40_ = 0;
+        break;
+    default:
+        break;
+    }
+}
 
 bool TextManager::IsNextCharacterInteractionControl(const void *input) const
 {
@@ -2046,7 +2254,7 @@ char* TextManager::HandleImmediateTags(char* input)
 
         if (CaseInsensitiveDoesStringBeginWith(input, data_020f0950)) // <WIN>
         {
-            winTag_19b1_ = 0;
+            showWindow_19b1_ = 0;
             input += 5;
             continue;
         }
@@ -2507,6 +2715,49 @@ void TextManager::ReleaseGlyphByIndex(unsigned short ch)
     }
 }
 
+void TextManager::LoadNextPage()
+{
+    ReleaseMainMessageGlyphs();
+    memset(glyphIndexList_4c_, 0, 0x280);
+    memset(currentPageMessage_50_, 0, 0x280);
+
+    int skip = 1;
+    unsigned char controlTest = unknown_58_[1];
+    if (controlTest == 0xff)
+    {
+        skip = 2;
+    }
+
+    unknown_54_ = unknown_58_ + skip;
+    unknown_58_ = unknown_54_;
+
+    CopyPage();
+    CalculateNewlines(true, currentPageMessage_50_, pageScratchBuffer_60_, 227, 0, true, 1);
+    int len = func_020d2ff0(pageScratchBuffer_60_);
+    memcpy(currentPageMessage_50_, pageScratchBuffer_60_, len);
+}
+
+void TextManager::SubmitQuestionResponse(unsigned short response, char* searchStart)
+{
+    char* newPos = FindControlCharacter(response, searchStart);
+    if (newPos == NULL)
+    {
+        func_02043204(this);
+        func_02043124(this);
+        return;
+    }
+
+    ReleaseMainMessageGlyphs();
+    memset(glyphIndexList_4c_, 0, 0x280);
+    memset(currentPageMessage_50_, 0, 0x280);
+    unknown_54_ = unknown_58_ = newPos;
+    pauseType_9a0_ = 5;
+    CopyPage();
+    CalculateNewlines(true, currentPageMessage_50_, pageScratchBuffer_60_, 227, 0, true, 1);
+    int len = func_020d2ff0(pageScratchBuffer_60_);
+    memcpy(currentPageMessage_50_, pageScratchBuffer_60_, len);
+}
+
 int TextManager::MeasureLine(const char* text) const
 {
     if (text == NULL)
@@ -2693,7 +2944,7 @@ int NewlineCalculation_CloseXR(char* input, int* pX, int fontIndex, int leftMarg
 }
 
 void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
-    int boxWidth, int leftMargin, bool arg7, unsigned char fontType)
+    int boxWidth, int leftMargin, bool useNewlineControl, unsigned char fontType)
 {
     int currentX;
     char* inputLastWordStart = NULL;
@@ -2886,7 +3137,7 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
                     memcpy(output, data_020f0990, 1);
                     output += 1;
                 }
-                if (arg7)
+                if (useNewlineControl)
                 {
                     memcpy(output, &data_020e7e04.newlineWord, 2);
                     output += 2;

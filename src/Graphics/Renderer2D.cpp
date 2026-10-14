@@ -444,7 +444,7 @@ void Renderer2D::RenderText(short x, short y, const char *argText, unsigned char
     
     unsigned char defaultSpacing;
     unsigned char size;
-    
+
     short initialX = x;
     short initialY = y;
     

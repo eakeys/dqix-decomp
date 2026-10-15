@@ -160,7 +160,7 @@ void TextManager::RenderGlyph2D(Renderer2D *renderer, RenderGlyph *glyph, short 
         return;
 
     const char* str = glyph->indexGlyph->tag;
-    short y = preShiftY - (short)(renderer2D_34_->unknown_ae_ * 8);
+    short y = preShiftY - (short)(renderer2D_34_->topTile_ae_ * 8);
     
     unsigned char effects = TextManager::GetInstance()->unknown_195b_;
 

@@ -4,13 +4,23 @@
 #include "std_library_functions.h"
 #include "Vector.h"
 
-
-
 // sizeof == 0xe0.
 // Dynamically allocated by func_020421c4.
 class Renderer2D
 {
 public:
+    enum RendererFlags
+    {
+        RendererFlags_01 = 1,
+        RendererFlags_02 = 2,
+        RendererFlags_04 = 4,
+        RendererFlags_08 = 8,
+        RendererFlags_10 = 0x10,
+        RendererFlags_20 = 0x20,
+        RendererFlags_40 = 0x40,
+        RendererFlags_80 = 0x80
+    };
+
     // sizeof == 0x20. This is its own thing but I don't know what yet,
     // see e.g. func_0205d594 that modifies an instance of it.
     struct DestinationData
@@ -23,48 +33,57 @@ public:
         inline int GetBGIndex() const { return bgIndex; }
     };
 public:
-char unk_0[4];
+    Renderer2D* next_0_;
     DestinationData* destinationData_4_;
     unsigned char* stagingData_8_;
-    short unknown_array_c_[18];
-    short unknown_array_30_[18];
-    short unknown_array_54_[18];
-    short unknown_array_78_[18];
+    short elementXValues_[18];
+    short elementYValues_[18];
+    short elementWidths_[18];
+    short elementHeights_[18];
     int unknown_9c_;
     unsigned int vramOffset_a0_;
     unsigned int bufferSize_a4_;
     short numTilesX_a8_;
     short numTilesY_aa_;
-char unk_ac[2];
-    short unknown_ae_;
+    short leftTile_ac_;
+    short topTile_ae_;
     short unknown_b0_;
     short unknown_b2_;
 char unk_b4[2];
     short lineSpacing_b6_;
-char unk_b8[4];
+char unk_b8[2];
+    short overrideLineSpacing_ba_;
     short cursorX_bc_;
     short cursorY_be_;
 char unk_c0[5];
     // bit 6: draw the gray cursor
     unsigned char flags_c5_;
-char unk_c6[0xd4 - 0xc6];
+    unsigned char unknown_c6_;
+    unsigned char fontHeight_c7_;
+char unk_c8[12];
     unsigned short* unknown_d4_;
     unsigned char maybePageNumbersEnabled_d8_0_ : 1;
     unsigned char pageNumberDirty_d8_1_ : 1;
-    unsigned char unk_d8_bits : 6;
+    unsigned char useBG_d8_2_ : 1;
+    unsigned char unk_d8_bits : 5;
     unsigned char pageNumber_d9_; // zero-indexed
     unsigned char numPages_da_;
-char unk_db[1];
-    char unknown_dc_;
-    char unknown_dd_;
-    char unknown_de_;
+    // top, bottom, left, right
+    char backgroundMargins_db_[4];
 char unk_df[1];
 
     void FillRectangle(int colorIndex, short left, short top, short right, short bottom);
+    void PrepareMenu(const char* markup, short border, unsigned char font);
 
     void BlitBitmap4Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
     int PrepareText(const char* text, int unused, bool bool4, bool bool5, unsigned char fontIndex);
 
+    void RoundCorners();
+    // First two arguments are probably x, y but they're never used, the control's dimensions
+    // themselves are used instead. w, h are only checked to be non-negative
+    void DrawRoundedRectangleBorder(short, short, short w, short h, const char* margins);
+
+    void DrawDividingLine(short y);
     void RenderText(short x, short y, const char* text, unsigned char size, unsigned char colorIndex, 
         short* outW, short* outH, int fontIndex);
 
@@ -77,6 +96,12 @@ char unk_df[1];
 
     void Unmap();
     bool CheckValueTag(const char** ppText, const char* candidate, short* outValues, int numValues);
+
+    // Test specified corners of this control (1 = top left, 2 = top right, 4 = bottom left,
+    // 8 = bottom right) to see if they align with an edge of a control further down the list
+    // (i.e. a menu behind it). Returns 0 if no overlap, 1,2,3,4 for alignment to a
+    // left/top/right/bottom edge, and 5 for generic overlap
+    int TestCornerOverlapAlignment(unsigned int corners);
 
     unsigned char* GetCharacterBase() const;
     void RefreshPageNumber(bool stage);

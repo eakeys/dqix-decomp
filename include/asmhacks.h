@@ -41,3 +41,13 @@
 // or you can compare against a call to this function (provided it
 // actually gets inlined) 
 inline unsigned int UNSIGNED_ZERO() { return 0; }
+
+// For use with optimizations, e.g. if you have a variable that is only ever
+// written to but never used, but isn't optimized out, you can write some nonsense
+// usage and guard it with this function. (The if block is removed later in
+// the optimization process than the part that removes unused variable assignments)
+inline bool ALWAYS_FALSE()
+{
+    int x = 0;
+    return x;
+}

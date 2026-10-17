@@ -1,5 +1,5 @@
 #include "Graphics/Text.h"
-#include "Graphics/Renderer2D.h"
+#include "Graphics/UIElement.h"
 #include "System/Cache.h"
 #include "System/BGBases.h"
 #include <asmhacks.h>
@@ -22,8 +22,12 @@ extern "C"
     LoadToBGCharProc func_0204a5e4(int mainOrSub, int whichBG);
 
     void func_0204acb0(void*);
+    void func_0204acd0(void*);
 
-    void func_0204df9c(Renderer2D*, FontIndexFile::Glyph*, short x, short y, int palette, int fontIndex);
+    void func_0204b878(UIElement::DestinationData*, UIElement::SubstructC8*,
+        short, short, short, short, short, short, unsigned short);
+
+    void func_0204df9c(UIElement*, FontIndexFile::Glyph*, short x, short y, int palette, int fontIndex);
 
     // alternate strlen
     int func_020d2ff0(const char*);
@@ -75,7 +79,7 @@ extern char data_020f0300[]; // "%d"
 extern char data_020f0303[]; // bytes 0x81 0xa9 \0, Shift-JIS for left arrow
 extern char data_020f0306[]; // bytes 0x81 0xa8 \0, Shift-JIS for right arrow
 
-void Renderer2D::GetElementBounds(short elementID, short *outX, short *outY, short *outW, short *outH) const
+void UIElement::GetElementBounds(short elementID, short *outX, short *outY, short *outW, short *outH) const
 {
     if (elementID < 0 || elementID >= 18)
         return;
@@ -85,7 +89,7 @@ void Renderer2D::GetElementBounds(short elementID, short *outX, short *outY, sho
     *outH = elementHeights_[elementID];
 }
 
-void Renderer2D::SetElementBounds(short elementID, short x, short y, short w, short h)
+void UIElement::SetElementBounds(short elementID, short x, short y, short w, short h)
 {
     if (elementID < 0 || elementID >= 18)
         return;
@@ -95,13 +99,13 @@ void Renderer2D::SetElementBounds(short elementID, short x, short y, short w, sh
     elementHeights_[elementID] = h;
 }
 
-void Renderer2D::Reset()
+void UIElement::Reset()
 {
     next_0_ = NULL;
     destinationData_4_ = NULL;
-    stagingData_8_ = NULL;
+    pixelBuffer_8_ = NULL;
     ClearElementBounds();
-    unknown_9c_ = 0;
+    status_9c_ = 0;
     vramOffset_a0_ = 0;
     bufferSize_a4_ = 0;
     leftTile_ac_ = 0;
@@ -135,10 +139,107 @@ void Renderer2D::Reset()
     memset(backgroundMargins_db_, 0, sizeof(backgroundMargins_db_));
 }
 
-void Renderer2D::Create(const char *markup, int vramOffset, int unused,
+void UIElement::FullReset()
+{
+    func_0204acd0(&substruct_c8_);
+    Reset();
+}
+
+void UIElement::SetMargins(const char* margins)
+{
+    memset(backgroundMargins_db_, 0, sizeof(backgroundMargins_db_));
+    if (margins != NULL)
+        memcpy(backgroundMargins_db_, margins, sizeof(backgroundMargins_db_));
+}
+
+void UIElement::Allocate(SafeAllocator *allocator, void *pixelBuffer, unsigned int indexBufferSize)
+{
+    indexBuffer_d4_ = (unsigned short*)allocator->Allocate(indexBufferSize);
+    pixelBuffer_8_ = (unsigned char*)pixelBuffer;
+}
+
+bool UIElement::IsFullyLoaded() const
+{
+    return status_9c_ == 3;
+}
+
+bool UIElement::IsIndexBufferUsable() const
+{
+    if (indexBuffer_d4_ == NULL)
+        return false;
+    if (status_9c_ == 0)
+        return false;
+    return true;
+}
+
+void UIElement::UseDefaultSettings()
+{
+    status_9c_ = 0;
+    leftTile_ac_ = 0;
+    topTile_ae_ = 0;
+    numTilesX_a8_ = 0;
+    numTilesY_aa_ = 0;
+    textXOffset_b0_ = 4;
+    textYOffset_b2_ = 4;
+    unknown_b8_ = 0;
+    overrideLineSpacing_ba_ = 0;
+    unknown_c0_ = 0;
+    flags_c5_ &= ~RendererFlags_08;
+    maybePageNumbersEnabled_d8_0_ = false;
+    pageNumberDirty_d8_1_ = false;
+    useBG_d8_2_ = false;
+    unknown_c4_ = 0xff;
+    flags_c5_ = 0;
+    memset(backgroundMargins_db_, 0, sizeof(backgroundMargins_db_));
+}
+
+void UIElement::Update(int numTicks)
+{
+    if (!(flags_c5_ & RendererFlags_01))
+        return;
+    switch (status_9c_)
+    {
+    case 0:
+    case 3:
+        break;
+    case 1:
+        unknown_c0_ = numTilesY_aa_;
+        status_9c_++;
+        AssignIndices();
+        break;
+    case 2:
+        AssignIndices();
+        break;
+    case 4:
+        status_9c_ = 3;
+        break;
+    }
+    RefreshPageNumber(true);
+}
+
+void UIElement::Display()
+{
+    if (destinationData_4_ == NULL)
+        return;
+    if (!(flags_c5_ & RendererFlags_01) || status_9c_ == 0)
+        return;
+    if (flags_c5_ & RendererFlags_20)
+        return;
+
+    func_0204b878(destinationData_4_, &substruct_c8_,
+        0, 0, leftTile_ac_, topTile_ae_, substruct_c8_.unknown_0, unknown_c0_, borderPalette_c2_);
+}
+
+void UIElement::FullUpdate()
+{
+    Update(1);
+    AssignIndices();
+}
+
+void UIElement::Create(const char *markup, int vramOffset, int unused,
     bool vCentering, bool expandToFit, unsigned char fontIndex)
 {
-    if (destinationData_4_ == NULL || stagingData_8_ == NULL || markup == NULL)
+    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL || markup == NULL)
         return;
 
     ClearElementBounds();
@@ -154,8 +255,8 @@ void Renderer2D::Create(const char *markup, int vramOffset, int unused,
     PrepareMenu(processedMarkup, prepareTextReturnValue, fontIndex);
     vramOffset_a0_ = vramOffset;
     LoadToBGCharProc loadProc = func_0204a5e4(destinationData_4_->GetScreen(), destinationData_4_->GetBGIndex());
-    CleanInvalidateCacheRange(stagingData_8_, bufferSize_a4_);
-    loadProc(stagingData_8_, vramOffset_a0_, bufferSize_a4_);
+    CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
+    loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
     if (flags_c5_ & RendererFlags_01)
     {
         unknown_c0_ = 0;
@@ -166,27 +267,27 @@ void Renderer2D::Create(const char *markup, int vramOffset, int unused,
         substruct_c8_.unknown_2 = tilesY;
         substruct_c8_.unknown_8 = tileBufferLength;
         borderPalette_c2_ = 0;
-        unknown_9c_ = 1;
+        status_9c_ = 1;
     }
     else
     {
         flags_c5_ |= RendererFlags_01;
         unknown_c0_ = 0;
         int tileBufferLength = numTilesX_a8_ * numTilesY_aa_ * 2;
-        memset(unknown_d4_, 0, tileBufferLength);
+        memset(indexBuffer_d4_, 0, tileBufferLength);
         short tilesY = numTilesY_aa_;
         short tilesX = numTilesX_a8_;
         substruct_c8_.unknown_0 = tilesX;
         substruct_c8_.unknown_2 = tilesY;
         substruct_c8_.unknown_8 = tileBufferLength;
         borderPalette_c2_ = 0;
-        unknown_9c_ = 1;
+        status_9c_ = 1;
     }
 }
 
-void Renderer2D::LoadMenuPage(const char* markup, bool expandToFit, unsigned char fontIndex)
+void UIElement::LoadMenuPage(const char* markup, bool expandToFit, unsigned char fontIndex)
 {
-    if (destinationData_4_ == NULL || stagingData_8_ == NULL || markup == NULL)
+    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL || markup == NULL)
         return;
 
     short tilesX = numTilesX_a8_;
@@ -216,11 +317,11 @@ void Renderer2D::LoadMenuPage(const char* markup, bool expandToFit, unsigned cha
     PrepareMenu(processedMarkup, prepareTextReturnValue, fontIndex);
     RefreshPageNumber(false);
     LoadToBGCharProc loadProc = func_0204a5e4(destinationData_4_->GetScreen(), destinationData_4_->GetBGIndex());
-    CleanInvalidateCacheRange(stagingData_8_, bufferSize_a4_);
-    loadProc(stagingData_8_, vramOffset_a0_, bufferSize_a4_);
+    CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
+    loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
 }
 
-void Renderer2D::FillRectangle(int colorIndex, short left, short top, short right, short bottom)
+void UIElement::FillRectangle(int colorIndex, short left, short top, short right, short bottom)
 {
     if (right < 0 || bottom < 0)
         return;
@@ -258,7 +359,7 @@ void Renderer2D::FillRectangle(int colorIndex, short left, short top, short righ
             byteIndex += colInTileOffset;
             byteIndex += rowInTileOffset;
             
-            unsigned char* pByte = &stagingData_8_[byteIndex];
+            unsigned char* pByte = &pixelBuffer_8_[byteIndex];
             if (x & 1)
             {
                 *pByte &= 0xf;
@@ -273,7 +374,7 @@ void Renderer2D::FillRectangle(int colorIndex, short left, short top, short righ
     }
 }
 
-void Renderer2D::PrepareMenu(const char* markup, short border, unsigned char font)
+void UIElement::PrepareMenu(const char* markup, short border, unsigned char font)
 {
     if (markup == NULL)
         return;
@@ -291,7 +392,7 @@ void Renderer2D::PrepareMenu(const char* markup, short border, unsigned char fon
     int currentElement;
     short currentX;
     short currentY = textYOffset_b2_;
-    unsigned char* pixelData = stagingData_8_;
+    unsigned char* pixelData = pixelBuffer_8_;
     unsigned char* pixelWriteCursor = pixelData + currentY * bytesPerRow;
     short dotCount = 0;
     short dotSize = 0;
@@ -314,9 +415,9 @@ void Renderer2D::PrepareMenu(const char* markup, short border, unsigned char fon
     
     short lineSpacing = lineSpacing_b6_;
     if (useBG_d8_2_)
-        memcpy(stagingData_8_, (char*)GetSubBG2CharacterBase() + vramOffset_a0_, bufferSize_a4_);
+        memcpy(pixelBuffer_8_, (char*)GetSubBG2CharacterBase() + vramOffset_a0_, bufferSize_a4_);
     else
-        memset(stagingData_8_, 0, bufferSize_a4_);
+        memset(pixelBuffer_8_, 0, bufferSize_a4_);
 
     int fillColor;
     if (flags_c5_ & RendererFlags_04)
@@ -713,7 +814,7 @@ void Renderer2D::PrepareMenu(const char* markup, short border, unsigned char fon
         *pixelWriteCursor = 0;
 }
 
-void Renderer2D::BlitBitmap1Bit(const void* src, short left, short top,
+void UIElement::BlitBitmap1Bit(const void* src, short left, short top,
     short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow)
 {
     const unsigned char* srcBits = (const unsigned char*)src;
@@ -744,7 +845,7 @@ void Renderer2D::BlitBitmap1Bit(const void* src, short left, short top,
                 if (tileVisible)
                 {
                     short writeOffset = tileInnerY + (tileIndexX + tileIndexY) * 32 + (dx >> 1);
-                    unsigned char* writeBuffer = stagingData_8_;
+                    unsigned char* writeBuffer = pixelBuffer_8_;
                     if (destX & 1)
                     {
                         writeBuffer[writeOffset] &= 0x0f;
@@ -767,7 +868,7 @@ void Renderer2D::BlitBitmap1Bit(const void* src, short left, short top,
     }
 }
 
-void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top, 
+void UIElement::BlitBitmap4Bit(const void* argsrc, short left, short top, 
     short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow)
 {
     const unsigned char* src = (const unsigned char*)argsrc;
@@ -798,7 +899,7 @@ void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top,
             short tileInnerX = destXbutInt & 7;
             writeOffset += tileInnerX >> 1;
             writeOffset += tileInnerYOffset;
-            byteValue = stagingData_8_[writeOffset];
+            byteValue = pixelBuffer_8_[writeOffset];
             if (left & 1)
             {
                 if (srcX & 1)
@@ -812,7 +913,7 @@ void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top,
                             byteValue &= 0xf0;
                             byteValue |= srcNibble;
                         }
-                        stagingData_8_[writeOffset] = byteValue;
+                        pixelBuffer_8_[writeOffset] = byteValue;
                     }
                     src++;
                 }
@@ -827,7 +928,7 @@ void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top,
                             byteValue &= 0x0f;
                             byteValue |= srcNibble;
                         }
-                        stagingData_8_[writeOffset] = byteValue;
+                        pixelBuffer_8_[writeOffset] = byteValue;
                     }
                 }
             } 
@@ -843,7 +944,7 @@ void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top,
                             byteValue &= 0x0f;
                             byteValue |= srcNibble;
                         }
-                        stagingData_8_[writeOffset] = byteValue;
+                        pixelBuffer_8_[writeOffset] = byteValue;
                     }
                     src++;
                 }
@@ -857,7 +958,7 @@ void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top,
                             byteValue &= 0xf0;
                             byteValue |= srcNibble;
                         }
-                        stagingData_8_[writeOffset] = byteValue;
+                        pixelBuffer_8_[writeOffset] = byteValue;
                     }
                 }
             }
@@ -865,26 +966,29 @@ void Renderer2D::BlitBitmap4Bit(const void* argsrc, short left, short top,
     }
 }
 
-// 0x0204e3e0. Not a match
-short Renderer2D::PrepareText(const char *text, int unused, bool vCentered, bool bool5, unsigned char fontIndex)
+short UIElement::PrepareText(const char *argtext, int unused, bool vCentered,
+    bool expandToFit, unsigned char fontIndex)
 {
+    int titleY;
+    int textX, textY, maxX, maxY;
+    const char* text = argtext;
     if (text == NULL)
         return 0;
 
-    int textX = textXOffset_b0_;
-    int textY = textYOffset_b2_;
-
-    int maxX = textX;
-    int maxY = textY;
-
-    bool hasTitle = false; // bVar4
-    int title_iVar11 = 0;
+    maxX = textXOffset_b0_;
+    maxY = textYOffset_b2_;
+    unsigned char lastGlyph;
+    int nextGlyphU8;
+    bool hasTitle = false;
     
-    int lastGlyph = 0xff; // local_148
+    titleY = 0;
+    short encValue = 0;
+    int savedTextX;
     short vSpacing = lineSpacing_b6_;
-    int local_154 = 0;
-    int textRightX; // local_158
+    textX = textXOffset_b0_;
+    textY = textYOffset_b2_;
     
+    lastGlyph = 0xff;
 
     while (*text != 0)
     {
@@ -895,10 +999,9 @@ short Renderer2D::PrepareText(const char *text, int unused, bool vCentered, bool
             if (maxX < textX)
                 maxX = textX;
             
-            text += 2;
-            textY += lineSpacing_b6_;
             textX = textXOffset_b0_;
-            
+            textY += lineSpacing_b6_;
+            text += 2;            
             lastGlyph = 0xff;
             continue;
         }
@@ -908,11 +1011,10 @@ short Renderer2D::PrepareText(const char *text, int unused, bool vCentered, bool
             if (maxX < textX)
                 maxX = textX;
             
+            textX = textXOffset_b0_;
+            textY += lineSpacing_b6_;
             text += 1;
             lastGlyph = 0xff;
-            textY += lineSpacing_b6_;
-            textX = textXOffset_b0_;
-            
             continue;
         }
 
@@ -922,114 +1024,115 @@ short Renderer2D::PrepareText(const char *text, int unused, bool vCentered, bool
             const char* localTextPtr = text + 1;
             const char* tagEnd = GetTextTagEnd(const_cast<char*>(text));
             short tagValues[8];
-            if (!CheckValueTag(&localTextPtr, data_020f0248, tagValues, 1))
+            if (CheckValueTag(&localTextPtr, data_020f0248, tagValues, 1))
             {
-                if (CheckValueTag(&localTextPtr, data_020f024e, tagValues, 1))
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f024e, tagValues, 1))
+            {
+                if (maxX < textX)
+                    maxX = textX;
+                textX = tagValues[0];
+                lastGlyph = 0xff;
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f0251, tagValues, 1))
+            {
+                if (maxY < textY)
+                    maxY = textY;
+                textY = tagValues[0];
+                lastGlyph = 0xff;
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f0254, tagValues, 2))
+            {
+                if (maxX < textX)
+                    maxX = textX;
+                if (maxY < textY)
+                    maxY = textY;
+                textX = tagValues[0];
+                textY = tagValues[1];
+                lastGlyph = 0xff;
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f0258, tagValues, 1))
+            {
+                textX += tagValues[0];
+                lastGlyph = 0xff;
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f025b, tagValues, 1))
+            {
+                textY += tagValues[0];
+                lastGlyph = 0xff;
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f025e, tagValues, 2))
+            {
+                textX += tagValues[0];
+                textY += tagValues[1];
+                lastGlyph = 0xff;
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f0298, tagValues, 1))
+            {
+                encValue = tagValues[0];
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f02d4, tagValues, 1))
+            {
+                hasTitle = true;
+                titleY = tagValues[0];
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f02db, tagValues, 0))
+            {
+                if (hasTitle)
                 {
                     if (maxX < textX)
                         maxX = textX;
-                    lastGlyph = 0xff;
-                    textX = tagValues[0];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f0251, tagValues, 1))
-                {
                     if (maxY < textY)
                         maxY = textY;
-                    lastGlyph = 0xff;
-                    textY = tagValues[0];
+                    textX = textXOffset_b0_;
+                    textY = titleY + textYOffset_b2_;
                 }
-                else if (CheckValueTag(&localTextPtr, data_020f0254, tagValues, 2))
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f02e7, tagValues, 1))
+            {
+                if (maxX < textX)
+                    maxX = textX;
+                textX = tagValues[0];
+                lastGlyph = 0xff;
+                savedTextX = textX;
+                char rightBuffer[256] = {0};
+                const char* sourceStart = localTextPtr;
+                const char* sourceEnd = strstr(sourceStart, data_020f02eb);
+                if (sourceEnd != NULL)
                 {
-                    if (maxX < textX)
-                        maxX = textX;
-                    if (maxY < textY)
-                        maxY = textY;
-                    lastGlyph = 0xff;
-                    textX = tagValues[0];
-                    textY = tagValues[1];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f0258, tagValues, 1))
-                {
-                    lastGlyph = 0xff;
-                    textX += tagValues[0];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f025b, tagValues, 1))
-                {
-                    lastGlyph = 0xff;
-                    textY += tagValues[0];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f025e, tagValues, 2))
-                {
-                    lastGlyph = 0xff;
-                    textX += tagValues[0];
-                    textY += tagValues[1];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f0298, tagValues, 1))
-                {
-                    local_154 = tagValues[0];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f02d4, tagValues, 1))
-                {
-                    hasTitle = true;
-                    title_iVar11 = tagValues[0];
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f02db, tagValues, 1))
-                {
-                    if (hasTitle)
+                    int length = sourceEnd - sourceStart;
+                    if (length < 256)
                     {
-                        if (maxX < textX)
-                            maxX = textX;
-                        if (maxY < textY)
-                            maxY = textY;
-                        textY = title_iVar11 + textYOffset_b2_;
-                        textX = textXOffset_b0_;
+                        memcpy(rightBuffer, sourceStart, length);
+                        textX -= MeasureTextWidth(rightBuffer, fontIndex);
                     }
                 }
-                else if (CheckValueTag(&localTextPtr, data_020f02e7, tagValues, 1))
-                {
-                    if (maxX < textX)
-                        maxX = textX;
-                    textRightX = tagValues[0];
-                    lastGlyph = 0xff;
-                    char rightBuffer[256] = {0};
-                    const char* sourceStart = localTextPtr;
-                    const char* sourceEnd = strstr(sourceStart, data_020f02eb);
-                    textX = textRightX;
-                    if (sourceEnd != NULL)
-                    {
-                        int length = sourceEnd - sourceStart;
-                        if (length < 256)
-                        {
-                            memcpy(rightBuffer, sourceStart, length);
-                            textX = textRightX - MeasureTextWidth(rightBuffer, fontIndex);
-                        }
-                    }
-                }
-                else if (CheckValueTag(&localTextPtr, data_020f02f1, tagValues, 1))
-                {
-                    if (maxX < textX)
-                        maxX = textX;
-                
-                    lastGlyph = 0xff;
-                    textX = textRightX;
-                }
+            }
+            else if (CheckValueTag(&localTextPtr, data_020f02f1, tagValues, 0))
+            {
+                if (maxX < textX)
+                    maxX = textX;
+            
+                textX = savedTextX;
+                lastGlyph = 0xff;
             }
             text = tagEnd + 1;
             continue;
         }
 
         unsigned char spacing = data_020e7bd6[fontIndex] + 1;
-        if (nextGlyph < 0)
+        if (nextGlyph >= 0)
         {
-            text += 1;
+            nextGlyphU8 = nextGlyph & 0xff;
+            FontIndexFile::Glyph* glyph = GetFontGlyphByIndex(nextGlyph, fontIndex);
+            int kerning = GetFontGlyphKerning(lastGlyph, nextGlyphU8, fontIndex);
+            lastGlyph = nextGlyphU8;
+            spacing = glyph->width + 1 + kerning;
+            text += glyph->tagLength;
         }
         else
         {
-            FontIndexFile::Glyph* glyph = GetFontGlyphByIndex(nextGlyph, fontIndex);
-            int kerning = GetFontGlyphKerning(lastGlyph, nextGlyph, fontIndex);
-            spacing = glyph->width + 1 + kerning;
-            text += glyph->tagLength;
-            lastGlyph = nextGlyph;
+            text += 1;
         }
         textX += spacing;
     }
@@ -1038,45 +1141,62 @@ short Renderer2D::PrepareText(const char *text, int unused, bool vCentered, bool
         textX = maxX;
     if (textY < maxY)
         textY = maxY;
-
+    textY = textY + vSpacing - (lineSpacing_b6_ - 10);
     if (((textX + 3) & 7) <= 3)
         textX += 4;
 
-    int finalY = (textY + vSpacing) - (lineSpacing_b6_ - 10);
+    int neededTilesX = ((textX + 7) & ~7) >> 3;
+    int neededTilesY = ((textY + 7) & ~7) >> 3;
 
-    int numXBlocks = (textX + 7) >> 3;
-    int numYBlocks = (finalY + 7) >> 3;
+    if (neededTilesX > 32)
+        neededTilesX = 32;
+    if (neededTilesY > 32)
+        neededTilesY = 32;
 
-    if (numXBlocks > 32)
-        numXBlocks = 32;
-    if (numYBlocks > 32)
-        numYBlocks = 32;
-
-    if (bool5)
+    if (expandToFit)
     {
-        if (numTilesX_a8_ < numXBlocks)
-            numTilesX_a8_ = numXBlocks;
-        if (numTilesY_aa_ < numYBlocks)
-            numTilesY_aa_ = numYBlocks;
+        if (numTilesX_a8_ < neededTilesX)
+            numTilesX_a8_ = neededTilesX;
+        if (numTilesY_aa_ < neededTilesY)
+            numTilesY_aa_ = neededTilesY;
     }
 
     if (vCentered)
     {
-        finalY -= textYOffset_b2_;
-        if (8 * numTilesY_aa_ - finalY < 7)
-            numTilesY_aa_++;
-        textYOffset_b2_ = (numTilesY_aa_ * 8 - finalY) >> 1;
+        textY -= textYOffset_b2_;
+        if (numTilesY_aa_ * 8 - textY < 7)
+            numTilesY_aa_ = numTilesY_aa_ + 1; // needed for byte match :skull:
+        textYOffset_b2_ = (numTilesY_aa_ * 8 - textY) >> 1;
     }
 
     if (hasTitle)
     {
-        textYOffset_b2_ += title_iVar11;
+        textYOffset_b2_ += titleY;
         if (vCentered)
             textYOffset_b2_--;
     }
 
     bufferSize_a4_ = numTilesX_a8_ * numTilesY_aa_ * 32;
-    return local_154;
+    return encValue;
+}
+
+void UIElement::AssignIndices()
+{
+    if (!(flags_c5_ & RendererFlags_01) || indexBuffer_d4_ == NULL)
+        return;
+
+    unsigned short index = vramOffset_a0_ / 32;
+    unsigned short* buffer = indexBuffer_d4_;
+    for (short y = 0; y < numTilesY_aa_; y++)
+    {
+        for (short x = 0; x < numTilesX_a8_; x++)
+        {
+            buffer[x] = index;
+            index++;
+        }
+        buffer += numTilesX_a8_;
+    }
+    status_9c_++;
 }
 
 bool TestPointInBox(short x, short y, short left, short top, short right, short bottom)
@@ -1087,7 +1207,7 @@ bool TestPointInBox(short x, short y, short left, short top, short right, short 
     return inside;
 }
 
-void Renderer2D::RoundCorners()
+void UIElement::RoundCorners()
 {
     if (flags_c5_ & RendererFlags_10)
         return;
@@ -1124,7 +1244,7 @@ void Renderer2D::RoundCorners()
 
 static inline short TileToPixel(short tile) { return tile * 8; }
 
-void Renderer2D::DrawRoundedRectangleBorder(short, short, short w, short h, const char* margins)
+void UIElement::DrawRoundedRectangleBorder(short, short, short w, short h, const char* margins)
 {
     if (w < 0 || h < 0)
         return;
@@ -1222,7 +1342,7 @@ void Renderer2D::DrawRoundedRectangleBorder(short, short, short w, short h, cons
         BlitBitmap4Bit(cornerTile, TileToPixel(numTilesX - 1) - right, TileToPixel(numTilesY - 1) - bottom, 8, 8, 0xf0, 0x0f);
 }
 
-void Renderer2D::ClearElementBounds()
+void UIElement::ClearElementBounds()
 {
     memset(elementXValues_, 0, sizeof(elementXValues_));
     memset(elementYValues_, 0, sizeof(elementYValues_));
@@ -1230,7 +1350,7 @@ void Renderer2D::ClearElementBounds()
     memset(elementHeights_, 0, sizeof(elementHeights_));
 }
 
-void Renderer2D::GetElementBoundArrays(short** outXArray, short** outYArray, short** outWArray, short** outHArray)
+void UIElement::GetElementBoundArrays(short** outXArray, short** outYArray, short** outWArray, short** outHArray)
 {
     *outXArray = elementXValues_;
     *outYArray = elementYValues_;
@@ -1238,7 +1358,15 @@ void Renderer2D::GetElementBoundArrays(short** outXArray, short** outYArray, sho
     *outHArray = elementHeights_;
 }
 
-void Renderer2D::DrawRoundedRectangle(short x, short y, short w, short h,
+void UIElement::SetVRAMOffset(int offset, unsigned char argc4)
+{
+    if (flags_c5_ & RendererFlags_01)
+        return;
+    vramOffset_a0_ = offset;
+    unknown_c4_ = argc4;
+}
+
+void UIElement::DrawRoundedRectangle(short x, short y, short w, short h,
     unsigned char borderColor, bool noBackground, bool noBorder, const char *margins)
 {
     leftTile_ac_ = x;
@@ -1265,7 +1393,7 @@ void Renderer2D::DrawRoundedRectangle(short x, short y, short w, short h,
         substruct_c8_.unknown_0 = w;
         substruct_c8_.unknown_2 = h;
         substruct_c8_.unknown_8 = indexBufferLength;
-        memset(stagingData_8_, 0, bufferSize_a4_);
+        memset(pixelBuffer_8_, 0, bufferSize_a4_);
         if (!noBackground)
         {
             short left = 0;
@@ -1288,7 +1416,7 @@ void Renderer2D::DrawRoundedRectangle(short x, short y, short w, short h,
         numTilesX_a8_ = w;
         numTilesY_aa_ = h;
         bufferSize_a4_ = w * h * 32;
-        memset(stagingData_8_, 0, bufferSize_a4_);
+        memset(pixelBuffer_8_, 0, bufferSize_a4_);
         if (!noBackground)
         {
             short left = 0;
@@ -1304,13 +1432,13 @@ void Renderer2D::DrawRoundedRectangle(short x, short y, short w, short h,
             }
             FillRectangle2(0x10 | 0x01, left, top, right, bottom);
         }
-        memset(unknown_d4_, 0, indexBufferLength);
+        memset(indexBuffer_d4_, 0, indexBufferLength);
         short numTilesX = numTilesX_a8_;
         short numTilesY = numTilesY_aa_;
         substruct_c8_.unknown_0 = numTilesX;
         substruct_c8_.unknown_2 = numTilesY;
         substruct_c8_.unknown_8 = indexBufferLength;
-        unknown_9c_ = 1;
+        status_9c_ = 1;
     }
 
     if (!noBorder)
@@ -1323,7 +1451,7 @@ void Renderer2D::DrawRoundedRectangle(short x, short y, short w, short h,
         flags_c5_ |= RendererFlags_80;
 }
 
-void Renderer2D::DrawDividingLine(short y) {
+void UIElement::DrawDividingLine(short y) {
     if (y < 0)
         return;
     short width = numTilesX_a8_ * 8;
@@ -1333,7 +1461,7 @@ void Renderer2D::DrawDividingLine(short y) {
     FillRectangle(15, 1, y, width - 1, y + 1);
 }
 
-void Renderer2D::RenderText(short x, short y, const char *argText, unsigned char size,
+void UIElement::RenderText(short x, short y, const char *argText, unsigned char size,
     unsigned char initialColor, short *outW, short *outH, int fontIndex)
 {
     if (argText == NULL)
@@ -1454,7 +1582,7 @@ void Renderer2D::RenderText(short x, short y, const char *argText, unsigned char
     *outH -= initialY;
 }
 
-void Renderer2D::RenderNumber(short x, short y, int number, unsigned char size,
+void UIElement::RenderNumber(short x, short y, int number, unsigned char size,
     unsigned char colorIndex, short *outW, short *outH, bool rightAlign,
     unsigned char numDigits, bool alwaysShowSign, bool fixedNumDigits)
 {
@@ -1482,7 +1610,7 @@ void Renderer2D::RenderNumber(short x, short y, int number, unsigned char size,
     RenderText(x, y, textBuffer, size, colorIndex, outW, outH, fontIndex);
 }
 
-void Renderer2D::FillRectangle2(int colorIndex, short left, short top, short right, short bottom)
+void UIElement::FillRectangle2(int colorIndex, short left, short top, short right, short bottom)
 {
     if (right < 0 || bottom < 0)
         return;
@@ -1520,7 +1648,7 @@ void Renderer2D::FillRectangle2(int colorIndex, short left, short top, short rig
             byteIndex += colInTileOffset;
             byteIndex += rowInTileOffset;
             
-            unsigned char* pByte = &stagingData_8_[byteIndex];
+            unsigned char* pByte = &pixelBuffer_8_[byteIndex];
             if (x & 1)
             {
                 *pByte &= 0xf;
@@ -1535,7 +1663,7 @@ void Renderer2D::FillRectangle2(int colorIndex, short left, short top, short rig
     }
 }
 
-void Renderer2D::BlitGrayCursor(short x, short y)
+void UIElement::BlitGrayCursor(short x, short y)
 {
     if (!(flags_c5_ & RendererFlags_40_DrawGrayCursor))
         return;
@@ -1556,7 +1684,7 @@ void Renderer2D::BlitGrayCursor(short x, short y)
     }
 }
 
-void Renderer2D::DrawPageArrows()
+void UIElement::DrawPageArrows()
 {
     short x = 0;
     short height = numTilesY_aa_ * 8;
@@ -1580,17 +1708,17 @@ void Renderer2D::DrawPageArrows()
         BlitBitmap1Bit(graphic, (short)(x - 1), y, 8, 8, 0xf0, 0xf);
 }
 
-void Renderer2D::Unmap()
+void UIElement::Unmap()
 {
     DestinationData* data = destinationData_4_;
     int bgIndex = data->GetBGIndex();
     int screen =  data->GetScreen();
     LoadToBGCharProc loadProc = func_0204a5e4(screen, bgIndex);
-    CleanInvalidateCacheRange(stagingData_8_, bufferSize_a4_);
-    loadProc(stagingData_8_, vramOffset_a0_, bufferSize_a4_);
+    CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
+    loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
 }
 
-bool Renderer2D::CheckValueTag(const char **ppText, const char *candidate, short *outValues, int numValues)
+bool UIElement::CheckValueTag(const char **ppText, const char *candidate, short *outValues, int numValues)
 {
     int candidateLength = func_020d2ff0(candidate);
     const char* searchPtr = *ppText;
@@ -1616,13 +1744,13 @@ bool Renderer2D::CheckValueTag(const char **ppText, const char *candidate, short
     return false;
 }
 
-int Renderer2D::TestCornerOverlapAlignment(unsigned int mask)
+int UIElement::TestCornerOverlapAlignment(unsigned int mask)
 {
     int result;
     short top, left, right, bottom;
     short otherLeft, otherTop, otherRight, otherBottom;
 
-    Renderer2D* loopControl = next_0_;
+    UIElement* loopControl = next_0_;
     if (loopControl == NULL)
         return 0;
     
@@ -1703,9 +1831,9 @@ int Renderer2D::TestCornerOverlapAlignment(unsigned int mask)
     return result;
 }
 
-void Renderer2D::DrawGrayCursor()
+void UIElement::DrawGrayCursor()
 {
-    if (destinationData_4_ == NULL || stagingData_8_ == NULL)
+    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL)
         return;
     
     int screen = destinationData_4_->GetScreen();
@@ -1715,17 +1843,17 @@ void Renderer2D::DrawGrayCursor()
     if (charBase == NULL)
         return;
     if (charBase != NULL)
-        memcpy(stagingData_8_, charBase + vramOffset_a0_, bufferSize_a4_);
+        memcpy(pixelBuffer_8_, charBase + vramOffset_a0_, bufferSize_a4_);
 
     flags_c5_ |= RendererFlags_40_DrawGrayCursor;
     BlitGrayCursor(cursorX_bc_, cursorY_be_);
 
     LoadToBGCharProc loadProc = func_0204a5e4(screen, bg);
-    CleanInvalidateCacheRange(stagingData_8_, bufferSize_a4_);
-    loadProc(stagingData_8_, vramOffset_a0_, bufferSize_a4_);
+    CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
+    loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
 }
 
-unsigned char* Renderer2D::GetCharacterBase() const
+unsigned char* UIElement::GetCharacterBase() const
 {
     int screen = destinationData_4_->GetScreen();
     int bgIndex = destinationData_4_->GetBGIndex();
@@ -1753,17 +1881,16 @@ unsigned char* Renderer2D::GetCharacterBase() const
     return result;
 }
 
-void Renderer2D::RefreshPageNumber(bool stage)
+void UIElement::RefreshPageNumber(bool stage)
 {
     if (!maybePageNumbersEnabled_d8_0_ || (!pageNumberDirty_d8_1_ && stage))
         return;
 
-    if (destinationData_4_ == NULL || stagingData_8_ == NULL)
+    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL)
         return;
 
     int screen =  destinationData_4_->GetScreen();
     int bgIndex = destinationData_4_->GetBGIndex();
-    
 
     if (stage)
     {
@@ -1771,7 +1898,7 @@ void Renderer2D::RefreshPageNumber(bool stage)
         if (characterData == NULL)
             return;
         if (characterData != NULL)
-            memcpy(stagingData_8_, characterData + vramOffset_a0_, bufferSize_a4_);
+            memcpy(pixelBuffer_8_, characterData + vramOffset_a0_, bufferSize_a4_);
     }
     short firstNumberRight;
     short boxHeight = numTilesY_aa_ * 8;
@@ -1779,7 +1906,6 @@ void Renderer2D::RefreshPageNumber(bool stage)
 
     short boxWidth = numTilesX_a8_ * 8;
     short centerX = boxWidth / 2;
-
     
     if (flags_c5_ & RendererFlags_10)
         renderY -= 3;
@@ -1825,14 +1951,14 @@ void Renderer2D::RefreshPageNumber(bool stage)
     if (stage)
     {
         LoadToBGCharProc proc = func_0204a5e4(screen, bgIndex);
-        CleanInvalidateCacheRange(stagingData_8_, bufferSize_a4_);
-        proc(stagingData_8_, vramOffset_a0_, bufferSize_a4_);
+        CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
+        proc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
     }
 
     pageNumberDirty_d8_1_ = false;
 }
 
-void Renderer2D::ResetPageNumbers(bool enabled)
+void UIElement::ResetPageNumbers(bool enabled)
 {
     maybePageNumbersEnabled_d8_0_ = enabled;
     pageNumberDirty_d8_1_ = true;
@@ -1840,13 +1966,13 @@ void Renderer2D::ResetPageNumbers(bool enabled)
     numPages_da_ = 0;
 }
 
-void Renderer2D::SetPageNumber(unsigned char to)
+void UIElement::SetPageNumber(unsigned char to)
 {
     pageNumber_d9_ = to;
     pageNumberDirty_d8_1_ = true;
 }
 
-void Renderer2D::SetPageCount(unsigned char to)
+void UIElement::SetPageCount(unsigned char to)
 {
     numPages_da_ = to;
     pageNumberDirty_d8_1_ = true;

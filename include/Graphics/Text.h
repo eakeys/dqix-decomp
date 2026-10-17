@@ -5,7 +5,7 @@
 #include "Vector.h"
 #include "ClipWindow.h"
 #include "../Util/Grammar.h"
-#include "Renderer2D.h"
+#include "UIElement.h"
 
 // note for posterity: be careful if porting this to 64-bit, the file is loaded
 // by memcpy where all pointers hold 32-bit offsets from the start of the file
@@ -268,7 +268,7 @@ public:
     char unknown_30_;
     char unknown_31_;
     char pad_32[2];
-    Renderer2D* renderer2D_34_;
+    UIElement* renderer2D_34_;
     int unknown_38_;
     int unknown_3c_;
     int unknown_40_;
@@ -464,7 +464,7 @@ public:
         int, int, bool use2D, unsigned char fontIndex, int lineSpacing);
 
     // usa: func_020654b8
-    void RenderGlyph2D(Renderer2D* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
+    void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
 
     // usa: func_02065920
     void AdvanceAutoTimer(unsigned int ticks);

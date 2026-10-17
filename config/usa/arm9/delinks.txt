@@ -89,7 +89,7 @@ src/Graphics/Text1.cpp:
 
 // 0x02046cc8?
 
-src/Graphics/Renderer2D.cpp:
+src/Graphics/UIElement.cpp:
     .text start:0x0204c610 end:0x02050454
 
 src/Graphics/LightingManager.cpp:

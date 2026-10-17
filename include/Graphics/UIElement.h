@@ -6,7 +6,7 @@
 
 // sizeof == 0xe0.
 // Dynamically allocated by func_020421c4.
-class Renderer2D
+class UIElement
 {
 public:
     enum RendererFlags
@@ -33,14 +33,17 @@ public:
         inline int GetBGIndex() const { return bgIndex; }
     };
 public:
-    Renderer2D* next_0_;
+    UIElement* next_0_;
     DestinationData* destinationData_4_;
-    unsigned char* stagingData_8_;
+    unsigned char* pixelBuffer_8_;
     short elementXValues_[18];
     short elementYValues_[18];
     short elementWidths_[18];
     short elementHeights_[18];
-    int unknown_9c_;
+    // values 0-4, 0 = uninitialized, 1 = ready to stage?
+    // 3 = fully loaded?
+    // 4 = ??? from 4 it moves back to 3
+    int status_9c_;
     unsigned int vramOffset_a0_;
     unsigned int bufferSize_a4_;
     short numTilesX_a8_;
@@ -56,7 +59,9 @@ public:
     short cursorX_bc_;
     short cursorY_be_;
     short unknown_c0_;
-    short borderPalette_c2_; // passed as param_6 to func_0204f174, affects border color in tmap list
+    unsigned short borderPalette_c2_;
+    // I don't see this used anywhere within the class but it's set alongside vram offset
+    // so probably related to that in some way
     unsigned char unknown_c4_;
     unsigned char flags_c5_;
     unsigned char unknown_c6_;
@@ -68,7 +73,7 @@ public:
         char unk_4[4];
         int unknown_8;
     } substruct_c8_;
-    unsigned short* unknown_d4_;
+    unsigned short* indexBuffer_d4_;
     unsigned char maybePageNumbersEnabled_d8_0_ : 1;
     unsigned char pageNumberDirty_d8_1_ : 1;
     unsigned char useBG_d8_2_ : 1;
@@ -82,6 +87,24 @@ public:
     void GetElementBounds(short elementID, short* outX, short* outY, short* outW, short* outH) const;
     void SetElementBounds(short elementID, short x, short y, short w, short h);
     void Reset();
+    // probably Destroy() (but not a destructor)
+    void FullReset();
+
+    void SetMargins(const char* margins);
+    // SafeAllocator used to allocate index buffer
+    void Allocate(SafeAllocator* allocator, void* pixelBuffer, unsigned int indexBufferSize);
+
+    bool IsFullyLoaded() const;
+    // Returns true if the index buffer pointer is not null and status != 0
+    // (i.e. the dimensions for the index buffer are configured)
+    bool IsIndexBufferUsable() const;
+
+    void UseDefaultSettings();
+    void Update(int numTicks);
+    void Display(); // technically only displays the foreground. needs to run every frame
+
+    // updates and reassigns indices
+    void FullUpdate();
 
     void Create(const char* markup, int vramOffset, int unused, bool vCentering, bool expandToFit, unsigned char fontIndex);
     void LoadMenuPage(const char* markup, bool expandToFit, unsigned char fontIndex);
@@ -89,9 +112,13 @@ public:
     void FillRectangle(int colorIndex, short left, short top, short right, short bottom);
     void PrepareMenu(const char* markup, short border, unsigned char font);
 
+    // func_0204df9c to go here as BlitGlyph()
+
     void BlitBitmap1Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
     void BlitBitmap4Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
     short PrepareText(const char* text, int unused, bool vCentering, bool expandToFit, unsigned char fontIndex);
+
+    void AssignIndices();
 
     void RoundCorners();
     // First two arguments are probably x, y but they're never used, the control's dimensions
@@ -99,6 +126,7 @@ public:
     void DrawRoundedRectangleBorder(short, short, short w, short h, const char* margins);
     void ClearElementBounds();
     void GetElementBoundArrays(short** outXArray, short** outYArray, short** outWArray, short** outHArray);
+    void SetVRAMOffset(int offset, unsigned char argc4);
 
     void DrawRoundedRectangle(short x, short y, short w, short h, unsigned char borderColor, bool noBackground, bool noBorder, const char* margins);
     void DrawDividingLine(short y);

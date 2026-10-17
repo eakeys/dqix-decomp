@@ -689,7 +689,7 @@ struct TextBoxBounds
     void SetBounds(short ax, short ay, short aw, short ah);
 };
 
-void DrawTextBoxBorderTile(Renderer2D* renderer, short x, short y, int idx)
+void DrawTextBoxBorderTile(UIElement* renderer, short x, short y, int idx)
 {
     if (renderer == NULL)
         return;
@@ -699,7 +699,7 @@ void DrawTextBoxBorderTile(Renderer2D* renderer, short x, short y, int idx)
     renderer->BlitBitmap4Bit(tileBase, x, y, 8, 8, 0xf0, 0x0f);
 }
 
-void DrawTextBoxBorder2D(Renderer2D* renderer, const TextBoxBounds* bounds)
+void DrawTextBoxBorder2D(UIElement* renderer, const TextBoxBounds* bounds)
 {
     if (renderer == NULL || bounds == NULL)
         return;

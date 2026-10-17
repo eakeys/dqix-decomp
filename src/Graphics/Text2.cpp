@@ -154,7 +154,7 @@ extern char data_020f098c[]; // "[-]"
 extern char data_020f0990[]; // "-"
 extern char data_020f0992[]; // "\n" (the special character, not backslash and an n)
 
-void TextManager::RenderGlyph2D(Renderer2D *renderer, RenderGlyph *glyph, short x, short preShiftY, unsigned char colorIndex)
+void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x, short preShiftY, unsigned char colorIndex)
 {
     if (glyph->indexGlyph == NULL)
         return;

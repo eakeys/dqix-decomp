@@ -457,6 +457,12 @@ public:
     // usa: func_02045cac
     void ReleaseAllGlyphs();
 
+    // usa: func_02045f3c
+    // args 5 and 6 are unused, in 2D mode only white and green text is supported,
+    // and if you repeat the first character 10 times the function will return early. wtf?
+    void DrawPreprocessedText(const unsigned short* words, int x, int y, unsigned short color,
+        int, int, bool use2D, unsigned char fontIndex, int lineSpacing);
+
     // usa: func_020654b8
     void RenderGlyph2D(Renderer2D* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
 

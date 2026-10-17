@@ -17,7 +17,7 @@ public:
         RendererFlags_08 = 8,
         RendererFlags_10 = 0x10,
         RendererFlags_20 = 0x20,
-        RendererFlags_40 = 0x40,
+        RendererFlags_40_DrawGrayCursor = 0x40,
         RendererFlags_80 = 0x80
     };
 
@@ -47,20 +47,27 @@ public:
     short numTilesY_aa_;
     short leftTile_ac_;
     short topTile_ae_;
-    short unknown_b0_;
-    short unknown_b2_;
-char unk_b4[2];
+    short textXOffset_b0_;
+    short textYOffset_b2_;
+    short unknown_b4_;
     short lineSpacing_b6_;
-char unk_b8[2];
+    short unknown_b8_;
     short overrideLineSpacing_ba_;
     short cursorX_bc_;
     short cursorY_be_;
-char unk_c0[5];
-    // bit 6: draw the gray cursor
+    short unknown_c0_;
+    short borderPalette_c2_; // passed as param_6 to func_0204f174, affects border color in tmap list
+    unsigned char unknown_c4_;
     unsigned char flags_c5_;
     unsigned char unknown_c6_;
     unsigned char fontHeight_c7_;
-char unk_c8[12];
+    struct SubstructC8
+    {
+        short unknown_0;
+        short unknown_2;
+        char unk_4[4];
+        int unknown_8;
+    } substruct_c8_;
     unsigned short* unknown_d4_;
     unsigned char maybePageNumbersEnabled_d8_0_ : 1;
     unsigned char pageNumberDirty_d8_1_ : 1;
@@ -70,19 +77,30 @@ char unk_c8[12];
     unsigned char numPages_da_;
     // top, bottom, left, right
     char backgroundMargins_db_[4];
-char unk_df[1];
+    char pad_df[1];
+
+    void GetElementBounds(short elementID, short* outX, short* outY, short* outW, short* outH) const;
+    void SetElementBounds(short elementID, short x, short y, short w, short h);
+    void Reset();
+
+    void Create(const char* markup, int vramOffset, int unused, bool vCentering, bool expandToFit, unsigned char fontIndex);
+    void LoadMenuPage(const char* markup, bool expandToFit, unsigned char fontIndex);
 
     void FillRectangle(int colorIndex, short left, short top, short right, short bottom);
     void PrepareMenu(const char* markup, short border, unsigned char font);
 
+    void BlitBitmap1Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
     void BlitBitmap4Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
-    int PrepareText(const char* text, int unused, bool bool4, bool bool5, unsigned char fontIndex);
+    short PrepareText(const char* text, int unused, bool vCentering, bool expandToFit, unsigned char fontIndex);
 
     void RoundCorners();
     // First two arguments are probably x, y but they're never used, the control's dimensions
     // themselves are used instead. w, h are only checked to be non-negative
     void DrawRoundedRectangleBorder(short, short, short w, short h, const char* margins);
+    void ClearElementBounds();
+    void GetElementBoundArrays(short** outXArray, short** outYArray, short** outWArray, short** outHArray);
 
+    void DrawRoundedRectangle(short x, short y, short w, short h, unsigned char borderColor, bool noBackground, bool noBorder, const char* margins);
     void DrawDividingLine(short y);
     void RenderText(short x, short y, const char* text, unsigned char size, unsigned char colorIndex, 
         short* outW, short* outH, int fontIndex);
@@ -92,7 +110,8 @@ char unk_df[1];
         bool alwaysShowSign, bool fixedNumDigits);
 
     void FillRectangle2(int colorIndex, short left, short top, short right, short bottom);
-    void DrawGrayCursor(short x, short y);
+    void BlitGrayCursor(short x, short y);
+    void DrawPageArrows();
 
     void Unmap();
     bool CheckValueTag(const char** ppText, const char* candidate, short* outValues, int numValues);
@@ -102,6 +121,9 @@ char unk_df[1];
     // (i.e. a menu behind it). Returns 0 if no overlap, 1,2,3,4 for alignment to a
     // left/top/right/bottom edge, and 5 for generic overlap
     int TestCornerOverlapAlignment(unsigned int corners);
+
+    // wraps BlitGrayCursor() in calls to map and unmap the memory
+    void DrawGrayCursor();
 
     unsigned char* GetCharacterBase() const;
     void RefreshPageNumber(bool stage);

@@ -26,6 +26,7 @@ extern const int data_020e7a94[]; // { 2, 3 }
 extern const char data_020e7a9c[]; // { 1, 1, 1, 1, 1, 1, 1, 1, 15 }
 extern const short data_020e7aa6[]; // { 1, 2, 2, 3, 2 }
 extern const short data_020e7ab0[]; // { 2, 1, 3, 2, 2 }
+extern const unsigned char data_020e7ade[3][8];
 
 extern char data_020efe78[]; // "<X=%d>"
 extern char data_020efe7f[]; // "<Y=%d>"
@@ -675,4 +676,109 @@ void LoadCustomFonts(SafeAllocator* alloc)
     LoadCustomFont(alloc, data_020f0079, &data_02107800.pFontIndexFiles[0], &data_02107800.pFontDataFiles[0]);
     LoadCustomFont(alloc, data_020f007c, &data_02107800.pFontIndexFiles[1], &data_02107800.pFontDataFiles[1]);
     BackgroundLoader::RemoveLockGlobal();
+}
+
+struct TextBoxBounds
+{
+    short x, y, width, height;
+
+    short Left() const { return x; }
+    short Top() const { return y; }
+
+    void Clear();
+    void SetBounds(short ax, short ay, short aw, short ah);
+};
+
+void DrawTextBoxBorderTile(Renderer2D* renderer, short x, short y, int idx)
+{
+    if (renderer == NULL)
+        return;
+    const unsigned char* tileBase = data_02107800.windowBorderTiles;
+    unsigned int offset = idx * 32;
+    tileBase += offset;
+    renderer->BlitBitmap4Bit(tileBase, x, y, 8, 8, 0xf0, 0x0f);
+}
+
+void DrawTextBoxBorder2D(Renderer2D* renderer, const TextBoxBounds* bounds)
+{
+    if (renderer == NULL || bounds == NULL)
+        return;
+    // inline accessors necessary for register allocation
+    short left = bounds->Left();
+    short top = bounds->Top();
+    short right = left + bounds->width;
+    short bottom = top + bounds->height;
+    top -= renderer->topTile_ae_ * 8;
+    bottom -= renderer->topTile_ae_ * 8;
+    right -= 8;
+    bottom -= 8;
+    if (left < 0 || top < 0 || bottom < 0 || right < 0) return;
+    for (short x = left + 8; x < right; x += 8)
+        DrawTextBoxBorderTile(renderer, x, top, 1);
+    for (short x = left + 8; x < right; x += 8)
+        DrawTextBoxBorderTile(renderer, x, bottom, 6);
+    for (short y = top + 8; y < bottom; y += 8)
+        DrawTextBoxBorderTile(renderer, left, y, 3);
+    for (short y = top + 8; y < bottom; y += 8)
+        DrawTextBoxBorderTile(renderer, right, y, 4);
+    DrawTextBoxBorderTile(renderer, left, top, 0);
+    DrawTextBoxBorderTile(renderer, right, top, 2);
+    DrawTextBoxBorderTile(renderer, left, bottom, 5);
+    DrawTextBoxBorderTile(renderer, right, bottom, 7);
+}
+
+void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* bounds, int boxStyle)
+{
+    if (tileBuffer == NULL || bounds == NULL)
+        return;
+
+    if (bounds->width == 0 || bounds->height == 0)
+        return;
+
+    short left = bounds->Left();
+    short top = bounds->Top();
+    short right = left + bounds->width;
+    short bottom = top + bounds->height;
+    const unsigned char* tileLookup = data_020e7ade[boxStyle];
+    left >>= 3;
+    top >>= 3;
+    right >>= 3;
+    bottom >>= 3;
+    short topRow = top * 32;
+    short bottomRow = bottom * 32;
+    *(tileBuffer + topRow + left) = tileLookup[0] - 0x13;
+    *(tileBuffer + topRow + right) = tileLookup[1] - 0x13;
+    *(tileBuffer + bottomRow + left) = tileLookup[2] - 0x13;
+    *(tileBuffer + bottomRow + right) = tileLookup[3] - 0x13;
+    for (short x = left + 1; x < right; x++) {
+        *(tileBuffer + topRow + x) = tileLookup[4] - 0x13;
+        *(tileBuffer + bottomRow + x) = tileLookup[5] - 0x13;
+    }
+    for (short y = top + 1; y < bottom; y++) {
+        short row = y * 32;
+        *(tileBuffer + row + left) = tileLookup[6] - 0x13;
+        *(tileBuffer + row + right) = tileLookup[7] - 0x13;
+    }
+    for (short y = top + 1; y < bottom; y++) {
+        short row = y * 32;
+        for (short x = left + 1; x < right; x++) {
+            *(tileBuffer + row + x) = 1;
+        }
+    }
+}
+
+void TextBoxBounds::Clear()
+{
+    x = 0;
+    y = 0;
+    width = 0;
+    height = 0;
+}
+
+void TextBoxBounds::SetBounds(short toX, short toY, short toWidth, short toHeight)
+{
+    x = toX;
+    y = toY;
+    width = toWidth;
+    height = toHeight;
 }

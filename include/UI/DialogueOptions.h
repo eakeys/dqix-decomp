@@ -2,26 +2,7 @@
 
 #include <std_library_functions.h>
 #include "../Graphics/Vector.h"
-
-// This needs to go in a different directory but it's related
-// to text processing so it's here for now
-
-// sizeof == 0x1c
-struct TextBox
-{
-    short x;
-    short y;
-    short width;
-    short height;
-    int unknown_8;
-    int unknown_c;
-    fix32_t scaleX;
-    fix32_t scaleY;
-    unsigned short color;
-    char pad_1a[2];
-
-    void Initialize();
-};
+#include "TextBox.h"
 
 /*
     Function runtime info for substructs:
@@ -55,7 +36,7 @@ public:
     };
 
     int numElements_0_;
-    int unknown_4_;
+    int numPages_4_;
     // width and height i.e. number of cols & rows
     int gridWidth_8_;
     int gridHeight_c_;
@@ -84,6 +65,26 @@ public:
     void SetCurrentElementIndex(int idx);
     // usa: func_0205bb84
     int GetCurrentElementIndex() const;
+};
+
+class InputGridMenu : public BasicGridMenu
+{
+public:
+    int changeAmount_30_;
+    unsigned short currentKey_34_;
+    unsigned char changeY_36_;
+    unsigned char changeX_37_;
+    unsigned char inputCountdown_38_;
+    unsigned char keyRepeatInitialDelay_39_;
+    unsigned char keyRepeatLoopDelay_3a_;
+    char unk_3b[1];
+    unsigned char unknown_3c_;
+    unsigned char unknown_3d_;
+    char pad_3e[2];
+
+public:
+
+    bool Update(int numTicks);
 };
 
 // sizeof == 0x238, owned by TextManager at offset 0x90.
@@ -116,21 +117,7 @@ public:
             char unknown_4e_;
             char pad_4f[1];
         } subsubstruct_4_;
-        struct Subsubstruct_54 // 0205bef8
-        {
-            BasicGridMenu base_0_;
-            int unknown_30_;
-            short unknown_34_;
-            char unknown_36_;
-            char unknown_37_;
-            char unknown_38_;
-            char unknown_39_;
-            char unknown_3a_;
-            char unk_3b[1];
-            char unknown_3c_;
-            char unknown_3d_;
-            char pad_3e[2];
-        } subsubstruct_54_;
+        InputGridMenu subsubstruct_54_;
         unsigned char unknown_94_;
         unsigned char unknown_95_;
         char pad_96[2];

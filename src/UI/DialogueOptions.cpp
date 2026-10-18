@@ -1,17 +1,27 @@
 #include "UI/DialogueOptions.h"
 #include "UI/Text.h"
+#include "Input/Input.h"
 
 extern "C"
 {
+    void func_0205bf3c(InputGridMenu*);
+
+    void func_0205c4a8(InputGridMenu*, int);
+
     void func_0205c73c(void*);
     void func_0205c53c(void*);
     void func_0205c564(void*);
+
 }
+
+extern const bool data_020e7db0[4], data_020e7db4[4];
+extern const unsigned short data_020e7db8[5];
+extern const int data_020e7dc4[4];
 
 void BasicGridMenu::Reset()
 {
     numElements_0_ = 0;
-    unknown_4_ = 1;
+    numPages_4_ = 1;
     gridWidth_8_ = 1;
     gridHeight_c_ = 1;
     elementOrdering_10_ = ElementOrdering_ColumnMajor;
@@ -81,6 +91,211 @@ int BasicGridMenu::GetCurrentElementIndex() const
     short offsetOnPage = (*pInnerArrayLength_24_) * (*pOuterIndex_28_) + (*pInnerIndex_2c_);
     short pageBase = currentPage_14_ * gridHeight_c_ * gridWidth_8_;
     return pageBase + offsetOnPage;
+}
+
+bool InputGridMenu::Update(int numTicks)
+{
+    if (numElements_0_ == 0)
+        return false;
+    if (gridWidth_8_ <= 0)
+        return false;
+    if (gridHeight_c_ <= 0)
+        return false;
+
+    unsigned char initialDelay = keyRepeatInitialDelay_39_;
+    unsigned char loopDelay = keyRepeatLoopDelay_3a_;
+
+    unsigned short keyCandidates[5];
+    COPY_ARRAY(keyCandidates, data_020e7db8);
+    
+    for (int i = 0; keyCandidates[i] != 0xffff && currentKey_34_ == 0; i++)
+    {
+        unsigned short candidate = keyCandidates[i];
+        if (!g_keyManager.TestKeysPressed(candidate))
+            continue;
+
+        if (changeY_36_ | changeX_37_)
+        {
+            func_0205bf3c(this);
+            break;
+        }
+
+        int changeAmounts[4];
+        COPY_ARRAY(changeAmounts, data_020e7dc4);
+        bool changeYLookup[4];
+        COPY_ARRAY(changeYLookup, data_020e7db0);
+        bool changeXLookup[4];
+        COPY_ARRAY(changeXLookup, data_020e7db4);
+
+        currentKey_34_ = candidate;
+        inputCountdown_38_ = initialDelay;
+        changeAmount_30_ = changeAmounts[i];
+        changeY_36_ = changeYLookup[i];
+        changeX_37_ = changeXLookup[i];
+        if (currentKey_34_ == KEY_UP || currentKey_34_ == KEY_DOWN)
+        {
+            int oldY = currentY_1c_;
+            currentY_1c_ += changeAmount_30_;
+            if (unknown_3d_)
+            {
+                if (gridHeight_c_ <= currentY_1c_)
+                    currentY_1c_ = 0;
+                else if (currentY_1c_ < 0)
+                    currentY_1c_ = gridHeight_c_ - 1;
+                
+                if (currentKey_34_ == KEY_UP)
+                {
+                    int elementCount = numElements_0_;
+                    if (elementCount <= GetCurrentElementIndex())
+                        SetCurrentElementIndex(elementCount - 1);
+                }
+                else if (currentKey_34_ == KEY_DOWN)
+                {
+                    if (numElements_0_ <= GetCurrentElementIndex())
+                        currentY_1c_ = 0;
+                }
+            }
+            else
+            {
+                if (gridHeight_c_ <= currentY_1c_)
+                    currentY_1c_ = oldY;
+                else if (currentY_1c_ < 0)
+                    currentY_1c_ = oldY;
+                if (GetCurrentElementIndex() >= numElements_0_)
+                    currentY_1c_ = oldY;
+            }
+        }
+        else if (currentKey_34_ == KEY_LEFT || currentKey_34_ == KEY_RIGHT)
+        {
+            int oldX = currentX_18_;
+            currentX_18_ += changeAmount_30_;
+            if (gridWidth_8_ <= currentX_18_)
+            {
+                if (unknown_3c_)
+                {
+                    currentX_18_ = 0;
+                    if (numPages_4_ > 1)
+                        func_0205c4a8(this, 1);
+                }
+                else if (numPages_4_ == 1)
+                    currentX_18_ = oldX;
+                else
+                {
+                    currentX_18_ = 0;
+                    func_0205c4a8(this, 1);
+                }
+            }
+            else if (currentX_18_ < 0)
+            {
+                if (unknown_3c_)
+                {
+                    currentX_18_ = gridWidth_8_ - 1;
+                    if (numPages_4_ > 1)
+                        func_0205c4a8(this, -1);
+                }
+                else if (numPages_4_ == 1)
+                    currentX_18_ = oldX;
+                else
+                {
+                    currentX_18_ = gridWidth_8_ - 1;
+                    func_0205c4a8(this, -1);
+                }
+            }
+            if (GetCurrentElementIndex() >= numElements_0_)
+            {
+                if (numPages_4_ == 1)
+                    currentX_18_ = oldX;
+                else
+                {
+                    currentX_18_ = 0;
+                    func_0205c4a8(this, 1);
+                }
+            }
+        }
+        return true;
+    }
+
+    if (changeY_36_)
+    {
+        if (g_keyManager.TestKeysHeld(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
+        {
+            unsigned char dt = numTicks;
+            if (dt < inputCountdown_38_)
+                inputCountdown_38_ -= dt;
+            else
+            {
+                inputCountdown_38_ = loopDelay;
+                changeY_36_ = true;
+                changeX_37_ = false;
+                currentY_1c_ += changeAmount_30_;
+                if (gridHeight_c_ <= currentY_1c_)
+                    currentY_1c_ = gridHeight_c_ - 1;
+                else if (currentY_1c_ < 0)
+                    currentY_1c_ = 0;
+                int elementCount = numElements_0_;
+                if (elementCount <= GetCurrentElementIndex())
+                    SetCurrentElementIndex(elementCount - 1);
+                if (currentKey_34_ == KEY_UP || currentKey_34_ == KEY_LEFT)
+                {
+                    int elementCount = numElements_0_;
+                    if (elementCount <= GetCurrentElementIndex())
+                        SetCurrentElementIndex(elementCount - 1);
+                }
+                else if (currentKey_34_ == KEY_DOWN || currentKey_34_ == KEY_RIGHT)
+                {
+                    if (numElements_0_ <= GetCurrentElementIndex())
+                        currentY_1c_ = 0;
+                }
+            }
+        }
+        if (g_keyManager.TestKeysReleased(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
+            func_0205bf3c(this);
+
+        return true;
+    }
+    else if (changeX_37_)
+    {
+        if (g_keyManager.TestKeysHeld(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
+        {
+            unsigned char dt = numTicks;
+            if (dt < inputCountdown_38_)
+                inputCountdown_38_ -= dt;
+            else
+            {
+                inputCountdown_38_ = loopDelay;
+                changeY_36_ = false;
+                changeX_37_ = true;
+                currentX_18_ += changeAmount_30_;
+                if (gridWidth_8_ <= currentX_18_)
+                {
+                    currentX_18_ = gridWidth_8_ - 1;
+                    func_0205c4a8(this, 1);
+                }
+                else if (currentX_18_ < 0)
+                {
+                    currentX_18_ = 0;
+                    func_0205c4a8(this, -1);
+                }
+
+                if (GetCurrentElementIndex() >= numElements_0_)
+                {
+                    if (numPages_4_ == 1)
+                        currentX_18_ = 0;
+                    else
+                    {
+                        currentX_18_ = 0;
+                        func_0205c4a8(this, 1);
+                    }
+                }
+            }
+        }
+        if (g_keyManager.TestKeysReleased(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
+            func_0205bf3c(this);
+
+        return true;
+    }
+
+    return false;
 }
 
 void DialogueOptionManager::Reset()

@@ -1,4 +1,4 @@
-#include "Graphics/Text.h"
+#include "UI/Text.h"
 #include "std_library_functions.h"
 #include "Util/StringTests.h"
 #include "GameState/GameState.h"

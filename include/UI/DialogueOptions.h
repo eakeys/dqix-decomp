@@ -1,7 +1,7 @@
 #pragma once
 
 #include <std_library_functions.h>
-#include "Vector.h"
+#include "../Graphics/Vector.h"
 
 // This needs to go in a different directory but it's related
 // to text processing so it's here for now

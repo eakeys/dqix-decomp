@@ -2,8 +2,8 @@
 
 #include "../Memory/SafeAllocator.h"
 #include "std_library_functions.h"
-#include "Vector.h"
-#include "ClipWindow.h"
+#include "../Graphics/Vector.h"
+#include "../Graphics/ClipWindow.h"
 #include "DialogueOptions.h"
 #include "../Util/Grammar.h"
 #include "UIElement.h"

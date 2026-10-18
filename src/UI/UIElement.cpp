@@ -1,5 +1,5 @@
-#include "Graphics/Text.h"
-#include "Graphics/UIElement.h"
+#include "UI/Text.h"
+#include "UI/UIElement.h"
 #include "System/Cache.h"
 #include "System/BGBases.h"
 #include <asmhacks.h>

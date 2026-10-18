@@ -1,5 +1,5 @@
-#include "Graphics/DialogueOptions.h"
-#include "Graphics/Text.h"
+#include "UI/DialogueOptions.h"
+#include "UI/Text.h"
 
 extern "C"
 {

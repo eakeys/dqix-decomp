@@ -2,7 +2,7 @@
 
 #include "../Memory/SafeAllocator.h"
 #include "std_library_functions.h"
-#include "Vector.h"
+#include "../Graphics/Vector.h"
 
 // sizeof == 0xe0.
 // Dynamically allocated by func_020421c4.

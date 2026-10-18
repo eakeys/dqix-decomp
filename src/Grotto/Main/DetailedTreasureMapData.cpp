@@ -5,7 +5,7 @@
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"
 #include "System/Memory.h"
-#include "Graphics/Text.h"
+#include "UI/Text.h"
 #include "std_library_functions.h"
 #include <asmhacks.h>
 

@@ -8,20 +8,79 @@ extern "C"
     void func_0205c564(void*);
 }
 
-void DialogueOptionManager::Substruct_1c::SubsubstructBase::Reset()
+void BasicGridMenu::Reset()
 {
-    unknown_0_ = 0;
+    numElements_0_ = 0;
     unknown_4_ = 1;
-    unknown_8_ = 1;
-    unknown_c_ = 1;
-    unknown_10_ = 0;
-    unknown_14_ = 0;
-    unknown_18_ = 0;
-    unknown_1c_ = 0;
-    unknown_20_ = 0;
-    unknown_24_ = 0;
-    unknown_28_ = 0;
-    unknown_2c_ = 0;
+    gridWidth_8_ = 1;
+    gridHeight_c_ = 1;
+    elementOrdering_10_ = ElementOrdering_ColumnMajor;
+    currentPage_14_ = 0;
+    currentX_18_ = 0;
+    currentY_1c_ = 0;
+    pOuterArrayLength_20_ = 0;
+    pInnerArrayLength_24_ = 0;
+    pOuterIndex_28_ = 0;
+    pInnerIndex_2c_ = 0;
+}
+
+void BasicGridMenu::SetSize(int w, int h, unsigned char elementOrdering)
+{
+    gridWidth_8_ = w;
+    gridHeight_c_ = h;
+    elementOrdering_10_ = elementOrdering;
+    if (elementOrdering == ElementOrdering_ColumnMajor)
+    {
+        pOuterArrayLength_20_ = &gridWidth_8_;
+        pInnerArrayLength_24_ = &gridHeight_c_;
+        pOuterIndex_28_ = &currentX_18_;
+        pInnerIndex_2c_ = &currentY_1c_;
+    }
+    else if (elementOrdering == ElementOrdering_RowMajor)
+    {
+        pOuterArrayLength_20_ = &gridHeight_c_;
+        pInnerArrayLength_24_ = &gridWidth_8_;
+        pOuterIndex_28_ = &currentY_1c_;
+        pInnerIndex_2c_ = &currentX_18_;
+    }
+}
+
+void BasicGridMenu::SetElementCount(int to)
+{
+    if (to < 0)
+        return;
+    numElements_0_ = to;
+    // prevent going off the end if we reduced the count
+    if (GetCurrentElementIndex() >= to)
+        SetCurrentElementIndex(to - 1);
+}
+
+int BasicGridMenu::GetElementCount() const
+{
+    return numElements_0_;
+}
+
+void BasicGridMenu::SetCurrentElementIndex(int idx)
+{
+    if (idx < 0)
+        return;
+    if (idx >= numElements_0_)
+        return;
+    int pageStride = gridHeight_c_ * gridWidth_8_;
+    if (pageStride == 0)
+        return;
+
+    currentPage_14_ = idx / pageStride;
+    idx %= pageStride;
+    *pInnerIndex_2c_ = idx % *pInnerArrayLength_24_;
+    *pOuterIndex_28_ = idx / *pInnerArrayLength_24_;
+}
+
+int BasicGridMenu::GetCurrentElementIndex() const
+{
+    short offsetOnPage = (*pInnerArrayLength_24_) * (*pOuterIndex_28_) + (*pInnerIndex_2c_);
+    short pageBase = currentPage_14_ * gridHeight_c_ * gridWidth_8_;
+    return pageBase + offsetOnPage;
 }
 
 void DialogueOptionManager::Reset()

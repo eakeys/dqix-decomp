@@ -25,11 +25,6 @@ struct TextBox
 
 /*
     Function runtime info for substructs:
-    0205ba2c substruct_1c::subsubstructBase
-    0205ba68 substruct_1c::subsubstructBase
-    0205bacc substruct_1c::subsubstructBase
-    0205bb04 substruct_1c::subsubstructBase
-    0205bb84 substruct_1c::subsubstructBase
     0205bbcc substruct_1c::subsubstruct_4
     0205bc10 substruct_1c::subsubstruct_4
     0205bc2c substruct_1c::subsubstruct_4
@@ -50,6 +45,47 @@ struct TextBox
     0205c77c substruct_4
 */
 
+class BasicGridMenu
+{
+public:
+    enum ElementOrdering
+    {
+        ElementOrdering_ColumnMajor = 0,
+        ElementOrdering_RowMajor = 1,
+    };
+
+    int numElements_0_;
+    int unknown_4_;
+    // width and height i.e. number of cols & rows
+    int gridWidth_8_;
+    int gridHeight_c_;
+    unsigned char elementOrdering_10_;
+    char pad_11[3];
+    int currentPage_14_;
+    int currentX_18_;
+    int currentY_1c_;
+    int* pOuterArrayLength_20_;
+    int* pInnerArrayLength_24_;
+    int* pOuterIndex_28_;
+    int* pInnerIndex_2c_;
+
+public:
+    // usa: func_0205ba2c
+    void Reset();
+    // usa: func_0205ba68
+    void SetSize(int w, int h, unsigned char elementOrdering);
+
+    // usa: func_0205bacc
+    void SetElementCount(int to);
+    // usa: func_0205bafc
+    int GetElementCount() const;
+
+    // usa: func_0205bb04
+    void SetCurrentElementIndex(int idx);
+    // usa: func_0205bb84
+    int GetCurrentElementIndex() const;
+};
+
 // sizeof == 0x238, owned by TextManager at offset 0x90.
 class DialogueOptionManager
 {
@@ -62,31 +98,11 @@ public:
 
     struct Substruct_1c // 0205c564
     {
-        struct SubsubstructBase // 0205ba2c
-        {
-            int unknown_0_;
-            int unknown_4_;
-            int unknown_8_;
-            int unknown_c_;
-            char unknown_10_;
-            char pad_11[3];
-            int unknown_14_;
-            int unknown_18_;
-            int unknown_1c_;
-            int unknown_20_;
-            int unknown_24_;
-            int unknown_28_;
-            int unknown_2c_;
-
-            // usa: func_0205ba2c
-            void Reset();
-        };
-
         char unk_0[4];
 
         struct Subsubstruct_4 // 0205bbcc
         {
-            SubsubstructBase base_0_;
+            BasicGridMenu base_0_;
             int unknown_30_;
             int unknown_34_;
             short unknown_38_;
@@ -102,7 +118,7 @@ public:
         } subsubstruct_4_;
         struct Subsubstruct_54 // 0205bef8
         {
-            SubsubstructBase base_0_;
+            BasicGridMenu base_0_;
             int unknown_30_;
             short unknown_34_;
             char unknown_36_;

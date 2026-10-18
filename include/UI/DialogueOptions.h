@@ -72,19 +72,23 @@ class InputGridMenu : public BasicGridMenu
 public:
     int changeAmount_30_;
     unsigned short currentKey_34_;
-    unsigned char changeY_36_;
-    unsigned char changeX_37_;
+    bool changingY_36_;
+    bool changingX_37_;
     unsigned char inputCountdown_38_;
     unsigned char keyRepeatInitialDelay_39_;
     unsigned char keyRepeatLoopDelay_3a_;
     char unk_3b[1];
-    unsigned char unknown_3c_;
-    unsigned char unknown_3d_;
+    bool wrapX_3c_;
+    bool wrapY_3d_;
     char pad_3e[2];
 
 public:
-
+    void Initialize();
+    void CancelInput();
     bool Update(int numTicks);
+    void AdvancePage(int change);
+    // returns a range [start, end)
+    void GetCurrentPageElementRange(int* outStart, int* outEnd) const;
 };
 
 // sizeof == 0x238, owned by TextManager at offset 0x90.

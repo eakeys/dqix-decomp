@@ -4,8 +4,6 @@
 
 extern "C"
 {
-    void func_0205bf3c(InputGridMenu*);
-
     void func_0205c4a8(InputGridMenu*, int);
 
     void func_0205c73c(void*);
@@ -93,6 +91,29 @@ int BasicGridMenu::GetCurrentElementIndex() const
     return pageBase + offsetOnPage;
 }
 
+void InputGridMenu::Initialize()
+{
+    BasicGridMenu::Reset();
+    changeAmount_30_ = 0;
+    currentKey_34_ = 0;
+    changingY_36_ = false;
+    changingX_37_ = false;
+    inputCountdown_38_ = 0;
+    keyRepeatInitialDelay_39_ = 20;
+    keyRepeatLoopDelay_3a_ = 10;
+    wrapX_3c_ = true;
+    wrapY_3d_ = true;
+}
+
+void InputGridMenu::CancelInput()
+{
+    changeAmount_30_ = 0;
+    currentKey_34_ = 0;
+    changingY_36_ = false;
+    changingX_37_ = false;
+    inputCountdown_38_ = 0;
+}
+
 bool InputGridMenu::Update(int numTicks)
 {
     if (numElements_0_ == 0)
@@ -114,9 +135,9 @@ bool InputGridMenu::Update(int numTicks)
         if (!g_keyManager.TestKeysPressed(candidate))
             continue;
 
-        if (changeY_36_ | changeX_37_)
+        if (changingY_36_ | changingX_37_)
         {
-            func_0205bf3c(this);
+            CancelInput();
             break;
         }
 
@@ -130,13 +151,13 @@ bool InputGridMenu::Update(int numTicks)
         currentKey_34_ = candidate;
         inputCountdown_38_ = initialDelay;
         changeAmount_30_ = changeAmounts[i];
-        changeY_36_ = changeYLookup[i];
-        changeX_37_ = changeXLookup[i];
+        changingY_36_ = changeYLookup[i];
+        changingX_37_ = changeXLookup[i];
         if (currentKey_34_ == KEY_UP || currentKey_34_ == KEY_DOWN)
         {
             int oldY = currentY_1c_;
             currentY_1c_ += changeAmount_30_;
-            if (unknown_3d_)
+            if (wrapY_3d_)
             {
                 if (gridHeight_c_ <= currentY_1c_)
                     currentY_1c_ = 0;
@@ -171,7 +192,7 @@ bool InputGridMenu::Update(int numTicks)
             currentX_18_ += changeAmount_30_;
             if (gridWidth_8_ <= currentX_18_)
             {
-                if (unknown_3c_)
+                if (wrapX_3c_)
                 {
                     currentX_18_ = 0;
                     if (numPages_4_ > 1)
@@ -187,7 +208,7 @@ bool InputGridMenu::Update(int numTicks)
             }
             else if (currentX_18_ < 0)
             {
-                if (unknown_3c_)
+                if (wrapX_3c_)
                 {
                     currentX_18_ = gridWidth_8_ - 1;
                     if (numPages_4_ > 1)
@@ -215,7 +236,7 @@ bool InputGridMenu::Update(int numTicks)
         return true;
     }
 
-    if (changeY_36_)
+    if (changingY_36_)
     {
         if (g_keyManager.TestKeysHeld(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
         {
@@ -225,8 +246,8 @@ bool InputGridMenu::Update(int numTicks)
             else
             {
                 inputCountdown_38_ = loopDelay;
-                changeY_36_ = true;
-                changeX_37_ = false;
+                changingY_36_ = true;
+                changingX_37_ = false;
                 currentY_1c_ += changeAmount_30_;
                 if (gridHeight_c_ <= currentY_1c_)
                     currentY_1c_ = gridHeight_c_ - 1;
@@ -249,11 +270,11 @@ bool InputGridMenu::Update(int numTicks)
             }
         }
         if (g_keyManager.TestKeysReleased(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
-            func_0205bf3c(this);
+            CancelInput();
 
         return true;
     }
-    else if (changeX_37_)
+    else if (changingX_37_)
     {
         if (g_keyManager.TestKeysHeld(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
         {
@@ -263,8 +284,8 @@ bool InputGridMenu::Update(int numTicks)
             else
             {
                 inputCountdown_38_ = loopDelay;
-                changeY_36_ = false;
-                changeX_37_ = true;
+                changingY_36_ = false;
+                changingX_37_ = true;
                 currentX_18_ += changeAmount_30_;
                 if (gridWidth_8_ <= currentX_18_)
                 {
@@ -290,12 +311,36 @@ bool InputGridMenu::Update(int numTicks)
             }
         }
         if (g_keyManager.TestKeysReleased(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
-            func_0205bf3c(this);
+            CancelInput();
 
         return true;
     }
 
     return false;
+}
+
+void InputGridMenu::AdvancePage(int change)
+{
+    currentPage_14_ += change;
+    if (numPages_4_ <= currentPage_14_)
+        currentPage_14_ -= numPages_4_;
+    else if (currentPage_14_ < 0)
+        currentPage_14_ += numPages_4_;
+
+    int elementCount = GetElementCount();
+    if (elementCount <= GetCurrentElementIndex())
+        SetCurrentElementIndex(elementCount - 1);
+}
+
+void InputGridMenu::GetCurrentPageElementRange(int* outStart, int* outEnd) const
+{
+    int pageStride = gridWidth_8_ * gridHeight_c_;
+    
+    *outStart = pageStride * currentPage_14_;
+    *outEnd = *outStart + pageStride;
+
+    if (numElements_0_ < *outEnd)
+        *outEnd = numElements_0_;
 }
 
 void DialogueOptionManager::Reset()

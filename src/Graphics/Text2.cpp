@@ -32,8 +32,6 @@ extern "C"
     void func_02042c24(void*, short, short);
     void func_02043124(TextManager*);
     void func_02043204(TextManager*);
-    int func_02044420(const TextManager*, const void*);
-    bool func_02044494(const TextManager*, const void*);
     void func_020457e8(TextManager*, int);
 
     int func_020546a8(PartyMember*);
@@ -160,7 +158,7 @@ void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x
         return;
 
     const char* str = glyph->indexGlyph->tag;
-    short y = preShiftY - (short)(renderer2D_34_->topTile_ae_ * 8);
+    short y = preShiftY - (short)(mainUIElement_34_->topTile_ae_ * 8);
     
     unsigned char effects = TextManager::GetInstance()->unknown_195b_;
 
@@ -267,7 +265,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
             }
             glyph = &glyphs_[code];
             if (noOffsets)
-                RenderGlyph2D(renderer2D_34_, glyph, x, y, 15);
+                RenderGlyph2D(mainUIElement_34_, glyph, x, y, 15);
             else
             {
                 SetRenderGlyphPosition(glyph, x, y, 0);
@@ -301,7 +299,7 @@ void TextManager::ProcessYesNoInput(int input)
             func_0205eaa0(data_02108760, 1, 0);
         }
         SubmitQuestionResponse(ControlWord_Yes, unknown_58_);
-        func_0205c840(substruct_90_);
+        dialogueOptions_90_.Release();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -313,7 +311,7 @@ void TextManager::ProcessYesNoInput(int input)
         unknown_954_ = 1;
         ReleaseMainMessageGlyphs();
         SubmitQuestionResponse(ControlWord_No, unknown_58_);
-        func_0205c840(substruct_90_);
+        dialogueOptions_90_.Release();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -332,7 +330,7 @@ void TextManager::ProcessUkeYameInput(int input)
         ReleaseMainMessageGlyphs();
         func_0205eaa0(data_02108760, 1, 0);
         SubmitQuestionResponse(ControlWord_Uke, unknown_58_);
-        func_0205c840(substruct_90_);
+        dialogueOptions_90_.Release();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -343,7 +341,7 @@ void TextManager::ProcessUkeYameInput(int input)
         unknown_954_ = 1;
         ReleaseMainMessageGlyphs();
         SubmitQuestionResponse(ControlWord_Yame, unknown_58_);
-        func_0205c840(substruct_90_);
+        dialogueOptions_90_.Release();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -2488,7 +2486,7 @@ int TextManager::GetControlWordNumExtraWords(const char *input) const
     int numExtra = 0;
     unsigned short controlWord;
     memcpy(&controlWord, input, 2);
-    if (!func_02044494(this, &controlWord))
+    if (!IsNextCharacterControlAlt(&controlWord))
         return 0;
 
     switch (controlWord)
@@ -2520,7 +2518,7 @@ char* TextManager::FindControlCharacter(unsigned short control, char* input) con
 {
     if (input == NULL)
         return NULL;
-    if (!func_02044494(this, &control))
+    if (!IsNextCharacterControlAlt(&control))
         return NULL;
 
     unsigned int bytesSearched = 0;
@@ -2683,8 +2681,8 @@ void TextManager::ReleaseMainMessageGlyphs()
     for (unsigned int i = glyphIndexListMainMessageStart_88_; i < glyphIndexListLength_6c_; i++)
     {
         pIndex = &glyphIndexList_4c_[i];
-        if (func_02044494(this, pIndex))
-            i += func_02044420(this, pIndex);
+        if (IsNextCharacterControlAlt(pIndex))
+            i += GetControlWordNumExtraWords(pIndex);
         else
             ReleaseGlyphByIndex(*pIndex);
     }
@@ -2698,7 +2696,7 @@ void TextManager::ReleaseGlyphByIndex(unsigned short ch)
 {
     if (ch >= 0x80)
         return;
-    if (func_02044494(this, &ch))
+    if (IsNextCharacterControlAlt(&ch))
         return;
     
     RenderGlyph* glyph = &glyphs_[ch];
@@ -2711,7 +2709,7 @@ void TextManager::ReleaseGlyphByIndex(unsigned short ch)
     if ((newRefcount & 0xff) == 0)
     {
         glyph->Reset2();
-        unknown_9b4_ = (unknown_9b4_ - 1) & 0x7f;
+        numGlyphsInUse_9b4_ = (numGlyphsInUse_9b4_ - 1) & 0x7f;
     }
 }
 
@@ -2773,9 +2771,9 @@ int TextManager::MeasureLine(const char* text) const
     {
         unsigned short control;
         memcpy(&control, text, 2);
-        if (func_02044494(this, &control))
+        if (IsNextCharacterControlAlt(&control))
         {
-            int numExtraWords = func_02044420(this, &control);
+            int numExtraWords = GetControlWordNumExtraWords(&control);
             short extraWord;
             switch (control)
             {
@@ -2868,9 +2866,9 @@ void TextManager::AdvanceLine()
     {
         if (IsNextCharacterControlOrJump(wordPtr))
             moreChars = false;
-        if (func_02044494(this, wordPtr))
+        if (IsNextCharacterControlAlt(wordPtr))
         {
-            int numExtraWords = func_02044420(this, wordPtr);
+            int numExtraWords = GetControlWordNumExtraWords(wordPtr);
             wordPtr += numExtraWords;
             wordSkip += numExtraWords;
         }
@@ -2972,9 +2970,9 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
             break;
         unsigned short control;
         memcpy(&control, input, 2);
-        if (func_02044494(this, &control) && control != ControlWord_Unknown_ff19)
+        if (IsNextCharacterControlAlt(&control) && control != ControlWord_Unknown_ff19)
         {
-            int numControlWordBytes = (func_02044420(this, &control) + 1) * 2;
+            int numControlWordBytes = (GetControlWordNumExtraWords(&control) + 1) * 2;
             memcpy(output, input, numControlWordBytes);
             input += numControlWordBytes;
             output += numControlWordBytes;

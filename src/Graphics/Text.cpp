@@ -70,6 +70,14 @@ extern char data_020f007c[]; // "me"
 
 extern "C"
 {
+    void func_02042b98(TextManager*, int, int, int, int);
+    void func_02044c74(TextManager*, UIElement*);
+
+    void func_02066cf0(TextManager*, int); // maybe bool
+
+    // get offsets among (-3, 0), (0, 0), (0, -2), (0, 0)
+    void func_0206b804(TextManager*, int*, int*);
+
     // alternative strlen
     int func_020d2ff0(const char*);
 }
@@ -678,6 +686,25 @@ void LoadCustomFonts(SafeAllocator* alloc)
     BackgroundLoader::RemoveLockGlobal();
 }
 
+void TextManager::SetActiveTextBox(TextBox* to)
+{
+    substruct_19e0_.pCurrentBox = to;
+}
+
+void TextManager::SetMainTextBoxActive()
+{
+    SetActiveTextBox(&mainTextBox_914_);
+}
+
+void TextBox::Initialize()
+{
+    x = y = width = height = 0;
+    unknown_8 = 0;
+    unknown_c = 0;
+    scaleX = scaleY = 0;
+    color = 0x7fff;
+}
+
 struct TextBoxBounds
 {
     short x, y, width, height;
@@ -767,6 +794,75 @@ void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* boun
     }
 }
 
+// commenting this out for now to go investigate the substruct at 0x90
+/*void TextManager::RefreshGraphics(bool arg)
+{
+    if (unknown_19cc_ != 0)
+    {
+        int offX, offY;
+        func_0206b804(this, &offX, &offY);
+        func_02044c74(this, mainUIElement_34_);
+
+        UIElement* ui = mainUIElement_34_;
+        unsigned char* pixelBuffer = ui->pixelBuffer_8_;
+        if (pixelBuffer != NULL)
+        {
+            ui->pixelBuffer_8_ = pixelBuffer; // wtf?
+            unknown_19cc_ = 0;
+            func_02066cf0(this, 1);
+            unknown_19cc_ = 1;
+            if (unknown_19c0_ != 0)
+                unknown_40_ = 0;
+
+            TextBoxBounds mainBoxBounds, speakerBoxBounds, optionBoxBounds;
+            mainBoxBounds.Clear();
+            speakerBoxBounds.Clear();
+            optionBoxBounds.Clear();
+
+            if ((unknown_998_ != 0 && showWindow_19b1_) || unknown_19cb_ != 0)
+            {
+                if (showWindow_19b1_)
+                {
+                    func_02042b98(this, 2, 116, 252, 74);
+                    mainBoxBounds.SetBounds(offX + 2, offY + 116, 252, 74);
+                    DrawTextBoxBorder2D(mainUIElement_34_, &mainBoxBounds);
+                    mainBoxBounds.SetBounds(2, 116, 252, 74);
+                }
+
+                if (unknown_19c4_ != 0 && unknown_19c3_ != 0)
+                {
+                    Substruct_19e0* substruct = &substruct_19e0_;
+                    substruct->pCurrentBox = &speakerTextBox_930_;
+                    // fix this with, most likely, an inline call
+                    if (substruct->pCurrentBox != NULL && substruct->pCurrentBox->unknown_8 == 2)
+                    {
+                        short boxX, boxY, boxW, boxH;
+                        if (substruct->pCurrentBox != NULL)
+                        {
+                            boxX = substruct->pCurrentBox->unknown_0;
+                            boxY = substruct->pCurrentBox->unknown_2;
+                        }
+                        if (substruct->pCurrentBox != NULL)
+                        {
+                            boxW = substruct->pCurrentBox->width;
+                            boxH = substruct->pCurrentBox->height;
+                        }
+                        speakerBoxBounds.SetBounds(boxX + offX, boxY + offY, boxW, boxH);
+                        DrawTextBoxBorder2D(mainUIElement_34_, &speakerBoxBounds);
+                        speakerBoxBounds.SetBounds(boxX, boxY, boxW, boxH);
+                    }
+                    substruct->pCurrentBox = &mainTextBox_914_;
+                }
+
+                if (pauseType_9a0_ == 6 && unknown_19ba_ != 0 && substruct_90_[0x233] != 0)
+                {
+                    
+                }
+            }
+        }
+    }
+}*/
+
 void TextBoxBounds::Clear()
 {
     x = 0;
@@ -781,4 +877,37 @@ void TextBoxBounds::SetBounds(short toX, short toY, short toWidth, short toHeigh
     y = toY;
     width = toWidth;
     height = toHeight;
+}
+
+int TextManager::GetControlWordNumExtraWords(const void* text) const
+{
+    int numExtraWords = 0;
+
+    unsigned short word;
+    memcpy(&word, text, 2);
+    if (!IsNextCharacterControlAlt(&word))
+        return numExtraWords;
+    switch (word)
+    {
+    case ControlWord_Unknown_ff20:
+    case ControlWord_Unknown_ff21:
+    case ControlWord_Unknown_ff23:
+    case ControlWord_Unknown_ff24:
+        numExtraWords = 1;
+        break;
+    case ControlWord_Unknown_ff22:
+    case ControlWord_Unknown_ff25:
+        numExtraWords = 2;
+        break;
+    }
+    return numExtraWords;
+}
+
+bool TextManager::IsNextCharacterControlAlt(const void* text) const
+{
+    unsigned short word;
+    memcpy(&word, text, 2);
+    if ((word & 0xff00) == 0xff00)
+        return true;
+    return false;
 }

@@ -4,6 +4,7 @@
 #include "std_library_functions.h"
 #include "Vector.h"
 #include "ClipWindow.h"
+#include "DialogueOptions.h"
 #include "../Util/Grammar.h"
 #include "UIElement.h"
 
@@ -63,7 +64,7 @@ struct RenderGlyph
     unsigned char unk_16_1 : 1;
     unsigned char unk_16_2 : 1;
     unsigned char unk_16_3 : 1;
-    char unknown_17;
+    unsigned char unknown_17;
     const FontIndexFile::Glyph* indexGlyph;
 
     void Reset();
@@ -221,21 +222,6 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
 // loads both the s7 and me font from data/pack_lv5
 void LoadCustomFonts(SafeAllocator* alloc);
 
-// sizeof == 0x1c
-struct TextBox
-{
-    short unknown_0;
-    short unknown_2;
-    short width;
-    short height;
-    int unknown_8;
-    int unknown_c;
-    fix32_t scaleX;
-    fix32_t scaleY;
-    unsigned short unknown_18;
-    char pad_1a[2];
-};
-
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 
 // Initialized by func_02042c68, get member types from here
@@ -268,7 +254,7 @@ public:
     char unknown_30_;
     char unknown_31_;
     char pad_32[2];
-    UIElement* renderer2D_34_;
+    UIElement* mainUIElement_34_;
     int unknown_38_;
     int unknown_3c_;
     int unknown_40_;
@@ -298,7 +284,7 @@ public:
     int mainMessageStartOffset_84_;
     unsigned int glyphIndexListMainMessageStart_88_;
     int unknown_8c_;
-    char substruct_90_[0x238]; // func_0205c790
+    DialogueOptionManager dialogueOptions_90_; // func_0205c790
     int unknown_2c8_;
     char substruct_2cc_[4];
     int unknown_2d0_;
@@ -348,7 +334,7 @@ public:
     int gyouParameter_9a4_;
     char unk_9a8[8];
     int unknown_9b0_;
-    int unknown_9b4_;
+    int numGlyphsInUse_9b4_;
     // holds data about glyphs that are used in the current message
     RenderGlyph glyphs_[0x80];
     // number of times a glyph is used within message
@@ -406,13 +392,14 @@ public:
     char maybeDoesSoundPlay_19b7_;
     char cenTag_19b8_;
     char unknown_19b9_;
-    char unk_19ba[1];
+    char unknown_19ba_;
     char skipTag_19bb_;
     char unknown_19bc_;
     char unk_19bd[1];
     char unknown_19be_;
     char unknown_19bf_;
-    char unk_19c0[2];
+    unsigned char unknown_19c0_;
+    char unk_19c1[1];
     unsigned char speakerDifference_19c2_;
     unsigned char unknown_19c3_;
     unsigned char unknown_19c4_;
@@ -449,8 +436,24 @@ public:
 
     static TextManager* GetInstance();
 
+    // usa: func_02042b10
+    // sets the pointer in substruct_19e0 at offset 0x440
+    void SetActiveTextBox(TextBox*);
+    // usa: func_02042b1c
+    void SetMainTextBoxActive();
+
     // usa: func_02042c68
     void Reset();
+
+    // usa: func-020439b0
+    void RefreshGraphics(bool arg);
+
+    // usa: func_02044420
+    int GetControlWordNumExtraWords(const void* text) const;
+
+    // usa: func_02044494
+    // identical to func_0206ac6c, might take unsigned short* instead?
+    bool IsNextCharacterControlAlt(const void* text) const;
 
     // usa: func_02045c00
     int GetGlyphIndex(const FontIndexFile::Glyph* glyph);
@@ -462,6 +465,14 @@ public:
     // and if you repeat the first character 10 times the function will return early. wtf?
     void DrawPreprocessedText(const unsigned short* words, int x, int y, unsigned short color,
         int, int, bool use2D, unsigned char fontIndex, int lineSpacing);
+
+    // usa: func_02045d14
+    // converts the text into the 16-bit index encoding (written into outWords)
+    // and returns the number of words written
+    unsigned short AcquireText16Bit(const char* text, unsigned short* outWords, unsigned char fontIndex);
+    int MeasureText16Bit(const unsigned short* words, int numWords, unsigned char fontIndex);
+    // usa: func_020462d0
+    void ReleaseText16Bit(unsigned short* words, int len);
 
     // usa: func_020654b8
     void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);

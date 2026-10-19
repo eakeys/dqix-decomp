@@ -1,6 +1,6 @@
 #include "Graphics/ClipWindow.h"
-#include "System/Memory.h"
-#include "System/Graphics.h"
+#include "NitroSDK/Memory.h"
+#include "NitroSDK/Graphics.h"
 
 #if defined(jpn)
 #define data_020f2bdc data_020f2d38

@@ -1,7 +1,7 @@
 #include "UI/Text.h"
 #include "UI/UIElement.h"
-#include "System/Cache.h"
-#include "System/BGBases.h"
+#include "NitroSDK/Cache.h"
+#include "NitroSDK/BGBases.h"
 #include <asmhacks.h>
 
 void LoadToMainBG0CharacterData(const void* data, unsigned int offset, unsigned int length);

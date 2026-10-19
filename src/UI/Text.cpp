@@ -1,5 +1,5 @@
 #include "UI/Text.h"
-#include "System/Graphics.h"
+#include "NitroSDK/Graphics.h"
 #include "Graphics/Vector.h"
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"

@@ -2,7 +2,7 @@
 
 #include "Resource/GameResources.h"
 #include "World/Object3D.h"
-#include "Filesystem/NitroVM.h"
+#include "NitroSDK/Filesystem/NitroVM.h"
 #include "GameState/TimeOfDay.h"
 #include "Grotto/Main/GrottoStruct.h"
 #include "PartyMember.h"

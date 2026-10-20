@@ -2227,13 +2227,13 @@ _ZN13TouchGridMenu5ResetEv kind:function(arm,size=0x44) addr:0x0205bbcc
 _ZN13TouchGridMenu10ClearFlagsEv kind:function(arm,size=0x14) addr:0x0205bc10
 _ZN13TouchGridMenu12SetHighlightEi kind:function(arm,size=0x8) addr:0x0205bc24
 _ZN13TouchGridMenu6UpdateEi kind:function(arm,size=0xb0) addr:0x0205bc2c
-_ZN13TouchGridMenu23ChangeSelectionExternalEi kind:function(arm,size=0x28) addr:0x0205bcdc
-_ZNK13TouchGridMenu23GetSelectedElementIndexEv kind:function(arm,size=0x1c) addr:0x0205bd04
+_ZN13TouchGridMenu35SetCurrentElementAndRemoveHighlightEi kind:function(arm,size=0x28) addr:0x0205bcdc
+_ZNK13TouchGridMenu21GetHighlightedElementEv kind:function(arm,size=0x1c) addr:0x0205bd04
 _ZNK13TouchGridMenu20IsSelectionConfirmedEv kind:function(arm,size=0x38) addr:0x0205bd20
 _ZN13TouchGridMenu16SetElementBoundsEiPsS0_S0_S0_ kind:function(arm,size=0x20) addr:0x0205bd58
 _ZN13TouchGridMenu12ProcessClickEii kind:function(arm,size=0x128) addr:0x0205bd78
 _ZN13TouchGridMenu9TestClickEv kind:function(arm,size=0x58) addr:0x0205bea0
-_ZN16KeyInputGridMenu10InitializeEv kind:function(arm,size=0x44) addr:0x0205bef8
+_ZN16KeyInputGridMenu5ResetEv kind:function(arm,size=0x44) addr:0x0205bef8
 _ZN16KeyInputGridMenu11CancelInputEv kind:function(arm,size=0x1c) addr:0x0205bf3c
 _ZN16KeyInputGridMenu6UpdateEi kind:function(arm,size=0x550) addr:0x0205bf58
 _ZN16KeyInputGridMenu11AdvancePageEi kind:function(arm,size=0x60) addr:0x0205c4a8
@@ -6337,10 +6337,10 @@ data_020e7d34 kind:data(any) addr:0x020e7d34
 data_020e7d84 kind:data(any) addr:0x020e7d84
 data_020e7d90 kind:data(any) addr:0x020e7d90
 data_020e7da4 kind:data(any) addr:0x020e7da4
-data_020e7db0 kind:data(any) addr:0x020e7db0
-data_020e7db4 kind:data(any) addr:0x020e7db4
-data_020e7db8 kind:data(any) addr:0x020e7db8
-data_020e7dc4 kind:data(any) addr:0x020e7dc4
+@280 kind:data(any) addr:0x020e7db0 local
+@281 kind:data(any) addr:0x020e7db4 local
+@282 kind:data(byte[0xa]) addr:0x020e7db8 local
+@283 kind:data(any) addr:0x020e7dc4 local
 data_020e7dd4 kind:data(any) addr:0x020e7dd4
 data_020e7de8 kind:data(any) addr:0x020e7de8
 data_020e7e04 kind:data(any) addr:0x020e7e04

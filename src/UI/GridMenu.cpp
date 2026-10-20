@@ -1,8 +1,5 @@
+#pragma ipa file
 #include "UI/GridMenu.h"
-
-extern const bool data_020e7db0[4], data_020e7db4[4];
-extern const unsigned short data_020e7db8[5];
-extern const int data_020e7dc4[4];
 
 void BasicGridMenu::Reset()
 {
@@ -264,8 +261,7 @@ bool KeyInputGridMenu::Update(int numTicks)
     unsigned char initialDelay = keyRepeatInitialDelay_39_;
     unsigned char loopDelay = keyRepeatLoopDelay_3a_;
 
-    unsigned short keyCandidates[5];
-    COPY_ARRAY(keyCandidates, data_020e7db8);
+    unsigned short keyCandidates[] = { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, -1 };
     
     for (int i = 0; keyCandidates[i] != 0xffff && currentKey_34_ == 0; i++)
     {
@@ -279,12 +275,9 @@ bool KeyInputGridMenu::Update(int numTicks)
             break;
         }
 
-        int changeAmounts[4];
-        COPY_ARRAY(changeAmounts, data_020e7dc4);
-        bool changeYLookup[4];
-        COPY_ARRAY(changeYLookup, data_020e7db0);
-        bool changeXLookup[4];
-        COPY_ARRAY(changeXLookup, data_020e7db4);
+        int changeAmounts[4] = { -1, 1, -1, 1 };
+        bool changeYLookup[4] = { true, true, false, false };
+        bool changeXLookup[4] = { false, false, true, true };
 
         currentKey_34_ = candidate;
         inputCountdown_38_ = initialDelay;

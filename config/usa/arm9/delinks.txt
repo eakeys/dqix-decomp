@@ -103,6 +103,7 @@ src/Graphics/LightingManager.cpp:
 src/UI/GridMenu.cpp:
     complete
     .text start:0x0205ba2c end:0x0205c73c
+    .rodata start:0x020e7db0 end:0x020e7dd4
 
 src/UI/DialogueOptions.cpp:
     .text start:0x0205c73c end:0x0205e00c

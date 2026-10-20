@@ -90,16 +90,16 @@ void TouchGridMenu::Reset()
     elementYValues_40_ = NULL;
     elementWidths_44_ = NULL;
     elementHeights_48_ = NULL;
-    unknown_4c_ = false;
+    choiceConfirmed_4c_ = false;
     unknown_4d_ = false;
-    unknown_4e_ = false;
+    choiceHighlighted_4e_ = false;
 }
 
 void TouchGridMenu::ClearFlags()
 {
-    unknown_4c_ = false;
+    choiceConfirmed_4c_ = false;
     unknown_4d_ = false;
-    unknown_4e_ = false;
+    choiceHighlighted_4e_ = false;
 }
 
 void TouchGridMenu::SetHighlight(int highlight)
@@ -114,30 +114,30 @@ bool TouchGridMenu::Update(int)
 
     int touchX, touchY;
     g_touchInput.GetTouchPoint(&touchX, &touchY);
-    if (g_touchInput.pressed_ && !unknown_4e_)
+    if (g_touchInput.pressed_ && !choiceHighlighted_4e_)
     {
-        unknown_4e_ = true;
+        choiceHighlighted_4e_ = true;
         int priorElement = highlightedElement_30_;
         highlightedElement_30_ = ProcessClick(touchX, touchY);
         if (highlightedElement_30_ < 0)
         {
-            unknown_4e_ = false;
+            choiceHighlighted_4e_ = false;
             return false;
         }
-        unknown_4c_ = true;
+        choiceConfirmed_4c_ = true;
         if (priorElement != highlightedElement_30_)
-            unknown_4c_ = false;
+            choiceConfirmed_4c_ = false;
         return true;
     }
     else
     {
-        unknown_4c_ = false;
-        unknown_4e_ = false;
+        choiceConfirmed_4c_ = false;
+        choiceHighlighted_4e_ = false;
         return false;
     }
 }
 
-void TouchGridMenu::ChangeSelectionExternal(int selection)
+void TouchGridMenu::SetCurrentElementAndRemoveHighlight(int selection)
 {
     if (selection < 0)
         return;
@@ -148,9 +148,9 @@ void TouchGridMenu::ChangeSelectionExternal(int selection)
     SetCurrentElementIndex(selection);
 }
 
-int TouchGridMenu::GetSelectedElementIndex() const
+int TouchGridMenu::GetHighlightedElement() const
 {
-    if (!unknown_4e_)
+    if (!choiceHighlighted_4e_)
         return -1;
     return GetCurrentElementIndex();
 }
@@ -158,7 +158,7 @@ int TouchGridMenu::GetSelectedElementIndex() const
 bool TouchGridMenu::IsSelectionConfirmed() const
 {
     bool confirmed = false;
-    if (g_touchInput.pressed_ && unknown_4e_ == 1 && unknown_4c_)
+    if (g_touchInput.pressed_ && choiceHighlighted_4e_ == 1 && choiceConfirmed_4c_)
         confirmed = true;
     return confirmed;
 }
@@ -207,11 +207,11 @@ int TouchGridMenu::ProcessClick(int touchX, int touchY)
             *pInnerIndex_2c_ = innerCoord;
             *pOuterIndex_28_ = outerCoord;
 
-            int selectedElement = GetSelectedElementIndex();
-            if (numElements_0_ <= selectedElement)
-                selectedElement = -1;
-            ChangeSelectionExternal(selectedElement);
-            return selectedElement;
+            int highlight = GetHighlightedElement();
+            if (numElements_0_ <= highlight)
+                highlight = -1;
+            SetCurrentElementAndRemoveHighlight(highlight);
+            return highlight;
         }
     }
 
@@ -229,9 +229,9 @@ bool TouchGridMenu::TestClick()
     return false;
 }
 
-void KeyInputGridMenu::Initialize()
+void KeyInputGridMenu::Reset()
 {
-    BasicGridMenu::Reset();
+    this->BasicGridMenu::Reset();
     changeAmount_30_ = 0;
     currentKey_34_ = 0;
     changingY_36_ = false;
@@ -484,9 +484,9 @@ void KeyInputGridMenu::GetCurrentPageElementRange(int* outStart, int* outEnd) co
 void DualInputGridMenu::Reset()
 {
     touchInput_4_.Reset();
-    keyInput_54_.Initialize();
-    unknown_94_ = 0;
-    unknown_95_ = 0;
+    keyInput_54_.Reset();
+    touchInputEnabled_94_ = false;
+    keyInputEnabled_95_ = false;
 }
 
 void DualInputGridMenu::Destroy()
@@ -497,9 +497,9 @@ void DualInputGridMenu::Destroy()
 int DualInputGridMenu::GetSelectedElementIndex() const
 {
     int idx = -1;
-    if (unknown_94_ && touchInput_4_.unknown_4c_)
-        idx = touchInput_4_.GetSelectedElementIndex();
-    if (!unknown_95_)
+    if (touchInputEnabled_94_ && touchInput_4_.choiceConfirmed_4c_)
+        idx = touchInput_4_.GetHighlightedElement();
+    if (!keyInputEnabled_95_)
         return idx;
 
     idx = keyInput_54_.GetCurrentElementIndex();
@@ -510,28 +510,28 @@ int DualInputGridMenu::Update(int numTicks)
 {
     int outcome = 0;
     int highlight = touchInput_4_.highlightedElement_30_;
-    if (unknown_94_ && TestClick())
+    if (touchInputEnabled_94_ && TestClick())
     {
-        keyInput_54_.SetCurrentElementIndex(touchInput_4_.GetSelectedElementIndex());
+        keyInput_54_.SetCurrentElementIndex(touchInput_4_.GetHighlightedElement());
         keyInput_54_.CancelInput();
         touchInput_4_.ClearFlags();
         outcome = 1;
     }
-    else if (unknown_94_ && touchInput_4_.Update(numTicks))
+    else if (touchInputEnabled_94_ && touchInput_4_.Update(numTicks))
     {
-        int newHighlight = touchInput_4_.GetSelectedElementIndex();
+        int newHighlight = touchInput_4_.GetHighlightedElement();
         if (highlight != newHighlight)
             outcome = 2;
         keyInput_54_.SetCurrentElementIndex(newHighlight);
         keyInput_54_.CancelInput();
     }
-    else if (unknown_95_)
+    else if (keyInputEnabled_95_)
     {
         int prevKeySelection = keyInput_54_.GetCurrentElementIndex();
         if (keyInput_54_.Update(numTicks) && prevKeySelection != keyInput_54_.GetCurrentElementIndex())
         {
             outcome = 1;
-            touchInput_4_.ChangeSelectionExternal(keyInput_54_.GetCurrentElementIndex());
+            touchInput_4_.SetCurrentElementAndRemoveHighlight(keyInput_54_.GetCurrentElementIndex());
             touchInput_4_.highlightedElement_30_ = -1;
             touchInput_4_.ClearFlags();
         }
@@ -543,7 +543,7 @@ int DualInputGridMenu::Update(int numTicks)
 bool DualInputGridMenu::TestClick()
 {
     bool clicked = false;
-    if (unknown_94_)
+    if (touchInputEnabled_94_)
         clicked = touchInput_4_.TestClick();
     return clicked;
 }
@@ -551,9 +551,9 @@ bool DualInputGridMenu::TestClick()
 int DualInputGridMenu::GetPageCount() const
 {
     int count = 0;
-    if (unknown_94_ && touchInput_4_.unknown_4c_)
+    if (touchInputEnabled_94_ && touchInput_4_.choiceConfirmed_4c_)
         count = touchInput_4_.numPages_4_;
-    if (unknown_95_)
+    if (keyInputEnabled_95_)
         count = keyInput_54_.numPages_4_;
     return count;
 }
@@ -561,9 +561,9 @@ int DualInputGridMenu::GetPageCount() const
 int DualInputGridMenu::GetCurrentPage() const
 {
     int current = 0;
-    if (unknown_94_ && touchInput_4_.unknown_4c_)
+    if (touchInputEnabled_94_ && touchInput_4_.choiceConfirmed_4c_)
         current = touchInput_4_.currentPage_14_;
-    if (unknown_95_)
+    if (keyInputEnabled_95_)
         current = keyInput_54_.currentPage_14_;
     return current;
 }

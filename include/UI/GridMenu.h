@@ -3,6 +3,7 @@
 #include "../Input/Input.h"
 #include <globaldefs.h>
 
+// sizeof == 0x30. Not responsible for any rendering
 class BasicGridMenu
 {
 public:
@@ -28,25 +29,21 @@ public:
     int* pInnerIndex_2c_;
 
 public:
-    // usa: func_0205ba2c
     void Reset();
-    // usa: func_0205ba68
     void SetSize(int w, int h, unsigned char elementOrdering);
 
-    // usa: func_0205bacc
     void SetElementCount(int to);
-    // usa: func_0205bafc
     int GetElementCount() const;
 
-    // usa: func_0205bb04
     void SetCurrentElementIndex(int idx);
-    // usa: func_0205bb84
     int GetCurrentElementIndex() const;
 };
 
+// sizeof == 0x50. Not responsible for any rendering
 class TouchGridMenu : public BasicGridMenu
 {
 public:
+    // the element that will show up green
     int highlightedElement_30_;
     int numClickableElements_34_;
     short originX_38_;
@@ -55,48 +52,44 @@ public:
     short* elementYValues_40_;
     short* elementWidths_44_;
     short* elementHeights_48_;
-    bool unknown_4c_;
+    bool choiceConfirmed_4c_;
     bool unknown_4d_;
-    bool unknown_4e_;
+    bool choiceHighlighted_4e_;
     char pad_4f[1];
 
 public:
-    // usa: func_0205bbcc
     void Reset();
 
-    // usa: func_0205bc10
     void ClearFlags();
-
-    // usa: func_0205bc24
     void SetHighlight(int);
 
-    // usa: func_0205bc2c
     // Returns true if an element has just been clicked
     bool Update(int numTicks);
-    // usa: func_0205bcdc
-    void ChangeSelectionExternal(int selection);
+    void SetCurrentElementAndRemoveHighlight(int selection);
 
-    // usa: func_0205bd04
-    int GetSelectedElementIndex() const;
-    // usa: func_0205bd20
+    // returns -1 if no element is highlighted (green)
+    int GetHighlightedElement() const;
     bool IsSelectionConfirmed() const;
 
-    // usa: func_0205bd58
+    // pass an array of each element's x-value, an array of each element's y-value, ... 
     void SetElementBounds(int num, short* x, short* y, short* w, short* h);
 
-    // usa: func_0205bc2c
+private:
     // returns the ID of the clicked element (-1 if none)
     int ProcessClick(int touchX, int touchY);
 
-    // usa: func_0205bea0
+public:
     // returns true if an element has been clicked this frame,
     // doesn't store the selected element
     bool TestClick();
 };
 
+// sizeof == 0x40. Not responsible for any rendering
 class KeyInputGridMenu : public BasicGridMenu
 {
 public:
+    // how much to change the relevant coordinate by (+1 when pressing/holding
+    // right or down, -1 for left or up)
     int changeAmount_30_;
     unsigned short currentKey_34_;
     bool changingY_36_;
@@ -110,7 +103,7 @@ public:
     char pad_3e[2];
 
 public:
-    void Initialize();
+    void Reset();
     void CancelInput();
     // returns true if the selection changed
     bool Update(int numTicks);
@@ -119,15 +112,20 @@ public:
     void GetCurrentPageElementRange(int* outStart, int* outEnd) const;
 };
 
-// sizeof == 0x98
+// sizeof == 0x98. Not responsible for any rendering
+// TouchGridMenu & KeyInputGridMenu both being derived from the same base class
+// makes this a bit of a mess, lots of duplicated fields
 class DualInputGridMenu
 {
 public:
     char unk_0[4];
     TouchGridMenu touchInput_4_;
     KeyInputGridMenu keyInput_54_;
-    unsigned char unknown_94_;
-    unsigned char unknown_95_;
+    bool touchInputEnabled_94_;
+    // generally used to prevent key input, but if you manually switch it
+    // off you lose touch input too. probably just a bug (which never
+    // comes up naturally bc key input is always enabled)?
+    bool keyInputEnabled_95_;
     char pad_96[2];
 
 public:
@@ -136,6 +134,8 @@ public:
 
     int GetSelectedElementIndex() const;
 
+    // returns 1 = received key input, 2 = received touch input to highlight,
+    // 0 otherwise. Returns 0 for confirming touch input
     int Update(int numTicks);
     bool TestClick();
     int GetPageCount() const;

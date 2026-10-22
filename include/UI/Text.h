@@ -378,7 +378,7 @@ public:
     unsigned char autoRemainingTime_195f_;
     char pageTValue_1960_; // seems to be time until dialogue advances automatically?
     char unk_1961[1];
-    char unknown_1962_;
+    unsigned char unknown_1962_;
     char unk_1963[1];
     ClipWindow windows_[2];
     char unknown_19ac_;
@@ -412,7 +412,7 @@ public:
     char unknown_19c8_;
     char unknown_19c9_;
     char unknown_19ca_;
-    char unknown_19cb_;
+    unsigned char unknown_19cb_;
     unsigned char unknown_19cc_;
     unsigned char unknown_19cd_;
     bool unknown_19ce_;

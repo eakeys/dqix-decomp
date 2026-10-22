@@ -8,9 +8,16 @@
 #include <globaldefs.h>
 
 extern unsigned int data_021077fc; // palette VRAM offset for glyphs
+
+struct TileMapIndexData
+{
+    unsigned short backgroundIndexBuffer[0x400];
+    unsigned short textBorderIndexBuffer[0x400];
+};
+
 struct Struct_02107800
 {
-    char unk_0[4];
+    TileMapIndexData* tileMapIndices;
     unsigned char* windowBorderTiles;
     char unk_8[4];
     char* secondaryScratchBuffer;
@@ -73,8 +80,12 @@ extern char data_02108760[];
 
 extern "C"
 {
+    void func_02042af4(TextManager*, void*, int);
     void func_02042b98(TextManager*, int, int, int, int);
     void func_02042fcc(TextBox*);
+    void func_02043040(TextManager*);
+    void func_02043124(TextManager*);
+    void func_020430b0(TextManager*);
     void func_0204394c(void*);
     void func_02044c74(TextManager*, UIElement*);
     void func_02044d0c();
@@ -89,6 +100,8 @@ extern "C"
     void func_0206b804(TextManager*, int*, int*);
 
     void func_0207df50(void*);
+    void func_0207df90(void*);
+    void func_0207dfac(void*);
 
     // alternative strlen
     int func_020d2ff0(const char*);
@@ -816,13 +829,12 @@ void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* boun
     }
 }
 
-// commenting this out for now to go investigate the substruct at 0x90
-/*void TextManager::RefreshGraphics(bool arg)
+void TextManager::RefreshGraphics(bool arg)
 {
     if (unknown_19cc_ != 0)
     {
-        int offX, offY;
-        func_0206b804(this, &offX, &offY);
+        int shakeX, shakeY;
+        GetBoxShakeOffset(&shakeX, &shakeY);
         func_02044c74(this, mainUIElement_34_);
 
         UIElement* ui = mainUIElement_34_;
@@ -833,7 +845,7 @@ void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* boun
             unknown_19cc_ = 0;
             func_02066cf0(this, 1);
             unknown_19cc_ = 1;
-            if (unknown_19c0_ != 0)
+            if (maybeBoxShaking_19c0_)
                 unknown_40_ = 0;
 
             TextBoxBounds mainBoxBounds, speakerBoxBounds, optionBoxBounds;
@@ -846,7 +858,7 @@ void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* boun
                 if (showWindow_19b1_)
                 {
                     func_02042b98(this, 2, 116, 252, 74);
-                    mainBoxBounds.SetBounds(offX + 2, offY + 116, 252, 74);
+                    mainBoxBounds.SetBounds(shakeX + 2, shakeY + 116, 252, 74);
                     DrawTextBoxBorder2D(mainUIElement_34_, &mainBoxBounds);
                     mainBoxBounds.SetBounds(2, 116, 252, 74);
                 }
@@ -856,34 +868,160 @@ void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* boun
                     Substruct_19e0* substruct = &substruct_19e0_;
                     substruct->pCurrentBox = &speakerTextBox_930_;
                     // fix this with, most likely, an inline call
-                    if (substruct->pCurrentBox != NULL && substruct->pCurrentBox->unknown_8 == 2)
+                    bool speakerBoxReady = (substruct->pCurrentBox != NULL) ? (substruct->pCurrentBox->unknown_8 == 2) : false;
+                    if (speakerBoxReady)
                     {
                         short boxX, boxY, boxW, boxH;
                         if (substruct->pCurrentBox != NULL)
                         {
-                            boxX = substruct->pCurrentBox->unknown_0;
-                            boxY = substruct->pCurrentBox->unknown_2;
+                            boxX = substruct->pCurrentBox->x;
+                            boxY = substruct->pCurrentBox->y;
                         }
                         if (substruct->pCurrentBox != NULL)
                         {
                             boxW = substruct->pCurrentBox->width;
                             boxH = substruct->pCurrentBox->height;
                         }
-                        speakerBoxBounds.SetBounds(boxX + offX, boxY + offY, boxW, boxH);
+                        speakerBoxBounds.SetBounds(boxX + shakeX, boxY + shakeY, boxW, boxH);
                         DrawTextBoxBorder2D(mainUIElement_34_, &speakerBoxBounds);
                         speakerBoxBounds.SetBounds(boxX, boxY, boxW, boxH);
                     }
                     substruct->pCurrentBox = &mainTextBox_914_;
                 }
 
-                if (pauseType_9a0_ == 6 && unknown_19ba_ != 0 && substruct_90_[0x233] != 0)
+                if (pauseType_9a0_ == 6 && unknown_19ba_ != 0 && dialogueOptions_90_.unknown_233_ != 0)
                 {
-                    
+                    optionBoxBounds.SetBounds(dialogueOptions_90_.textBox_b4_.x,
+                        dialogueOptions_90_.textBox_b4_.y,
+                        dialogueOptions_90_.textBox_b4_.width,
+                        dialogueOptions_90_.textBox_b4_.height);
+                    DrawTextBoxBorder2D(mainUIElement_34_, &optionBoxBounds);
                 }
             }
+
+            UIElement* elt = mainUIElement_34_;
+            if (elt != NULL)
+            {
+                short i;
+                short tileX = elt->leftTile_ac_;
+                short tileY = elt->topTile_ae_;
+                short numTilesX = elt->numTilesX_a8_;
+                int vramOffset = (tileX + 32 * tileY) * 32;
+                const unsigned char* source;
+                short numTilesY = elt->numTilesY_aa_;
+                source = elt->pixelBuffer_8_;
+                for (i = 0; i < numTilesY; i++)
+                {
+                    int rowSize = numTilesX * 32;
+                    StageMemoryToVRAM(VRAMSubregion_MainBG3Character, source, vramOffset, rowSize, true, false);
+                    source += rowSize;
+                    vramOffset += 32 * 32;
+                }
+            }
+
+            int oldShakeX = unknown_94c_;
+            int oldShakeY = unknown_950_;
+            BG2OFS = ((-oldShakeX) & 0x1ff) | (((-oldShakeY) << 16) & 0x1ff0000);
+            unknown_94c_ = shakeX;
+            unknown_950_ = shakeY;
+
+            if (pauseType_9a0_ != 1 && pauseType_9a0_ != 0)
+            {
+                memset(data_02107800.tileMapIndices->backgroundIndexBuffer, 0, 0x800);
+                if (((unknown_998_ != 0 && showWindow_19b1_) || unknown_19cb_))
+                {
+                    if (showWindow_19b1_)
+                    {
+                        unsigned short* windowTiles = data_02107800.tileMapIndices->backgroundIndexBuffer;
+                        DrawTextBoxBackground(windowTiles, &mainBoxBounds, 0);
+                        DrawTextBoxBackground(windowTiles, &speakerBoxBounds, 1);
+                        DrawTextBoxBackground(windowTiles, &optionBoxBounds, 2);
+                        StageMemoryToVRAM(VRAMSubregion_MainBG2Screen, windowTiles, 0, 0x800, true, false);
+                    }
+                }
+
+                if (!showWindow_19b1_)
+                    StageMemoryToVRAM(VRAMSubregion_MainBG2Screen,
+                        data_02107800.tileMapIndices->backgroundIndexBuffer, 0,
+                        sizeof(data_02107800.tileMapIndices->backgroundIndexBuffer),
+                        true, false);
+                
+                if (unknown_74_ == unknown_78_ || unknown_998_ == 0)
+                {
+                    TileMapIndexData* indexData = data_02107800.tileMapIndices;
+                    for (unsigned short i = 0; i < 0x100; i++)
+                        indexData->textBorderIndexBuffer[i] = 0;
+                    for (unsigned short i = 0x100; i < 0x300; i++)
+                        indexData->textBorderIndexBuffer[i] = i;
+                    StageMemoryToVRAM(VRAMSubregion_MainBG3Screen, indexData->textBorderIndexBuffer, 
+                        0, sizeof(indexData->textBorderIndexBuffer), true, false);
+                }
+            }
+            // switch off BG1 display, switch the others on
+            DISPCNT = (DISPCNT & ~0x1f00) | 0x1d00;
+        }
+
+        FreeVRAMStagingMemory(mainUIElement_34_->pixelBuffer_8_);
+
+        if (unknown_998_ == 0)
+        {
+            func_02043040(this);
+            func_02043124(this);
+            func_020430b0(this);
         }
     }
-}*/
+
+    if (unknown_19ce_ && unknown_44_ == 0)
+        func_0204394c(unknown_1e28_);
+
+    for (int i = 0; i < 2; i++)
+        windows_[i].SetEnabled(false);
+
+    if (arg && unknown_998_ == 0)
+        return;
+
+    if (unknown_1e28_ != NULL)
+    {
+        RenderGlyph* rglyph;
+        for (int i = 0; i < 0x80; i++)
+        {
+            if (glyphRefcounts_17b8_[i] == 0)
+                continue;
+            rglyph = &glyphs_[i];
+            if (!rglyph->unk_16_low)
+                continue;
+            if (unknown_19cc_ != 0 || unknown_19ce_)
+                rglyph->unk_16_low = false;
+            else
+            {
+                func_0207df90(unknown_1e28_);
+                rglyph->UploadToVRAM();
+                func_0207dfac(unknown_1e28_);
+            }
+            func_02042af4(this, &substruct_2cc_, rglyph->unknown_8);
+        }
+    }
+
+    if (mainTextBox_914_.unknown_8 >= 2)
+    {
+        windows_[0].SetBoundsXYWH(4, 118, 248, 70);
+        if (unknown_1962_ != 0)
+            windows_[0].SetEnabled(true);
+    }
+
+    if (dialogueOptions_90_.textBox_b4_.unknown_8 >= 2)
+    {
+        windows_[1].SetBoundsXYWH(dialogueOptions_90_.textBox_b4_.x + 2,
+            dialogueOptions_90_.textBox_b4_.y + 2,
+            dialogueOptions_90_.textBox_b4_.width - 4,
+            dialogueOptions_90_.textBox_b4_.height - 4);
+        if (unknown_1962_ != 0)
+            windows_[1].SetEnabled(true);
+    }
+
+    for (int i = 0; i < 2; i++)
+        windows_[i].Apply();
+}
 
 void TextBoxBounds::Clear()
 {

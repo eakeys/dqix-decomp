@@ -65,6 +65,7 @@ LD_FLAGS = " ".join([
     "-map closure,unused",  # Generate map file
     "-msgstyle gcc",        # Use GCC-like messages (some IDEs will make file names clickable)
     "-dead",                # Don't allow dead code
+    "-sym on",              # link-time debug info for melonDS
     active_function_name    # fix issue with overlay 30 being excluded by the previous command
 ])
 DSD_OBJDIFF_ARGS = " ".join([

@@ -17,5 +17,5 @@ struct TextBox
     unsigned short color;
     char pad_1a[2];
 
-    void Initialize();
+    void Reset();
 };

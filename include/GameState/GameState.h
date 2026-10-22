@@ -65,7 +65,9 @@ public:
     unsigned char* treasureMapLanguageData_;
     GrottoStruct grottoInfo_;
 
-    char unk_6fc0[0x7ff4 - 0x6fc0];
+    char unk_6fc0[0x7f58 - 0x6fc0];
+    short unknown_7f58_; // related to items in some way
+    char unk_7f5a[0xf4 - 0x58];
 
 public:
     // --- GameStateInstance.cpp ---

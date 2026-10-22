@@ -94,3 +94,5 @@
 #define SQRT_PARAM_64 (*(volatile unsigned long long*)0x040002b8)
 #define SQRT_PARAM_LOW (*(volatile unsigned int*)0x040002b8)
 #define SQRT_PARAM_HIGH (*(volatile unsigned int*)0x040002bc)
+
+#define POWCNT (*(volatile unsigned short*)0x04000304)

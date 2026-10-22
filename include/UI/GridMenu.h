@@ -69,7 +69,7 @@ public:
 
     // returns -1 if no element is highlighted (green)
     int GetHighlightedElement() const;
-    bool IsSelectionConfirmed() const;
+    bool IsSelectionConfirmed(int unused) const;
 
     // pass an array of each element's x-value, an array of each element's y-value, ... 
     void SetElementBounds(int num, short* x, short* y, short* w, short* h);

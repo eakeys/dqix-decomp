@@ -191,6 +191,7 @@ const unsigned char* GetWindowBorderTile(int id);
 // returns a pointer to the '>' closing all open tags. (i.e. add 1 to go past
 // the tag entirely)
 char* GetTextTagEnd(char*);
+inline const char* GetTextTagEnd(const char* x) { return GetTextTagEnd(const_cast<char*>(x)); }
 // usa: func_020424e4
 int GetNextFontGlyphIndex(const char* tag, int fontType);
 // usa: func_0204254c
@@ -255,7 +256,7 @@ public:
     char unknown_31_;
     char pad_32[2];
     UIElement* mainUIElement_34_;
-    int unknown_38_;
+    void* unknown_38_;
     int unknown_3c_;
     int unknown_40_;
     int unknown_44_;
@@ -312,12 +313,13 @@ public:
     char unk_913[1];
     TextBox mainTextBox_914_; // func_02042fcc 
     TextBox speakerTextBox_930_;
-    char unk_94c[8];
+    int unknown_94c_;
+    int unknown_950_;
     int unknown_954_;
     int unknown_958_;
     char substructOrArray_95c_[0x20];
     char substructOrArray_97c_[0x10];
-    char unk_98c[0x990 - 0x98c];
+    int unknown_98c_;
     int centerX_990_;
     int unknown_994_;
     int unknown_998_;
@@ -326,7 +328,7 @@ public:
     // 0 = waiting for A (no cursor),
     // 1 = waiting for A (with cursor),
     // 2 = similar to above, used by zoom,
-    // 3 = ?,
+    // 3 = continuation of message?
     // 4 = auto-advance (<AUTO=...>),
     // 5 = ?,
     // 6 = awaiting yes/no or uke/yame choice
@@ -364,7 +366,8 @@ public:
     char tagSTArray1_194e_[4];
     char tagSTArray2_1952_[4];
     char tagSTArrayIndex_1956_;
-    char unk_1957[2];
+    char unknown_1957_;
+    char unknown_1958_;
     char maybeSoundDuration_1959_;
     char unknown_195a_;
     unsigned char unknown_195b_;
@@ -392,28 +395,32 @@ public:
     char maybeDoesSoundPlay_19b7_;
     char cenTag_19b8_;
     char unknown_19b9_;
-    char unknown_19ba_;
+    unsigned char unknown_19ba_;
     char skipTag_19bb_;
     char unknown_19bc_;
-    char unk_19bd[1];
+    char unknown_19bd_;
     char unknown_19be_;
     char unknown_19bf_;
-    unsigned char unknown_19c0_;
-    char unk_19c1[1];
+    bool maybeBoxShaking_19c0_;
+    char unknown_19c1_;
     unsigned char speakerDifference_19c2_;
     unsigned char unknown_19c3_;
     unsigned char unknown_19c4_;
-    char unk_19c5[1];
+    char unknown_19c5_;
     bool recoveryParam_19c6_;
     bool recoveryParam_19c7_; 
-    char unk_19c8[3];
+    char unknown_19c8_;
+    char unknown_19c9_;
+    char unknown_19ca_;
     char unknown_19cb_;
     unsigned char unknown_19cc_;
     unsigned char unknown_19cd_;
-    char unknown_19ce_;
+    bool unknown_19ce_;
     char unknown_19cf_;
     unsigned char unknown_19d0_;
-    char unk_19d1[3];
+    char unknown_19d1_;
+    char unknown_19d2_;
+    char unknown_19d3_;
     char unknown_19d4_;
     // Q: does this count for a group of enemies too?
     // I couldn't find any uses of the <IF_TARGET_PARTY> tag anywhere...
@@ -455,6 +462,11 @@ public:
     // identical to func_0206ac6c, might take unsigned short* instead?
     bool IsNextCharacterControlAlt(const void* text) const;
 
+    // usa: func_0204500c
+    // graphicsMode = 0 to use the 3D rendering engine, = 1 to use
+    // the 2D engine
+    void ShowMessage(const char* msg, int graphicsMode, int width);
+
     // usa: func_02045c00
     int GetGlyphIndex(const FontIndexFile::Glyph* glyph);
     // usa: func_02045cac
@@ -474,6 +486,9 @@ public:
     // usa: func_020462d0
     void ReleaseText16Bit(unsigned short* words, int len);
 
+    // usa: func_020652d0
+    void ShowBinaryOptionDialogue(int defaultOption, const char* optionA, const char* optionB);
+
     // usa: func_020654b8
     void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
 
@@ -483,6 +498,9 @@ public:
     // usa: func_02066a6c
     // The bool probably has some deeper meaning
     void DrawSpeakerName(bool noOffsets);
+
+    // usa: func_020676e0
+    void CheckAndHandleDialogueOption();
 
     // usa: func_020678bc
     // 0 = yes, 1 = no, -1 = undecided, -2 = cancelled (no)
@@ -497,7 +515,7 @@ public:
     bool IsNextCharacterControlOrJump(const void* input) const;
 
     // usa: func_0206831c
-    void SubstituteValueTags(char* input, char* output);
+    void SubstituteValueTags(const char* input, char* output);
     // substitute any character that is not: 1) within a <tag>; 2) a special character
     // such as ' ', '/' or '\n', or the literal R"\n"; or 3) a recognized tag
     // of the font; with the tag "< >"
@@ -610,7 +628,7 @@ public:
     // func_02069f4c: "YAME>"
     // func_02069f74: "END>"
     // func_02069f9c: "CLOSE>"
-    // func_02069fc4: "SHAKE>" // shakes the text box (see e.g. heavy hatchet quest)
+    // func_02069fc4: "SHAKE>" // shakes the text box (see e.g. heavy hatchet quest, aquila gets kafrizzled)
     void SubstituteControlTags(char* input, char* output);
     
     // Handles tags like <EXC> (play exclamation/alert), <COLOR=r,g,b> (presumably
@@ -653,6 +671,12 @@ public:
     // usa: func_0206b61c
     // bit speculative as I haven't seen this called anywhere
     void AdvanceLine();
+
+    // usa: func_0206b7b0
+    void PositionOptionDialogue();
+
+    // usa: func_0206b804
+    void GetBoxShakeOffset(int* outX, int* outY);
 
     // usa: func_0206b974
     void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth, int margin, bool arg7, unsigned char fontType);

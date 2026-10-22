@@ -28,3 +28,9 @@
 #define BGCNT_MASK_SCREEN_BASE_2K 0x1f00
 #define BGCNT_MASK_BG01_EXTENDED_PALETTE 0x2000
 #define BGCNT_MASK_SCREEN_SIZE 0xc000
+
+// returns 0 for touch screen, 1 for top screen
+inline int GetCurrentMainScreen()
+{
+    return (POWCNT & 0x8000) >> 15;
+}

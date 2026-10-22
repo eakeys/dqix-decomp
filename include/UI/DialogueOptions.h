@@ -26,12 +26,12 @@ public:
     TextBox textBox_b4_;
     int textWidth_d0_;
     int unknown_d4_;
-    int unknown_d8_;
-    int unknown_dc_;
-    char substructOrArray_e0_[16];
-    char substructOrArray_f0_[16];
-    short widths_100_[8];
-    short unknownArray_110_[8];
+    int verticalSpacing_d8_;
+    int numTouchRegions_dc_;
+    short touchRegionX_e0_[8];
+    short touchRegionY_f0_[8];
+    short touchRegionWidth_100_[8];
+    short touchRegionHeight_110_[8];
     unsigned short textWords_120_[128];
     unsigned short optionOffsets_220_[8];
     unsigned short totalWords_230_;
@@ -47,4 +47,12 @@ public:
 
     // usa: func_0205cb74
     void AddOption(const char* text);
+    // usa: func_0205cc50
+    void ConfigureTouchRegions(bool alignWidth, int widthAdjust);
+    // usa: func_0205cd28
+    void ShowBackground3D();
+
+    // usa: func_0205cecc
+    // returns -1 if no selection made
+    int GetTouchInputSelection() const;
 };

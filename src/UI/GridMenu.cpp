@@ -152,7 +152,7 @@ int TouchGridMenu::GetHighlightedElement() const
     return GetCurrentElementIndex();
 }
 
-bool TouchGridMenu::IsSelectionConfirmed() const
+bool TouchGridMenu::IsSelectionConfirmed(int) const
 {
     bool confirmed = false;
     if (g_touchInput.pressed_ && choiceHighlighted_4e_ == 1 && choiceConfirmed_4c_)

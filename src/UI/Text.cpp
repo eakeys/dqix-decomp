@@ -4,6 +4,7 @@
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"
 #include "Graphics/VRAMStaging.h"
+#include "GameState/GameState.h"
 #include <globaldefs.h>
 
 extern unsigned int data_021077fc; // palette VRAM offset for glyphs
@@ -68,18 +69,39 @@ extern char data_020f0061[]; // "data/pack_lv5/fd_%s.bin"
 extern char data_020f0079[]; // "s7"
 extern char data_020f007c[]; // "me"
 
+extern char data_02108760[];
+
 extern "C"
 {
     void func_02042b98(TextManager*, int, int, int, int);
+    void func_02042fcc(TextBox*);
+    void func_0204394c(void*);
     void func_02044c74(TextManager*, UIElement*);
+    void func_02044d0c();
+    void func_02044f3c(TextManager*, const char*, int);
+    void func_02045824(TextManager*, int, int);
+
+    void func_0205e944(void*, int);
 
     void func_02066cf0(TextManager*, int); // maybe bool
 
     // get offsets among (-3, 0), (0, 0), (0, -2), (0, 0)
     void func_0206b804(TextManager*, int*, int*);
 
+    void func_0207df50(void*);
+
     // alternative strlen
     int func_020d2ff0(const char*);
+    
+    // populate noun from item ID?
+    void func_020dcf7c(short, Noun*);
+
+    unsigned char* func_020e1b24(void*);
+    void func_020e1b2c(void*, int);
+    bool func_020e1f1c(void*);
+    void func_020e2110(void*);
+    void func_020e23f4(void*);
+    void func_020e2478(void*);
 }
 
 static inline void WriteVertex16(unsigned short x, fix32_t y, unsigned short z)
@@ -696,7 +718,7 @@ void TextManager::SetMainTextBoxActive()
     SetActiveTextBox(&mainTextBox_914_);
 }
 
-void TextBox::Initialize()
+void TextBox::Reset()
 {
     x = y = width = height = 0;
     unknown_8 = 0;

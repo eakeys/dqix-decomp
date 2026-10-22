@@ -2,6 +2,7 @@
 #include "std_library_functions.h"
 #include "Util/StringTests.h"
 #include "GameState/GameState.h"
+#include "NitroSDK/Graphics.h"
 #include <globaldefs.h>
 
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
@@ -15,6 +16,8 @@ extern "C"
 
     // get language
     int func_0200fb08(GameState*);
+    GameResources* func_0200fb8c(GameState*);
+    void* func_020100f8(GameState*);
     // get party data struct?
     unsigned char* func_02010828(GameState*);
     // get total number of player characters, including companions
@@ -35,11 +38,15 @@ extern "C"
     void func_020457e8(TextManager*, int);
 
     int func_020546a8(PartyMember*);
+    void func_0205c77c(void*, int);
     void func_0205c840(void*);
+    void func_0205c904(DialogueOptionManager*);
+    void func_0205cc50(DialogueOptionManager*, int, int);
+    void func_0205cd94(DialogueOptionManager*);
+    bool func_0205cde8(DialogueOptionManager*);
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
 
-    void func_0206b804(void*, int*, int*);
     void func_02066cc0(void*, short*, short*);
 
     // probably get quest manager instance or something?
@@ -64,10 +71,14 @@ struct Struct_020e7e04
 {
     char unk_0[2];
     unsigned short newlineWord;
-    char unk_4[0x20];
+    char unk_4[0x8];
+    char shakeXValues[12];
+    char shakeYValues[12];
     short array_24[2];
 } extern const data_020e7e04;
 
+extern const char data_020e7e10[12];
+extern const char data_020e7e1c[12];
 extern const char data_020e7e30[5];
 extern const char data_020e7e35[7];
 extern const short data_020e7e44[];
@@ -152,6 +163,33 @@ extern char data_020f098c[]; // "[-]"
 extern char data_020f0990[]; // "-"
 extern char data_020f0992[]; // "\n" (the special character, not backslash and an n)
 
+void ShowBinaryOptionDialogue(DialogueOptionManager* dialogue, int defaultOption, const char* optionA, const char* optionB)
+{
+    dialogue->Reset();
+    dialogue->gridMenu_1c_.touchInputEnabled_94_ = dialogue->gridMenu_1c_.keyInputEnabled_95_ = true;
+    dialogue->gridMenu_1c_.touchInput_4_.SetSize(1, 2, BasicGridMenu::ElementOrdering_ColumnMajor);
+    dialogue->gridMenu_1c_.keyInput_54_.SetSize(1, 2, BasicGridMenu::ElementOrdering_ColumnMajor);
+    dialogue->gridMenu_1c_.touchInput_4_.SetElementCount(2);
+    dialogue->gridMenu_1c_.keyInput_54_.SetElementCount(2);
+    dialogue->AddOption(optionA);
+    dialogue->AddOption(optionB);
+    dialogue->textBox_b4_.x = 0;
+    dialogue->textBox_b4_.y = 0;
+    dialogue->ConfigureTouchRegions(true, -4);
+    TextManager::GetInstance()->PositionOptionDialogue();
+    dialogue->ConfigureTouchRegions(true, -4);
+    dialogue->gridMenu_1c_.touchInput_4_.SetCurrentElementAndRemoveHighlight(defaultOption);
+    dialogue->gridMenu_1c_.keyInput_54_.SetCurrentElementIndex(defaultOption);
+    dialogue->unknown_234_ = true;
+    func_0205c77c(&dialogue->substruct_4_, 1);
+    dialogue->unknown_233_ = true;
+    dialogue->unknown_234_ = true;
+    func_0205c77c(&dialogue->substruct_4_, 1);
+    dialogue->ShowBackground3D();
+    if (GetCurrentMainScreen() == 1)
+        dialogue->gridMenu_1c_.touchInputEnabled_94_ = false;
+}
+
 void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x, short preShiftY, unsigned char colorIndex)
 {
     if (glyph->indexGlyph == NULL)
@@ -226,9 +264,8 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         count = unknown_1942_ & 255;
     }
     if (indices != NULL) {
-        int offsetX, offsetY;
-        
-        func_0206b804(this, &offsetX, &offsetY);
+        int shakeX, shakeY;
+        GetBoxShakeOffset(&shakeX, &shakeY);
         short x, y;
         func_02066cc0(boxHandler, &x, &y);
         y -= 19;
@@ -244,7 +281,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
             func_02042c24(boxHandler, x, y);
         else
         {
-            func_02042c24(boxHandler, (x + offsetX), (y + offsetY));
+            func_02042c24(boxHandler, x + shakeX, y + shakeY);
             func_0202f404(boxHandler, 1, 0);
         }
         short widthRounding = 8 - (speakerNameWidth_1944_ & 7);
@@ -518,7 +555,7 @@ void ProcessVALTag(const char* input, char** ppOutput, TextManager* manager, int
 typedef void(*PFNProcessVALTag)(const char*, char**, TextManager*, int);
 extern const TextProcessingCallback<PFNProcessVALTag> data_020e7e5c[];
 
-void TextManager::SubstituteValueTags(char *input, char *argOutput)
+void TextManager::SubstituteValueTags(const char *input, char *argOutput)
 {
     if (input == NULL || argOutput == NULL)
         return;
@@ -531,12 +568,12 @@ void TextManager::SubstituteValueTags(char *input, char *argOutput)
         
         if (*input == '<')
         {
-            char* tagEnd = GetTextTagEnd(input);
+            const char* tagEnd = GetTextTagEnd(input);
             if (tagEnd != NULL)
             {
                 bool processedTag = false;
                 const TextProcessingCallback<PFNProcessVALTag>* candidate;
-                char* tagInterior = input + 1;
+                const char* tagInterior = input + 1;
                 
                 for (candidate = data_020e7e5c; candidate->tag != NULL; candidate++)
                 {
@@ -2880,6 +2917,37 @@ void TextManager::AdvanceLine()
 
     unknown_74_ += wordSkip;
     unknown_78_++;
+}
+
+void TextManager::PositionOptionDialogue()
+{
+    short mainX = mainTextBox_914_.x;
+    short mainW = mainTextBox_914_.width;
+    short optionW = dialogueOptions_90_.textBox_b4_.width;
+    short optionH = dialogueOptions_90_.textBox_b4_.height;
+    short mainY = mainTextBox_914_.y;
+
+    short x = mainX + mainW - optionW;
+    if (x < 0)
+        x = 0;
+       
+    short y = mainY - optionH;
+    if (y < 0)
+        y = 0;
+    dialogueOptions_90_.textBox_b4_.x = x;
+    dialogueOptions_90_.textBox_b4_.y = y;
+}
+
+void TextManager::GetBoxShakeOffset(int *outX, int *outY)
+{
+    *outX = *outY = 0;
+    if (!maybeBoxShaking_19c0_)
+        return;
+    unknown_19cd_ = 1;
+    unknown_40_ = 0;
+    int index = unknown_195d_ & 3;
+    *outX = data_020e7e04.shakeXValues[index];
+    *outY = data_020e7e04.shakeYValues[index];
 }
 
 struct NewlineCalculationTagProcessor

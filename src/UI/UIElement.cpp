@@ -18,15 +18,6 @@ extern "C"
 
     void func_02046608(void*, unsigned char, const char*, char*, int, int, unsigned char);
 
-    // get function to load to main/SUB BG character data
-    LoadToBGCharProc func_0204a5e4(int mainOrSub, int whichBG);
-
-    void func_0204acb0(void*);
-    void func_0204acd0(void*);
-
-    void func_0204b878(UIElement::DestinationData*, UIElement::SubstructC8*,
-        short, short, short, short, short, short, unsigned short);
-
     void func_0204df9c(UIElement*, FontIndexFile::Glyph*, short x, short y, int palette, int fontIndex);
 
     // alternate strlen
@@ -102,7 +93,7 @@ void UIElement::SetElementBounds(short elementID, short x, short y, short w, sho
 void UIElement::Reset()
 {
     next_0_ = NULL;
-    destinationData_4_ = NULL;
+    layer_4_ = NULL;
     pixelBuffer_8_ = NULL;
     ClearElementBounds();
     status_9c_ = 0;
@@ -127,7 +118,7 @@ void UIElement::Reset()
     unknown_c6_ = 2;
     fontHeight_c7_ = 10;
 
-    func_0204acb0(&substruct_c8_);
+    sprite_c8_.Reset();
 
     maybePageNumbersEnabled_d8_0_ = false;
     unk_d8_bits = 0;
@@ -141,7 +132,7 @@ void UIElement::Reset()
 
 void UIElement::FullReset()
 {
-    func_0204acd0(&substruct_c8_);
+    sprite_c8_.MaybeDestroy();
     Reset();
 }
 
@@ -154,7 +145,7 @@ void UIElement::SetMargins(const char* margins)
 
 void UIElement::Allocate(SafeAllocator *allocator, void *pixelBuffer, unsigned int indexBufferSize)
 {
-    indexBuffer_d4_ = (unsigned short*)allocator->Allocate(indexBufferSize);
+    sprite_c8_.indexBuffer = (unsigned short*)allocator->Allocate(indexBufferSize);
     pixelBuffer_8_ = (unsigned char*)pixelBuffer;
 }
 
@@ -165,7 +156,7 @@ bool UIElement::IsFullyLoaded() const
 
 bool UIElement::IsIndexBufferUsable() const
 {
-    if (indexBuffer_d4_ == NULL)
+    if (sprite_c8_.indexBuffer == NULL)
         return false;
     if (status_9c_ == 0)
         return false;
@@ -219,15 +210,15 @@ void UIElement::Update(int numTicks)
 
 void UIElement::Display()
 {
-    if (destinationData_4_ == NULL)
+    if (layer_4_ == NULL)
         return;
     if (!(flags_c5_ & RendererFlags_01) || status_9c_ == 0)
         return;
     if (flags_c5_ & RendererFlags_20)
         return;
 
-    func_0204b878(destinationData_4_, &substruct_c8_,
-        0, 0, leftTile_ac_, topTile_ae_, substruct_c8_.unknown_0, unknown_c0_, borderPalette_c2_);
+    layer_4_->BlitObject(&sprite_c8_,
+        0, 0, leftTile_ac_, topTile_ae_, sprite_c8_.width, unknown_c0_, borderPalette_c2_);
 }
 
 void UIElement::FullUpdate()
@@ -239,7 +230,7 @@ void UIElement::FullUpdate()
 void UIElement::Create(const char *markup, int vramOffset, int unused,
     bool vCentering, bool expandToFit, unsigned char fontIndex)
 {
-    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL || markup == NULL)
+    if (layer_4_ == NULL || pixelBuffer_8_ == NULL || markup == NULL)
         return;
 
     ClearElementBounds();
@@ -254,7 +245,7 @@ void UIElement::Create(const char *markup, int vramOffset, int unused,
     short prepareTextReturnValue = PrepareText(processedMarkup, unused, vCentering, expandToFit, fontIndex);
     PrepareMenu(processedMarkup, prepareTextReturnValue, fontIndex);
     vramOffset_a0_ = vramOffset;
-    LoadToBGCharProc loadProc = func_0204a5e4(destinationData_4_->GetScreen(), destinationData_4_->GetBGIndex());
+    VRAMLoadProc loadProc = GetCharVRAMLoadProc(layer_4_->GetEngine(), layer_4_->GetBGIndex());
     CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
     loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
     if (flags_c5_ & RendererFlags_01)
@@ -263,9 +254,9 @@ void UIElement::Create(const char *markup, int vramOffset, int unused,
         short tilesY = numTilesY_aa_;
         short tilesX = numTilesX_a8_;
         int tileBufferLength = tilesX * tilesY * 2;
-        substruct_c8_.unknown_0 = tilesX;
-        substruct_c8_.unknown_2 = tilesY;
-        substruct_c8_.unknown_8 = tileBufferLength;
+        sprite_c8_.width = tilesX;
+        sprite_c8_.height = tilesY;
+        sprite_c8_.bufferSize = tileBufferLength;
         borderPalette_c2_ = 0;
         status_9c_ = 1;
     }
@@ -274,12 +265,12 @@ void UIElement::Create(const char *markup, int vramOffset, int unused,
         flags_c5_ |= RendererFlags_01;
         unknown_c0_ = 0;
         int tileBufferLength = numTilesX_a8_ * numTilesY_aa_ * 2;
-        memset(indexBuffer_d4_, 0, tileBufferLength);
+        memset(sprite_c8_.indexBuffer, 0, tileBufferLength);
         short tilesY = numTilesY_aa_;
         short tilesX = numTilesX_a8_;
-        substruct_c8_.unknown_0 = tilesX;
-        substruct_c8_.unknown_2 = tilesY;
-        substruct_c8_.unknown_8 = tileBufferLength;
+        sprite_c8_.width = tilesX;
+        sprite_c8_.height = tilesY;
+        sprite_c8_.bufferSize = tileBufferLength;
         borderPalette_c2_ = 0;
         status_9c_ = 1;
     }
@@ -287,7 +278,7 @@ void UIElement::Create(const char *markup, int vramOffset, int unused,
 
 void UIElement::LoadMenuPage(const char* markup, bool expandToFit, unsigned char fontIndex)
 {
-    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL || markup == NULL)
+    if (layer_4_ == NULL || pixelBuffer_8_ == NULL || markup == NULL)
         return;
 
     short tilesX = numTilesX_a8_;
@@ -316,7 +307,7 @@ void UIElement::LoadMenuPage(const char* markup, bool expandToFit, unsigned char
 
     PrepareMenu(processedMarkup, prepareTextReturnValue, fontIndex);
     RefreshPageNumber(false);
-    LoadToBGCharProc loadProc = func_0204a5e4(destinationData_4_->GetScreen(), destinationData_4_->GetBGIndex());
+    VRAMLoadProc loadProc = GetCharVRAMLoadProc(layer_4_->GetEngine(), layer_4_->GetBGIndex());
     CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
     loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
 }
@@ -1182,11 +1173,11 @@ short UIElement::PrepareText(const char *argtext, int unused, bool vCentered,
 
 void UIElement::AssignIndices()
 {
-    if (!(flags_c5_ & RendererFlags_01) || indexBuffer_d4_ == NULL)
+    if (!(flags_c5_ & RendererFlags_01) || sprite_c8_.indexBuffer == NULL)
         return;
 
     unsigned short index = vramOffset_a0_ / 32;
-    unsigned short* buffer = indexBuffer_d4_;
+    unsigned short* buffer = sprite_c8_.indexBuffer;
     for (short y = 0; y < numTilesY_aa_; y++)
     {
         for (short x = 0; x < numTilesX_a8_; x++)
@@ -1390,9 +1381,9 @@ void UIElement::DrawRoundedRectangle(short x, short y, short w, short h,
             w = numTilesX_a8_;
         if (numTilesY_aa_ < h)
             h = numTilesY_aa_;
-        substruct_c8_.unknown_0 = w;
-        substruct_c8_.unknown_2 = h;
-        substruct_c8_.unknown_8 = indexBufferLength;
+        sprite_c8_.width = w;
+        sprite_c8_.height = h;
+        sprite_c8_.bufferSize = indexBufferLength;
         memset(pixelBuffer_8_, 0, bufferSize_a4_);
         if (!noBackground)
         {
@@ -1432,12 +1423,12 @@ void UIElement::DrawRoundedRectangle(short x, short y, short w, short h,
             }
             FillRectangle2(0x10 | 0x01, left, top, right, bottom);
         }
-        memset(indexBuffer_d4_, 0, indexBufferLength);
+        memset(sprite_c8_.indexBuffer, 0, indexBufferLength);
         short numTilesX = numTilesX_a8_;
         short numTilesY = numTilesY_aa_;
-        substruct_c8_.unknown_0 = numTilesX;
-        substruct_c8_.unknown_2 = numTilesY;
-        substruct_c8_.unknown_8 = indexBufferLength;
+        sprite_c8_.width = numTilesX;
+        sprite_c8_.height = numTilesY;
+        sprite_c8_.bufferSize = indexBufferLength;
         status_9c_ = 1;
     }
 
@@ -1710,10 +1701,10 @@ void UIElement::DrawPageArrows()
 
 void UIElement::Unmap()
 {
-    DestinationData* data = destinationData_4_;
+    BGLayer* data = layer_4_;
     int bgIndex = data->GetBGIndex();
-    int screen =  data->GetScreen();
-    LoadToBGCharProc loadProc = func_0204a5e4(screen, bgIndex);
+    int screen =  data->GetEngine();
+    VRAMLoadProc loadProc = GetCharVRAMLoadProc(screen, bgIndex);
     CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
     loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
 }
@@ -1761,13 +1752,13 @@ int UIElement::TestCornerOverlapAlignment(unsigned int mask)
     
     unsigned char screen = 0;
     result = 0;
-    if (destinationData_4_ != NULL)
-        screen = destinationData_4_->screen;
+    if (layer_4_ != NULL)
+        screen = layer_4_->engine_;
     
     while (loopControl != NULL)
     {
-        if (loopControl->destinationData_4_ != NULL && destinationData_4_ != NULL &&
-            screen != loopControl->destinationData_4_->screen)
+        if (loopControl->layer_4_ != NULL && layer_4_ != NULL &&
+            screen != loopControl->layer_4_->engine_)
         {
             loopControl = loopControl->next_0_;
             continue;
@@ -1833,11 +1824,11 @@ int UIElement::TestCornerOverlapAlignment(unsigned int mask)
 
 void UIElement::DrawGrayCursor()
 {
-    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL)
+    if (layer_4_ == NULL || pixelBuffer_8_ == NULL)
         return;
     
-    int screen = destinationData_4_->GetScreen();
-    int bg = destinationData_4_->GetBGIndex();
+    int screen = layer_4_->GetEngine();
+    int bg = layer_4_->GetBGIndex();
 
     unsigned char* charBase = GetCharacterBase();
     if (charBase == NULL)
@@ -1848,15 +1839,15 @@ void UIElement::DrawGrayCursor()
     flags_c5_ |= RendererFlags_40_DrawGrayCursor;
     BlitGrayCursor(cursorX_bc_, cursorY_be_);
 
-    LoadToBGCharProc loadProc = func_0204a5e4(screen, bg);
+    VRAMLoadProc loadProc = GetCharVRAMLoadProc(screen, bg);
     CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
     loadProc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
 }
 
 unsigned char* UIElement::GetCharacterBase() const
 {
-    int screen = destinationData_4_->GetScreen();
-    int bgIndex = destinationData_4_->GetBGIndex();
+    int screen = layer_4_->GetEngine();
+    int bgIndex = layer_4_->GetBGIndex();
     unsigned char* result = NULL;
     if (screen == 0)
     {
@@ -1886,11 +1877,11 @@ void UIElement::RefreshPageNumber(bool stage)
     if (!maybePageNumbersEnabled_d8_0_ || (!pageNumberDirty_d8_1_ && stage))
         return;
 
-    if (destinationData_4_ == NULL || pixelBuffer_8_ == NULL)
+    if (layer_4_ == NULL || pixelBuffer_8_ == NULL)
         return;
 
-    int screen =  destinationData_4_->GetScreen();
-    int bgIndex = destinationData_4_->GetBGIndex();
+    int screen =  layer_4_->GetEngine();
+    int bgIndex = layer_4_->GetBGIndex();
 
     if (stage)
     {
@@ -1950,7 +1941,7 @@ void UIElement::RefreshPageNumber(bool stage)
 
     if (stage)
     {
-        LoadToBGCharProc proc = func_0204a5e4(screen, bgIndex);
+        VRAMLoadProc proc = GetCharVRAMLoadProc(screen, bgIndex);
         CleanInvalidateCacheRange(pixelBuffer_8_, bufferSize_a4_);
         proc(pixelBuffer_8_, vramOffset_a0_, bufferSize_a4_);
     }

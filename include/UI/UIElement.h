@@ -3,6 +3,7 @@
 #include "../Memory/SafeAllocator.h"
 #include "std_library_functions.h"
 #include "../Graphics/Vector.h"
+#include "../Graphics/BGLayer.h"
 
 // sizeof == 0xe0.
 // Dynamically allocated by func_020421c4.
@@ -21,20 +22,9 @@ public:
         RendererFlags_80 = 0x80
     };
 
-    // sizeof == 0x20. This is its own thing but I don't know what yet,
-    // see e.g. func_0205d594 that modifies an instance of it.
-    struct DestinationData
-    {
-        char unk_0[0x1c];
-        unsigned char screen : 4; // 0 = main, 1 = sub (why 4 bits?)
-        unsigned char bgIndex : 4; // BG0 to BG3 (why 4 bits?)
-
-        inline int GetScreen() const { return screen; }
-        inline int GetBGIndex() const { return bgIndex; }
-    };
 public:
     UIElement* next_0_;
-    DestinationData* destinationData_4_;
+    BGLayer* layer_4_;
     unsigned char* pixelBuffer_8_;
     short elementXValues_[18];
     short elementYValues_[18];
@@ -66,14 +56,7 @@ public:
     unsigned char flags_c5_;
     unsigned char unknown_c6_;
     unsigned char fontHeight_c7_;
-    struct SubstructC8
-    {
-        short unknown_0;
-        short unknown_2;
-        char unk_4[4];
-        int unknown_8;
-    } substruct_c8_;
-    unsigned short* indexBuffer_d4_;
+    BGLayer::Sprite sprite_c8_;
     unsigned char maybePageNumbersEnabled_d8_0_ : 1;
     unsigned char pageNumberDirty_d8_1_ : 1;
     unsigned char useBG_d8_2_ : 1;

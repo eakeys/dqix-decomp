@@ -4,6 +4,9 @@
 #include "Memory/SafeAllocator.h"
 #include <std_library_functions.h>
 
+VRAMLoadProc GetCharVRAMLoadProc(int engine, int bgIndex);
+VRAMLoadProc GetScreenVRAMLoadProc(int engine, int bgIndex);
+
 // sizeof == 0x20
 struct BGLayer
 {
@@ -123,4 +126,7 @@ struct BGLayer
     void UploadPaletteData(int whichPalette, int indexInPalette, const void* data, unsigned int dataLength);
 
     void SetTileInRectangle(unsigned short idx, short x, short y, short w, short h, unsigned short palette);
+
+    inline int GetEngine() const { return engine_; }
+    inline int GetBGIndex() const { return bgIndex_; }
 };

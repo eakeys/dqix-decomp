@@ -382,6 +382,10 @@ src/NitroSDK/Filesystem/CardReadManager.cpp:
     complete
     .text start:0x020d084c end:0x020d0fc4
 
+src/Util/StringTests.cpp:
+    complete
+    .text start:0x020d8550 end:0x020d8654
+
 src/Filesystem/ExtendedNitroVM.cpp:
     complete
     .text start:0x020d8714 end:0x020d8fcc
@@ -397,12 +401,8 @@ src/Resource/ResourceMutex.cpp:
 
 src/Graphics/VRAMStaging.cpp:
     complete
-    .bss start:0x0214e5e4 end:0x02153628
     .text start:0x020dc07c end:0x020dc214
-
-src/Util/StringTests.cpp:
-    complete
-    .text start:0x020d8550 end:0x020d8654
+    .bss start:0x0214e5e4 end:0x02153628
 
 src/Graphics/ClipWindow.cpp:
     complete

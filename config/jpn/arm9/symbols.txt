@@ -6149,10 +6149,11 @@ data_020e852c kind:data(any) addr:0x020e852c
 data_020e8538 kind:data(any) addr:0x020e8538
 data_020e8544 kind:data(any) addr:0x020e8544
 data_020e8550 kind:data(any) addr:0x020e8550
-data_020e855c kind:data(any) addr:0x020e855c
-data_020e8564 kind:data(any) addr:0x020e8564
-data_020e856c kind:data(any) addr:0x020e856c
-data_020e8594 kind:data(any) addr:0x020e8594
+regionLookupPalette$765 kind:data(any) addr:0x020e855c local
+regionLookupBG0Screen$777 kind:data(any) addr:0x020e8564 local
+regionLookupBG0Char$771 kind:data(any) addr:0x020e856c local
+screenDimLookup$783 kind:data(any) addr:0x020e8574 local
+screenDataSizeLookup$789 kind:data(any) addr:0x020e8594 local
 data_020e85b4 kind:data(any) addr:0x020e85b4
 data_020e85d0 kind:data(any) addr:0x020e85d0
 data_020e85d4 kind:data(any) addr:0x020e85d4

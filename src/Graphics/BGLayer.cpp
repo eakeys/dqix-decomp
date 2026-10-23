@@ -1,3 +1,5 @@
+#pragma ipa file
+
 #include "Graphics/BGLayer.h"
 #include "NitroSDK/HWRegisters.h"
 #include "Graphics/VRAMStaging.h"
@@ -5,11 +7,6 @@
 #include <globaldefs.h>
 
 #if defined(jpn)
-#define data_020e7b60 data_020e855c
-#define data_020e7b68 data_020e8564
-#define data_020e7b70 data_020e856c
-#define data_020e7b98 data_020e8594
-
 #define data_020f01b0 data_020f01d8_jpn
 #define data_020f01b8 data_020f01e0
 #define data_020f01d8 data_020f0200
@@ -21,12 +18,6 @@
 #define data_020f0242 data_020f026a
 #endif
 
-extern const VRAMSubregion data_020e7b60[];
-extern const int data_020e7b68[];
-extern const int data_020e7b70[];
-// { { 0x800, 0x1000, 0x1000, 0x2000 }, { 0x200, 0x800, 0x2000, 0x8000 } }
-extern const unsigned int data_020e7b98[2][4];
-
 extern VRAMLoadProc data_020f01b0[];
 extern VRAMLoadProc data_020f01f8[2][4];
 extern VRAMLoadProc data_020f0218[2][4];
@@ -35,14 +26,59 @@ extern char data_020f0238[]; // "CHAR"
 extern char data_020f023d[]; // "PALT"
 extern char data_020f0242[]; // "SCRN"
 
-static inline unsigned int GetScreenDataSize(int bgMode, int sizeMode)
-{
-    return data_020e7b98[bgMode][sizeMode];
-}
-
 static inline VRAMLoadProc GetPaletteVRAMLoadProc(int engine)
 {
     return data_020f01b0[engine];
+}
+
+static inline VRAMSubregion GetPaletteVRAMRegion(int engine)
+{
+    static const VRAMSubregion regionLookupPalette[] =
+    { 
+        VRAMSubregion_MainBGStandardPalette,
+        VRAMSubregion_SubBGStandardPalette
+    };
+    return regionLookupPalette[engine];
+}
+
+static inline VRAMSubregion GetCharVRAMSubregion(int engine, int bgIndex)
+{
+    static const int regionLookupBG0Char[] =
+    {
+        VRAMSubregion_MainBG0Character,
+        VRAMSubregion_SubBG0Character
+    };
+    return (VRAMSubregion)(regionLookupBG0Char[engine] + 2 * bgIndex);
+}
+
+static inline VRAMSubregion GetScreenVRAMSubregion(int engine, int bgIndex)
+{
+    static const int regionLookupBG0Screen[] =
+    {
+        VRAMSubregion_MainBG0Screen,
+        VRAMSubregion_SubBG0Screen
+    };
+    return (VRAMSubregion)(regionLookupBG0Screen[engine] + 2 * bgIndex);
+}
+
+unsigned int Unused_GetScreenDimensions(int bgMode, int sizeMode)
+{
+    static const unsigned int screenDimLookup[2][4] =
+    {
+        { 0x00200020, 0x00200040, 0x00400020, 0x00400040 },
+        { 0x00100010, 0x00200020, 0x00400040, 0x00800080 }
+    };
+    return screenDimLookup[bgMode][sizeMode];
+}
+
+static inline unsigned int GetScreenDataSize(int bgMode, int sizeMode)
+{
+    static const unsigned int screenDataSizeLookup[2][4] =
+    {
+        { 0x800, 0x1000, 0x1000, 0x2000 },
+        { 0x200, 0x800, 0x2000, 0x8000 }
+    };
+    return screenDataSizeLookup[bgMode][sizeMode];
 }
 
 VRAMLoadProc GetCharVRAMLoadProc(int engine, int bgIndex)
@@ -150,8 +186,8 @@ void BGLayer::CharacterData::StageBNCG(int engine, int bgIndex, const void* data
     unsigned int length;
     memcpy(&length, source, 4);
     source += 0x4;
-    StageMemoryToVRAM(
-        (VRAMSubregion)(data_020e7b70[engine] + 2 * bgIndex),
+
+    StageMemoryToVRAM(GetCharVRAMSubregion(engine, bgIndex),
         source, vramOffset, length, true, false);
 }
 
@@ -252,7 +288,8 @@ void BGLayer::PaletteData::StageBNCL(int engine, const void* data)
     uint32_t length;
     memcpy(&length, source, 4);
     source += 4;
-    StageMemoryToVRAM(data_020e7b60[engine], source, 0, length, true, false);
+
+    StageMemoryToVRAM(GetPaletteVRAMRegion(engine), source, 0, length, true, false);
 }
 
 void BGLayer::Sprite::Reset()
@@ -308,8 +345,8 @@ void BGLayer::Sprite::StageBNSC(int engine, int bgIndex, const void* data)
 {
     const char* source = (const char*)data;
     memcpy(&bufferSize, source + 0xc, 4);
-    StageMemoryToVRAM(
-        (VRAMSubregion)(data_020e7b68[engine] + 2 * bgIndex),
+
+    StageMemoryToVRAM(GetScreenVRAMSubregion(engine, bgIndex),
         source + 0x10, 0, bufferSize, true, false);
 }
 

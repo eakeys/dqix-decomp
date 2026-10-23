@@ -94,6 +94,7 @@ src/Resource/PAC.cpp:
 src/Graphics/BGLayer.cpp:
     complete
     .text start:0x0204a5e4 end:0x0204bd7c
+    .rodata start:0x020e7b60 end:0x020e7bb8
 
 src/UI/UIElement.cpp:
     .text start:0x0204c610 end:0x02050454

@@ -43,6 +43,7 @@ PACInnerFileHeader* GetPACInnerFileHeader(void* pac, const char* filename)
         if (strcmp(file->name, withoutDirectory) == 0)
             return file;
     }
+
     return NULL;
 }
 

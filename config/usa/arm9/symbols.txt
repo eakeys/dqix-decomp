@@ -1881,22 +1881,22 @@ func_0204a5d4 kind:function(arm,size=0x8) addr:0x0204a5d4
 func_0204a5dc kind:function(arm,size=0x8) addr:0x0204a5dc
 _Z19GetCharVRAMLoadProcii kind:function(arm,size=0x14) addr:0x0204a5e4
 _Z21GetScreenVRAMLoadProcii kind:function(arm,size=0x14) addr:0x0204a5f8
-_Z17SetBG3SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a60c
-_Z17SetBG2SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a628
-_Z17SetBG1SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a644
-_Z17SetBG0SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a660
-_Z14SetBG3Priorityi kind:function(arm,size=0x1c) addr:0x0204a67c
-_Z14SetBG2Priorityi kind:function(arm,size=0x1c) addr:0x0204a698
-_Z14SetBG1Priorityi kind:function(arm,size=0x1c) addr:0x0204a6b4
-_Z14SetBG0Priorityi kind:function(arm,size=0x1c) addr:0x0204a6d0
-_Z15SetBG3SubOffsetii kind:function(arm,size=0x28) addr:0x0204a6ec
-_Z15SetBG2SubOffsetii kind:function(arm,size=0x28) addr:0x0204a714
-_Z15SetBG1SubOffsetii kind:function(arm,size=0x28) addr:0x0204a73c
-_Z15SetBG0SubOffsetii kind:function(arm,size=0x28) addr:0x0204a764
-_Z12SetBG3Offsetii kind:function(arm,size=0x28) addr:0x0204a78c
-_Z12SetBG2Offsetii kind:function(arm,size=0x28) addr:0x0204a7b4
-_Z12SetBG1Offsetii kind:function(arm,size=0x28) addr:0x0204a7dc
-_Z12SetBG0Offsetii kind:function(arm,size=0x28) addr:0x0204a804
+_Z17SetBG3SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a60c local
+_Z17SetBG2SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a628 local
+_Z17SetBG1SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a644 local
+_Z17SetBG0SubPriorityi kind:function(arm,size=0x1c) addr:0x0204a660 local
+_Z14SetBG3Priorityi kind:function(arm,size=0x1c) addr:0x0204a67c local
+_Z14SetBG2Priorityi kind:function(arm,size=0x1c) addr:0x0204a698 local
+_Z14SetBG1Priorityi kind:function(arm,size=0x1c) addr:0x0204a6b4 local
+_Z14SetBG0Priorityi kind:function(arm,size=0x1c) addr:0x0204a6d0 local
+_Z15SetBG3SubOffsetii kind:function(arm,size=0x28) addr:0x0204a6ec local
+_Z15SetBG2SubOffsetii kind:function(arm,size=0x28) addr:0x0204a714 local
+_Z15SetBG1SubOffsetii kind:function(arm,size=0x28) addr:0x0204a73c local
+_Z15SetBG0SubOffsetii kind:function(arm,size=0x28) addr:0x0204a764 local
+_Z12SetBG3Offsetii kind:function(arm,size=0x28) addr:0x0204a78c local
+_Z12SetBG2Offsetii kind:function(arm,size=0x28) addr:0x0204a7b4 local
+_Z12SetBG1Offsetii kind:function(arm,size=0x28) addr:0x0204a7dc local
+_Z12SetBG0Offsetii kind:function(arm,size=0x28) addr:0x0204a804 local
 _ZN7BGLayer13CharacterData5ResetEv kind:function(arm,size=0x1c) addr:0x0204a82c
 _ZN7BGLayer13CharacterData20LoadAndStageFromBNCGEPFvPKvjjES2_P13SafeAllocator kind:function(arm,size=0xac) addr:0x0204a848
 _ZN7BGLayer13CharacterData20LoadMetadataFromBNCGEPKv kind:function(arm,size=0x90) addr:0x0204a8f4
@@ -1916,8 +1916,8 @@ _ZN7BGLayer6Sprite9StageBNSCEPFvPKvjjES2_ kind:function(arm,size=0x34) addr:0x02
 _ZN7BGLayer6Sprite9StageBNSCEiiPKv kind:function(arm,size=0x5c) addr:0x0204ade8
 _ZN7BGLayer6Sprite13SwitchPaletteEt kind:function(arm,size=0x38) addr:0x0204ae44
 _ZN7BGLayer6Sprite24SwitchPaletteInRectangleEtssss kind:function(arm,size=0x98) addr:0x0204ae7c
-_ZN7BGLayer15GetScreenObjectEj kind:function(arm,size=0x24) addr:0x0204af14
-_ZN7BGLayer21AllocateScreenObjectsEjP13SafeAllocator kind:function(arm,size=0x2c) addr:0x0204af38
+_ZN7BGLayer9GetSpriteEj kind:function(arm,size=0x24) addr:0x0204af14
+_ZN7BGLayer15AllocateSpritesEjP13SafeAllocator kind:function(arm,size=0x2c) addr:0x0204af38
 _ZN7BGLayer5ResetEv kind:function(arm,size=0x50) addr:0x0204af64
 _ZN7BGLayer12MaybeDestroyEv kind:function(arm,size=0x5c) addr:0x0204afb4
 _ZN7BGLayer18PrepareIndexBufferEPv kind:function(arm,size=0x3c) addr:0x0204b010
@@ -1932,14 +1932,14 @@ _ZN7BGLayer23StageGraphicsFileBufferEPKv kind:function(arm,size=0x120) addr:0x02
 _ZN7BGLayer24StageGraphicsFileBuffer2EPKv kind:function(arm,size=0xf4) addr:0x0204b4c0
 _ZN7BGLayer11SetPriorityEi kind:function(arm,size=0x34) addr:0x0204b5b4
 _ZN7BGLayer9SetOffsetEii kind:function(arm,size=0x38) addr:0x0204b5e8
-_ZN7BGLayer18BlitObjectToBufferEPtPKNS_6SpriteEsssssst kind:function(arm,size=0x258) addr:0x0204b620
-_ZN7BGLayer10BlitObjectEPKNS_6SpriteEsssssst kind:function(arm,size=0x58) addr:0x0204b878
-_ZN7BGLayer17BlitObjectByIndexEjsssssst kind:function(arm,size=0x68) addr:0x0204b8d0
-_ZN7BGLayer10BlitObjectEPKNS_6SpriteEsst kind:function(arm,size=0x50) addr:0x0204b938
-_ZN7BGLayer17BlitObjectByIndexEjsst kind:function(arm,size=0x30) addr:0x0204b988
+_ZN7BGLayer18BlitSpriteToBufferEPtPKNS_6SpriteEsssssst kind:function(arm,size=0x258) addr:0x0204b620
+_ZN7BGLayer10BlitSpriteEPKNS_6SpriteEsssssst kind:function(arm,size=0x58) addr:0x0204b878
+_ZN7BGLayer17BlitSpriteByIndexEjsssssst kind:function(arm,size=0x68) addr:0x0204b8d0
+_ZN7BGLayer10BlitSpriteEPKNS_6SpriteEsst kind:function(arm,size=0x50) addr:0x0204b938
+_ZN7BGLayer17BlitSpriteByIndexEjsst kind:function(arm,size=0x30) addr:0x0204b988
 _ZN7BGLayer18SetPaletteInRegionEsssst kind:function(arm,size=0xfc) addr:0x0204b9b8
-_ZN7BGLayer18BlitObjectRepeatedEPKNS_6SpriteEsssssst kind:function(arm,size=0x100) addr:0x0204bab4
-_ZN7BGLayer25BlitObjectByIndexRepeatedEjsssssst kind:function(arm,size=0x54) addr:0x0204bbb4
+_ZN7BGLayer18BlitSpriteRepeatedEPKNS_6SpriteEsssssst kind:function(arm,size=0x100) addr:0x0204bab4
+_ZN7BGLayer25BlitSpriteByIndexRepeatedEjsssssst kind:function(arm,size=0x54) addr:0x0204bbb4
 _ZN7BGLayer17UploadPaletteDataEiiPKvj kind:function(arm,size=0x6c) addr:0x0204bc08
 _ZN7BGLayer18SetTileInRectangleEtsssst kind:function(arm,size=0x108) addr:0x0204bc74
 func_0204bd7c kind:function(arm,size=0x44) addr:0x0204bd7c
@@ -6316,11 +6316,11 @@ data_020e7b30 kind:data(any) addr:0x020e7b30
 data_020e7b3c kind:data(any) addr:0x020e7b3c
 data_020e7b48 kind:data(any) addr:0x020e7b48
 data_020e7b54 kind:data(any) addr:0x020e7b54
-regionLookupPalette$765 kind:data(any) addr:0x020e7b60 local
-regionLookupBG0Screen$777 kind:data(any) addr:0x020e7b68 local
-regionLookupBG0Char$771 kind:data(any) addr:0x020e7b70 local
-screenDimLookup$783 kind:data(any) addr:0x020e7b78 local
-screenDataSizeLookup$789 kind:data(any) addr:0x020e7b98 local
+regionLookupPalette$808 kind:data(any) addr:0x020e7b60 local
+regionLookupBG0Screen$814 kind:data(any) addr:0x020e7b68 local
+regionLookupBG0Char$803 kind:data(any) addr:0x020e7b70 local
+screenDimLookup$820 kind:data(any) addr:0x020e7b78 local
+screenDataSizeLookup$826 kind:data(any) addr:0x020e7b98 local
 data_020e7bb8 kind:data(any) addr:0x020e7bb8
 data_020e7bd6 kind:data(any) addr:0x020e7bd6
 data_020e7bd8 kind:data(any) addr:0x020e7bd8
@@ -6943,11 +6943,11 @@ data_020f0156 kind:data(any) addr:0x020f0156
 data_020f0159 kind:data(any) addr:0x020f0159
 data_020f015c kind:data(any) addr:0x020f015c
 data_020f01a4 kind:data(any) addr:0x020f01a4
-loadProcLookupPalette$785 kind:data(any) addr:0x020f01b0 local
-setOffsetLookup$826 kind:data(any) addr:0x020f01b8 local
-setPriorityLookup$820 kind:data(any) addr:0x020f01d8 local
-loadBGCharLookup$832 kind:data(any) addr:0x020f01f8 local
-loadBGScreenLookup$838 kind:data(any) addr:0x020f0218 local
+loadProcLookupPalette$797 kind:data(any) addr:0x020f01b0 local
+setOffsetLookup$838 kind:data(any) addr:0x020f01b8 local
+setPriorityLookup$832 kind:data(any) addr:0x020f01d8 local
+loadBGCharLookup$844 kind:data(any) addr:0x020f01f8 local
+loadBGScreenLookup$850 kind:data(any) addr:0x020f0218 local
 @stringBase0 kind:data(byte[0xf]) addr:0x020f0238 local
 data_020f0248 kind:data(any) addr:0x020f0248
 data_020f024e kind:data(any) addr:0x020f024e

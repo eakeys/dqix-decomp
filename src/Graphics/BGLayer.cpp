@@ -6,23 +6,23 @@
 #include "NitroSDK/Cache.h"
 #include <globaldefs.h>
 
-void SetBG3SubPriority(int to);
-void SetBG2SubPriority(int to);
-void SetBG1SubPriority(int to);
-void SetBG0SubPriority(int to);
-void SetBG3Priority(int to);
-void SetBG2Priority(int to);
-void SetBG1Priority(int to);
-void SetBG0Priority(int to);
+static void SetBG3SubPriority(int to);
+static void SetBG2SubPriority(int to);
+static void SetBG1SubPriority(int to);
+static void SetBG0SubPriority(int to);
+static void SetBG3Priority(int to);
+static void SetBG2Priority(int to);
+static void SetBG1Priority(int to);
+static void SetBG0Priority(int to);
 
-void SetBG3SubOffset(int x, int y);
-void SetBG2SubOffset(int x, int y);
-void SetBG1SubOffset(int x, int y);
-void SetBG0SubOffset(int x, int y);
-void SetBG3Offset(int x, int y);
-void SetBG2Offset(int x, int y);
-void SetBG1Offset(int x, int y);
-void SetBG0Offset(int x, int y);
+static void SetBG3SubOffset(int x, int y);
+static void SetBG2SubOffset(int x, int y);
+static void SetBG1SubOffset(int x, int y);
+static void SetBG0SubOffset(int x, int y);
+static void SetBG3Offset(int x, int y);
+static void SetBG2Offset(int x, int y);
+static void SetBG1Offset(int x, int y);
+static void SetBG0Offset(int x, int y);
 
 static inline VRAMLoadProc GetPaletteVRAMLoadProc(int engine)
 {
@@ -126,23 +126,23 @@ VRAMLoadProc GetScreenVRAMLoadProc(int engine, int bgIndex)
     return loadBGScreenLookup[engine][bgIndex];
 }
 
-void SetBG3SubPriority(int to) { BG3CNTSUB = (BG3CNTSUB & ~3) | to; }
-void SetBG2SubPriority(int to) { BG2CNTSUB = (BG2CNTSUB & ~3) | to; }
-void SetBG1SubPriority(int to) { BG1CNTSUB = (BG1CNTSUB & ~3) | to; }
-void SetBG0SubPriority(int to) { BG0CNTSUB = (BG0CNTSUB & ~3) | to; }
-void SetBG3Priority(int to) { BG3CNT = (BG3CNT & ~3) | to; }
-void SetBG2Priority(int to) { BG2CNT = (BG2CNT & ~3) | to; }
-void SetBG1Priority(int to) { BG1CNT = (BG1CNT & ~3) | to; }
-void SetBG0Priority(int to) { BG0CNT = (BG0CNT & ~3) | to; }
+static void SetBG3SubPriority(int to) { BG3CNTSUB = (BG3CNTSUB & ~3) | to; }
+static void SetBG2SubPriority(int to) { BG2CNTSUB = (BG2CNTSUB & ~3) | to; }
+static void SetBG1SubPriority(int to) { BG1CNTSUB = (BG1CNTSUB & ~3) | to; }
+static void SetBG0SubPriority(int to) { BG0CNTSUB = (BG0CNTSUB & ~3) | to; }
+static void SetBG3Priority(int to) { BG3CNT = (BG3CNT & ~3) | to; }
+static void SetBG2Priority(int to) { BG2CNT = (BG2CNT & ~3) | to; }
+static void SetBG1Priority(int to) { BG1CNT = (BG1CNT & ~3) | to; }
+static void SetBG0Priority(int to) { BG0CNT = (BG0CNT & ~3) | to; }
 
-void SetBG3SubOffset(int x, int y) { BG3OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG2SubOffset(int x, int y) { BG2OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG1SubOffset(int x, int y) { BG1OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG0SubOffset(int x, int y) { BG0OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG3Offset(int x, int y) { BG3OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG2Offset(int x, int y) { BG2OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG1Offset(int x, int y) { BG1OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
-void SetBG0Offset(int x, int y) { BG0OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG3SubOffset(int x, int y) { BG3OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG2SubOffset(int x, int y) { BG2OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG1SubOffset(int x, int y) { BG1OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG0SubOffset(int x, int y) { BG0OFSSUB = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG3Offset(int x, int y) { BG3OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG2Offset(int x, int y) { BG2OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG1Offset(int x, int y) { BG1OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
+static void SetBG0Offset(int x, int y) { BG0OFS = (x & 0x1ff) | ((y << 16) & 0x1ff0000); }
 
 void BGLayer::CharacterData::Reset()
 {
@@ -399,7 +399,7 @@ void BGLayer::Sprite::SwitchPaletteInRectangle(unsigned short paletteIdx,
     }
 }
 
-BGLayer::Sprite* BGLayer::GetScreenObject(unsigned int idx)
+BGLayer::Sprite* BGLayer::GetSprite(unsigned int idx)
 {
     if (sprites_ == NULL)
         return NULL;
@@ -409,7 +409,7 @@ BGLayer::Sprite* BGLayer::GetScreenObject(unsigned int idx)
         return &sprites_[idx];
 }
 
-void BGLayer::AllocateScreenObjects(unsigned int count, SafeAllocator* alloc)
+void BGLayer::AllocateSprites(unsigned int count, SafeAllocator* alloc)
 {
     if (alloc == NULL)
         return;
@@ -591,7 +591,7 @@ void BGLayer::SetOffset(int x, int y)
     GetOffsetSetterProc(engine_, bgIndex_)(x, y);
 }
 
-void BGLayer::BlitObjectToBuffer(unsigned short *destIdxBuffer, const Sprite *obj,
+void BGLayer::BlitSpriteToBuffer(unsigned short *destIdxBuffer, const Sprite *obj,
     short sourceTileX, short sourceTileY, short destTileX, short destTileY,
     short width, short height, unsigned short palette)
 {
@@ -689,17 +689,17 @@ void BGLayer::BlitObjectToBuffer(unsigned short *destIdxBuffer, const Sprite *ob
     }
 }
 
-void BGLayer::BlitObject(const Sprite* obj, short sourceTileX, short sourceTileY,
+void BGLayer::BlitSprite(const Sprite* obj, short sourceTileX, short sourceTileY,
     short destTileX, short destTileY, short width, short height, unsigned short palette)
 {
     if (indexBuffer_ == NULL)
         return;
        
-    BlitObjectToBuffer(indexBuffer_, obj, sourceTileX, sourceTileY, 
+    BlitSpriteToBuffer(indexBuffer_, obj, sourceTileX, sourceTileY, 
         destTileX, destTileY, width, height, palette);
 }
 
-void BGLayer::BlitObjectByIndex(unsigned int objIdx, short sourceTileX, short sourceTileY,
+void BGLayer::BlitSpriteByIndex(unsigned int objIdx, short sourceTileX, short sourceTileY,
     short destTileX, short destTileY, short width, short height, unsigned short palette)
 {
     if (numSprites_ <= objIdx)
@@ -713,12 +713,12 @@ void BGLayer::BlitObjectByIndex(unsigned int objIdx, short sourceTileX, short so
     if (indexBuffer_ == NULL)
         return;
 
-    BlitObjectToBuffer(indexBuffer_, obj, 
+    BlitSpriteToBuffer(indexBuffer_, obj, 
         sourceTileX , sourceTileY, destTileX, destTileY,
         width, height, palette);
 }
 
-void BGLayer::BlitObject(const Sprite* obj,
+void BGLayer::BlitSprite(const Sprite* obj,
     short destTileX, short destTileY, unsigned short palette)
 {
     if (obj == NULL)
@@ -727,17 +727,17 @@ void BGLayer::BlitObject(const Sprite* obj,
     short h = obj->height;
     if (indexBuffer_ == NULL)
         return;
-    BlitObjectToBuffer(indexBuffer_, obj, 0, 0, destTileX, destTileY, w, h, palette);
+    BlitSpriteToBuffer(indexBuffer_, obj, 0, 0, destTileX, destTileY, w, h, palette);
 }
 
-void BGLayer::BlitObjectByIndex(unsigned int objIdx,
+void BGLayer::BlitSpriteByIndex(unsigned int objIdx,
     short destTileX, short destTileY, unsigned short palette)
 {
     if (numSprites_ <= objIdx)
         return;
     if (sprites_ == NULL)
         return;
-    BlitObject(&sprites_[objIdx], destTileX, destTileY, palette);
+    BlitSprite(&sprites_[objIdx], destTileX, destTileY, palette);
 }
 
 void BGLayer::SetPaletteInRegion(short left, short top, short width, short height, unsigned short palette)
@@ -782,7 +782,7 @@ void BGLayer::SetPaletteInRegion(short left, short top, short width, short heigh
     }
 }
 
-void BGLayer::BlitObjectRepeated(const Sprite* obj, short width, short height,
+void BGLayer::BlitSpriteRepeated(const Sprite* obj, short width, short height,
         short destTileX, short destTileY, short countX, short countY, unsigned short palette)
 {
     if (width <= 0 || height <= 0)
@@ -805,20 +805,20 @@ void BGLayer::BlitObjectRepeated(const Sprite* obj, short width, short height,
         for (unsigned short x = 0; x < countX; x++)
         {
             if (indexBuffer_ != NULL)
-                BlitObjectToBuffer(indexBuffer_, obj, 0, 0, thisDrawX, thisDrawY, width, height, palette);
+                BlitSpriteToBuffer(indexBuffer_, obj, 0, 0, thisDrawX, thisDrawY, width, height, palette);
             thisDrawX += width;
         }
         thisDrawY += height;
     }
 }
 
-void BGLayer::BlitObjectByIndexRepeated(unsigned int objIdx, short width, short height,
+void BGLayer::BlitSpriteByIndexRepeated(unsigned int objIdx, short width, short height,
         short destTileX, short destTileY, short countX, short countY, unsigned short palette)
 {
     if (numSprites_ <= objIdx || sprites_ == NULL)
         return;
 
-    BlitObjectRepeated(&sprites_[objIdx], width, height,
+    BlitSpriteRepeated(&sprites_[objIdx], width, height,
         destTileX, destTileY, countX, countY, palette);
 }
 

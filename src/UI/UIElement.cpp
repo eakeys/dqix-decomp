@@ -217,7 +217,7 @@ void UIElement::Display()
     if (flags_c5_ & RendererFlags_20)
         return;
 
-    layer_4_->BlitObject(&sprite_c8_,
+    layer_4_->BlitSprite(&sprite_c8_,
         0, 0, leftTile_ac_, topTile_ae_, sprite_c8_.width, unknown_c0_, borderPalette_c2_);
 }
 

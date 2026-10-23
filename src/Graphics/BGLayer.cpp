@@ -1,4 +1,4 @@
-#include "Graphics/VRAMPointer.h"
+#include "Graphics/BGLayer.h"
 #include "NitroSDK/HWRegisters.h"
 #include "Graphics/VRAMStaging.h"
 #include "NitroSDK/Cache.h"

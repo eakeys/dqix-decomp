@@ -6813,15 +6813,12 @@ data_020f017e kind:data(any) addr:0x020f017e
 data_020f0181 kind:data(any) addr:0x020f0181
 data_020f0184 kind:data(any) addr:0x020f0184
 data_020f01cc kind:data(any) addr:0x020f01cc
-data_020f01d8_jpn kind:data(any) addr:0x020f01d8
-data_020f01e0 kind:data(any) addr:0x020f01e0
-data_020f0200 kind:data(any) addr:0x020f0200
-data_020f0202 kind:data(any) addr:0x020f0202
-data_020f0220 kind:data(any) addr:0x020f0220
-data_020f0240 kind:data(any) addr:0x020f0240
-data_020f0260 kind:data(any) addr:0x020f0260
-data_020f0265 kind:data(any) addr:0x020f0265
-data_020f026a kind:data(any) addr:0x020f026a
+loadProcLookupPalette$785 kind:data(any) addr:0x020f01d8 local
+setOffsetLookup$826 kind:data(any) addr:0x020f01e0 local
+setPriorityLookup$820 kind:data(any) addr:0x020f0200 local
+loadBGCharLookup$832 kind:data(any) addr:0x020f0220 local
+loadBGScreenLookup$838 kind:data(any) addr:0x020f0240 local
+@stringBase0 kind:data(byte[0xf]) addr:0x020f0260 local
 data_020f0270 kind:data(any) addr:0x020f0270
 data_020f0276 kind:data(any) addr:0x020f0276
 data_020f0279 kind:data(any) addr:0x020f0279

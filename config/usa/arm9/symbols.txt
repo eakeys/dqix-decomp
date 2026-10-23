@@ -6943,15 +6943,12 @@ data_020f0156 kind:data(any) addr:0x020f0156
 data_020f0159 kind:data(any) addr:0x020f0159
 data_020f015c kind:data(any) addr:0x020f015c
 data_020f01a4 kind:data(any) addr:0x020f01a4
-data_020f01b0 kind:data(any) addr:0x020f01b0
-data_020f01b8 kind:data(any) addr:0x020f01b8
-data_020f01d8 kind:data(any) addr:0x020f01d8
-data_020f01f8 kind:data(any) addr:0x020f01f8
-data_020f0202 kind:data(any) addr:0x020f0202
-data_020f0218 kind:data(any) addr:0x020f0218
-data_020f0238 kind:data(any) addr:0x020f0238
-data_020f023d kind:data(any) addr:0x020f023d
-data_020f0242 kind:data(any) addr:0x020f0242
+loadProcLookupPalette$785 kind:data(any) addr:0x020f01b0 local
+setOffsetLookup$826 kind:data(any) addr:0x020f01b8 local
+setPriorityLookup$820 kind:data(any) addr:0x020f01d8 local
+loadBGCharLookup$832 kind:data(any) addr:0x020f01f8 local
+loadBGScreenLookup$838 kind:data(any) addr:0x020f0218 local
+@stringBase0 kind:data(byte[0xf]) addr:0x020f0238 local
 data_020f0248 kind:data(any) addr:0x020f0248
 data_020f024e kind:data(any) addr:0x020f024e
 data_020f0251 kind:data(any) addr:0x020f0251

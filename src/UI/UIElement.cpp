@@ -1,12 +1,10 @@
 #include "UI/Text.h"
 #include "UI/UIElement.h"
+#include "Graphics/Blitter.h"
 #include "NitroSDK/Cache.h"
 #include "NitroSDK/BGBases.h"
+#include "NitroSDK/LoadToVRAM.h"
 #include <asmhacks.h>
-
-void LoadToMainBG0CharacterData(const void* data, unsigned int offset, unsigned int length);
-
-typedef void (*LoadToBGCharProc)(const void*, unsigned int, unsigned int);
 
 extern "C"
 {
@@ -17,8 +15,6 @@ extern "C"
     const unsigned char* func_02042a50(int size, const char*);
 
     void func_02046608(void*, unsigned char, const char*, char*, int, int, unsigned char);
-
-    void func_0204df9c(UIElement*, FontIndexFile::Glyph*, short x, short y, int palette, int fontIndex);
 
     // alternate strlen
     int func_020d2ff0(const char*);
@@ -447,10 +443,10 @@ void UIElement::PrepareMenu(const char* markup, short border, unsigned char font
         DrawRoundedRectangleBorder(0, 0, numTilesX_a8_, numTilesY_aa_, backgroundMargins_db_);
     }
 
-    int colorHigh = 0xf0; // color
-    int colorLow = 0x0f; // colorIdx
-    int prevColorHigh = 0xf0; // saveColor
-    int prevColorLow = 0xf; // saveColorIdx
+    unsigned char colorHigh = 0xf0;
+    unsigned char colorLow = 0x0f;
+    unsigned char prevColorHigh = 0xf0;
+    unsigned char prevColorLow = 0xf;
 
     while (*readCursor != 0)
     {
@@ -758,7 +754,7 @@ void UIElement::PrepareMenu(const char* markup, short border, unsigned char font
             thisGlyphIndex = nextGlyph;
             FontIndexFile::Glyph* glyph = GetFontGlyphByIndex(nextGlyph, font);
             currentX += GetFontGlyphKerning(lastGlyphIndex, thisGlyphIndex, font);
-            func_0204df9c(this, glyph, currentX, currentY, colorLow, font);
+            BlitGlyph(glyph, currentX, currentY, colorLow, font);
             lastGlyphIndex = thisGlyphIndex;
             xAdvance = glyph->width + 1;
             readCursor += glyph->tagLength;
@@ -766,7 +762,7 @@ void UIElement::PrepareMenu(const char* markup, short border, unsigned char font
         else
         {
             if (ch0 != ' ')
-                func_0204df9c(this, GetFontGlyphByIndex(0, font), currentX, currentY, colorLow, font);
+                BlitGlyph(GetFontGlyphByIndex(0, font), currentX, currentY, colorLow, font);
             readCursor += 1;
         }
         currentX += xAdvance;
@@ -803,6 +799,25 @@ void UIElement::PrepareMenu(const char* markup, short border, unsigned char font
     // nonsense usage of pixelWriteCursor to prevent it being optimized out
     if (ALWAYS_FALSE())
         *pixelWriteCursor = 0;
+}
+
+void UIElement::BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y, unsigned char color, unsigned char font)
+{
+    if (glyph == NULL)
+        return;
+    Blitter4Bit::BlitRegion region;
+    region.offset = 0;
+    region.originX = 0;
+    region.originY = 0;
+    region.width = 0;
+    region.height = 0;
+    region.width = numTilesX_a8_ * 8;
+    region.height = numTilesY_aa_ * 8;
+    Blitter4Bit blitter;
+    blitter.Reset();
+    blitter.SetDestination(pixelBuffer_8_);
+    blitter.SetRegions(&region, 1);
+    blitter.BlitGlyph(glyph, x, y, color, font);
 }
 
 void UIElement::BlitBitmap1Bit(const void* src, short left, short top,
@@ -1453,7 +1468,7 @@ void UIElement::DrawDividingLine(short y) {
 }
 
 void UIElement::RenderText(short x, short y, const char *argText, unsigned char size,
-    unsigned char initialColor, short *outW, short *outH, int fontIndex)
+    unsigned char initialColor, short *outW, short *outH, unsigned char fontIndex)
 {
     if (argText == NULL)
         return;
@@ -1547,7 +1562,7 @@ void UIElement::RenderText(short x, short y, const char *argText, unsigned char 
         
         if (glyph != NULL)
         {
-            func_0204df9c(this, glyph, x, y, colorIndex, fontIndex);
+            BlitGlyph(glyph, x, y, colorIndex, fontIndex);
             thisCharWidth = glyph->width + 1;
             short candidateH = y + yAdvance;
             short candidateW = x + thisCharWidth;
@@ -1562,7 +1577,7 @@ void UIElement::RenderText(short x, short y, const char *argText, unsigned char 
             if (*text != ' ')
             {
                 glyph = GetFontGlyphByIndex(0, fontIndex);
-                func_0204df9c(this, glyph, x, y, colorIndex, fontIndex);
+                BlitGlyph(glyph, x, y, colorIndex, fontIndex);
             }
             text++;
         }
@@ -1595,7 +1610,7 @@ void UIElement::RenderNumber(short x, short y, int number, unsigned char size,
     else
         sprintf(textBuffer, data_020f0300, number);
 
-    int fontIndex = GetFontIDBySize(size);
+    unsigned char fontIndex = GetFontIDBySize(size);
     if (rightAlign)
         x -= MeasureTextWidth(textBuffer, fontIndex);
     RenderText(x, y, textBuffer, size, colorIndex, outW, outH, fontIndex);

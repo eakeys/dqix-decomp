@@ -4,6 +4,7 @@
 #include "std_library_functions.h"
 #include "../Graphics/Vector.h"
 #include "../Graphics/BGLayer.h"
+#include "../Graphics/Font.h"
 
 // sizeof == 0xe0.
 // Dynamically allocated by func_020421c4.
@@ -95,8 +96,7 @@ public:
     void FillRectangle(int colorIndex, short left, short top, short right, short bottom);
     void PrepareMenu(const char* markup, short border, unsigned char font);
 
-    // func_0204df9c to go here as BlitGlyph()
-
+    void BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y, unsigned char color, unsigned char font);
     void BlitBitmap1Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
     void BlitBitmap4Bit(const void* src, short x, short y, short width, short height, unsigned char bitmaskHigh, unsigned char bitmaskLow);
     short PrepareText(const char* text, int unused, bool vCentering, bool expandToFit, unsigned char fontIndex);
@@ -114,7 +114,7 @@ public:
     void DrawRoundedRectangle(short x, short y, short w, short h, unsigned char borderColor, bool noBackground, bool noBorder, const char* margins);
     void DrawDividingLine(short y);
     void RenderText(short x, short y, const char* text, unsigned char size, unsigned char colorIndex, 
-        short* outW, short* outH, int fontIndex);
+        short* outW, short* outH, unsigned char fontIndex);
 
     void RenderNumber(short x, short y, int number, unsigned char size, unsigned char colorIndex,
         short* outW, short* outH, bool rightAlign, unsigned char numDigits,

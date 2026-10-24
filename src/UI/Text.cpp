@@ -484,9 +484,9 @@ int MeasureTextWidth(const char* text, int fontType)
     return totalWidth - 1;
 }
 
-int GetFontIDBySize(int size)
+unsigned char GetFontIDBySize(int size)
 {
-    int id = 0; // s7
+    unsigned char id = 0; // s7
     if (size == 12)
         id = 1; // me
     return id;
@@ -709,7 +709,7 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
         *ppData = (FontDataFile*)alloc->Allocate(fileSize);
         memcpy(*ppData, data_0211e33c, fileSize);
         FontDataFile* basePtr = *ppData;
-        basePtr->ptr_c = (void*)((intptr_t)basePtr + (intptr_t)basePtr->ptr_c);
+        basePtr->ptr_c = (unsigned char*)((intptr_t)basePtr + (intptr_t)basePtr->ptr_c);
     }
 }
 

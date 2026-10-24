@@ -116,7 +116,7 @@ void UIElement::Reset()
 
     sprite_c8_.Reset();
 
-    maybePageNumbersEnabled_d8_0_ = false;
+    pageNumbersEnabled_d8_0_ = false;
     unk_d8_bits = 0;
     pageNumber_d9_ = 0;
     numPages_da_ = 0;
@@ -139,7 +139,7 @@ void UIElement::SetMargins(const char* margins)
         memcpy(backgroundMargins_db_, margins, sizeof(backgroundMargins_db_));
 }
 
-void UIElement::Allocate(SafeAllocator *allocator, void *pixelBuffer, unsigned int indexBufferSize)
+void UIElement::AllocateSprite(SafeAllocator *allocator, void *pixelBuffer, unsigned int indexBufferSize)
 {
     sprite_c8_.indexBuffer = (unsigned short*)allocator->Allocate(indexBufferSize);
     pixelBuffer_8_ = (unsigned char*)pixelBuffer;
@@ -172,7 +172,7 @@ void UIElement::UseDefaultSettings()
     overrideLineSpacing_ba_ = 0;
     unknown_c0_ = 0;
     flags_c5_ &= ~RendererFlags_08;
-    maybePageNumbersEnabled_d8_0_ = false;
+    pageNumbersEnabled_d8_0_ = false;
     pageNumberDirty_d8_1_ = false;
     useBG_d8_2_ = false;
     unknown_c4_ = 0xff;
@@ -236,8 +236,7 @@ void UIElement::Create(const char *markup, int vramOffset, int unused,
     if (expandToFit) width = 256;
     char processedMarkup[0x800] = {0};
     func_02046608(TextManager::GetInstance(), fontHeight_c7_, markup, processedMarkup, width, textXOffset_b0_, fontIndex);
-    // what is going on here?! PrepareText looks like it returns the value of
-    // the <ENC=...> tag, why is is being used as border parameter?!
+    // return value is parameter of <ENC=...> tag, why use it as border size?!
     short prepareTextReturnValue = PrepareText(processedMarkup, unused, vCentering, expandToFit, fontIndex);
     PrepareMenu(processedMarkup, prepareTextReturnValue, fontIndex);
     vramOffset_a0_ = vramOffset;
@@ -473,8 +472,8 @@ void UIElement::PrepareMenu(const char* markup, short border, unsigned char font
 
         if (ch0 == '<')
         {
-            bool tagHandled = true; // handled, might be int and declared earlier
-            const char* tagCursor = readCursor + 1; // p
+            bool tagHandled = true;
+            const char* tagCursor = readCursor + 1;
             short tagValues[8];
             if (CheckValueTag(&tagCursor, data_020f0248, tagValues, 1))
             {
@@ -1171,7 +1170,7 @@ short UIElement::PrepareText(const char *argtext, int unused, bool vCentered,
     {
         textY -= textYOffset_b2_;
         if (numTilesY_aa_ * 8 - textY < 7)
-            numTilesY_aa_ = numTilesY_aa_ + 1; // needed for byte match :skull:
+            numTilesY_aa_ = numTilesY_aa_ + 1; // can't replace with ++ :skull:
         textYOffset_b2_ = (numTilesY_aa_ * 8 - textY) >> 1;
     }
 
@@ -1288,9 +1287,9 @@ void UIElement::DrawRoundedRectangleBorder(short, short, short w, short h, const
     short numTilesX = numTilesX_a8_;
     alignmentType = TestCornerOverlapAlignment(2);
     cornerTileIndex = 2;
-    if (alignmentType == 3)
+    if (alignmentType == 3) // top-right corner aligned to right edge
         cornerTileIndex = 9;
-    else if (alignmentType == 2)
+    else if (alignmentType == 2) // top-right corner aligned to top edge
         cornerTileIndex = 13;
     cornerTile = GetWindowBorderTile(cornerTileIndex);
     if (cornerTile != NULL)
@@ -1889,7 +1888,7 @@ unsigned char* UIElement::GetCharacterBase() const
 
 void UIElement::RefreshPageNumber(bool stage)
 {
-    if (!maybePageNumbersEnabled_d8_0_ || (!pageNumberDirty_d8_1_ && stage))
+    if (!pageNumbersEnabled_d8_0_ || (!pageNumberDirty_d8_1_ && stage))
         return;
 
     if (layer_4_ == NULL || pixelBuffer_8_ == NULL)
@@ -1966,7 +1965,7 @@ void UIElement::RefreshPageNumber(bool stage)
 
 void UIElement::ResetPageNumbers(bool enabled)
 {
-    maybePageNumbersEnabled_d8_0_ = enabled;
+    pageNumbersEnabled_d8_0_ = enabled;
     pageNumberDirty_d8_1_ = true;
     pageNumber_d9_ = 0;
     numPages_da_ = 0;

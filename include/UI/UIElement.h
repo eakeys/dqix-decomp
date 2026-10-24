@@ -58,10 +58,11 @@ public:
     unsigned char unknown_c6_;
     unsigned char fontHeight_c7_;
     BGLayer::Sprite sprite_c8_;
-    unsigned char maybePageNumbersEnabled_d8_0_ : 1;
+    unsigned char pageNumbersEnabled_d8_0_ : 1;
     unsigned char pageNumberDirty_d8_1_ : 1;
-    unsigned char useBG_d8_2_ : 1;
+    unsigned char useBG_d8_2_ : 1; // doesn't exist in jpn version
     unsigned char unk_d8_bits : 5;
+
     unsigned char pageNumber_d9_; // zero-indexed
     unsigned char numPages_da_;
     // top, bottom, left, right
@@ -76,7 +77,7 @@ public:
 
     void SetMargins(const char* margins);
     // SafeAllocator used to allocate index buffer
-    void Allocate(SafeAllocator* allocator, void* pixelBuffer, unsigned int indexBufferSize);
+    void AllocateSprite(SafeAllocator* allocator, void* pixelBuffer, unsigned int indexBufferSize);
 
     bool IsFullyLoaded() const;
     // Returns true if the index buffer pointer is not null and status != 0

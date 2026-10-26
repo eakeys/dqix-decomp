@@ -30,7 +30,7 @@ struct FontIndexFile
         int8_t tagLength : 6;
         int8_t isVowel : 1;
         int8_t unk_5_bit_7 : 1;
-        int16_t unknown_6;
+        int16_t dataOffset; // offset, in *bits* of each scanline within FontDataFile data
     };
 
     KerningEntry* kerning;
@@ -41,7 +41,7 @@ struct FontIndexFile
 struct FontDataFile
 {
     unsigned int maybeSignature; // seems to hold "1.0\0"
-    unsigned short unknown_4;
+    unsigned short bitsPerScanline;
     char unk_6[6];
     unsigned char* ptr_c;
 };

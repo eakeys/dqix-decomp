@@ -72,11 +72,11 @@ void Blitter4Bit::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     unsigned char colorIndex, unsigned char fontIndex)
 {
     FontDataFile* dataFile = GetFontDataFile(fontIndex);
-    short maybeOffset = glyph->unknown_6; // var25
+    short maybeOffset = glyph->dataOffset;
     unsigned char colorMaskHigh = colorIndex << 4;
     unsigned char colorMaskLow = colorIndex & 15;
-    int var28 = dataFile->unknown_4 >> 3;
-    char initialBitShift = 7 - (glyph->unknown_6 & 7);
+    int srcScanlineStride = dataFile->bitsPerScanline >> 3;
+    char initialBitShift = 7 - (glyph->dataOffset & 7);
 
     unsigned int numRegions = numRegions_;
     BlitRegion* regionList = regions_;
@@ -85,7 +85,7 @@ void Blitter4Bit::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     {
         short targetY = y + srcY;
         char bitShift = initialBitShift;
-        unsigned char* sourceBits = dataFile->ptr_c + var28 * srcY + (maybeOffset >> 3);
+        unsigned char* sourceBits = dataFile->ptr_c + srcScanlineStride * srcY + (maybeOffset >> 3);
         for (int srcX = 0; srcX < glyph->width; srcX++)
         {
             if (*sourceBits & (1 << bitShift))

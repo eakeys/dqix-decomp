@@ -198,7 +198,7 @@ void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x
     const char* str = glyph->indexGlyph->tag;
     short y = preShiftY - (short)(mainUIElement_34_->topTile_ae_ * 8);
     
-    unsigned char effects = TextManager::GetInstance()->unknown_195b_;
+    unsigned char effects = TextManager::GetInstance()->effects_195b_;
 
     short outX, outY;
 
@@ -2737,7 +2737,7 @@ void TextManager::ReleaseGlyphByIndex(unsigned short ch)
         return;
     
     RenderGlyph* glyph = &glyphs_[ch];
-    if (glyph->unknown_8 < 0)
+    if (glyph->bitAllocationIndex < 0)
         return;
     if (glyphRefcounts_17b8_[ch] == 0)
         return;

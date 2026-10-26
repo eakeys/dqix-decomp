@@ -14,26 +14,27 @@ struct RenderGlyph
 {
     const void* textureData;
     unsigned int textureVRAMOffset;
-    int unknown_8;
+    int bitAllocationIndex;
     int drawX;
     int drawY;
     short drawZ;
     unsigned char unk_16_low : 1;
     unsigned char unk_16_1 : 1;
     unsigned char unk_16_2 : 1;
-    unsigned char unk_16_3 : 1;
-    unsigned char unknown_17;
+    unsigned char fontIndex : 1;
+    unsigned char indexInFontFile;
     const FontIndexFile::Glyph* indexGlyph;
 
     void Reset();
     void Reset2();
 
     const char* GetGlyphTag() const;
+    void Populate(unsigned char glyphIndexInFile, const FontIndexFile::Glyph* glyph, 
+        const void* pixels, int bitAllocIndex, int textureVRAMOff, unsigned char fontIndex);
 
     void UploadToVRAM();
 
-    // Not used in all text rendering, only certain NPCs, combat text
-    // and item pickup in overland
+    // uses 3D system
     void Draw(int color, void* unknown, int alpha);
     
 };
@@ -245,7 +246,7 @@ public:
     int unknown_8c_;
     DialogueOptionManager dialogueOptions_90_; // func_0205c790
     int unknown_2c8_;
-    char substruct_2cc_[4];
+    unsigned char substruct_2cc_[4];
     int unknown_2d0_;
     // has 0x400 bytes allocated to it
     SafeAllocator* pAllocator_2d4_;
@@ -309,7 +310,7 @@ public:
     int mojiArg1_1860_;
     int mojiArg2_1864_;
     int unknown_1868_;
-    int waitTimeLengths_[4]; // func_02045824, used by <TIME=..> tag
+    int waitTimeLengths_186c_[4]; // func_02045824, used by <TIME=..> tag
     unsigned short color_187c_;
     unsigned short recoveryAmount_187e_; // amount of HP and MP to restore (usually 999)
     char partyMemberIndex_1880_;
@@ -328,7 +329,7 @@ public:
     char unknown_1958_;
     char maybeSoundDuration_1959_;
     char unknown_195a_;
-    unsigned char unknown_195b_;
+    unsigned char effects_195b_;
     char unknown_195c_;
     // low 2 bits determine which offset among (-2, 0), (0, 0), (0, -3), (0, 0) to apply to speaker name
     unsigned char unknown_195d_;
@@ -340,7 +341,7 @@ public:
     char unk_1963[1];
     ClipWindow windows_[2];
     char unknown_19ac_;
-    char unknown_19ad_;
+    char waitTimeQueueIndex_19ad_;
     char unknown_19ae_;
     char unknown_19af_;
     unsigned char unknown_19b0_;
@@ -401,6 +402,11 @@ public:
 
     static TextManager* GetInstance();
 
+    // usa: func_02042a90
+    int AcquireGlyphVRAM(unsigned char* bitfield, unsigned int numBytes);
+    // usa: func_02042af4
+    void ReleaseGlyphVRAM(unsigned char* bitfield, int idx);
+
     // usa: func_02042b10
     // sets the pointer in substruct_19e0 at offset 0x440
     void SetActiveTextBox(TextBox*);
@@ -420,27 +426,47 @@ public:
     // identical to func_0206ac6c, might take unsigned short* instead?
     bool IsNextCharacterControlAlt(const void* text) const;
 
+    // usa: func_0204483c
+    // replaces TIME, RECT, WIN, CEN, MOJI and SKIP tags as well as newlines
+    // with control characters
+    void ConvertBoxModifierTags(const char* in, char* out);
+
+    // usa: func_020449a4
+    // process modifiers like <CEN> at the start of some text and return
+    // a pointer past these
+    const char* HandleImmediateBoxTags(const char* in);
+
     // usa: func_0204500c
     // graphicsMode = 0 to use the 3D rendering engine, = 1 to use
     // the 2D engine
     void ShowMessage(const char* msg, int graphicsMode, int width);
+
+    // usa: func_020457e8
+    void RecordWaitTimeValue(int value);
+    // usa: func_02045824
+    // slot == -1 to save to all 4 slots
+    void RecordWaitTimeValue(int value, int slot);
+
+    // usa: func_020459b8
+    int LoadNewGlyph(unsigned char glyphIndex, const FontIndexFile::Glyph* glyph, unsigned char fontIndex);
 
     // usa: func_02045c00
     int GetGlyphIndex(const FontIndexFile::Glyph* glyph);
     // usa: func_02045cac
     void ReleaseAllGlyphs();
 
-    // usa: func_02045f3c
-    // args 5 and 6 are unused, in 2D mode only white and green text is supported,
-    // and if you repeat the first character 10 times the function will return early. wtf?
-    void DrawPreprocessedText(const unsigned short* words, int x, int y, unsigned short color,
-        int, int, bool use2D, unsigned char fontIndex, int lineSpacing);
-
     // usa: func_02045d14
     // converts the text into the 16-bit index encoding (written into outWords)
     // and returns the number of words written
     unsigned short AcquireText16Bit(const char* text, unsigned short* outWords, unsigned char fontIndex);
     int MeasureText16Bit(const unsigned short* words, int numWords, unsigned char fontIndex);
+    
+    // usa: func_02045f3c
+    // args 5 and 6 are unused, in 2D mode only white and green text is supported,
+    // and if you repeat the first character 10 times the function will return early. wtf?
+    void DrawPreprocessedText(const unsigned short* words, int x, int y, unsigned short color,
+        int, int, bool use2D, unsigned char fontIndex, int lineSpacing);
+    
     // usa: func_020462d0
     void ReleaseText16Bit(unsigned short* words, int len);
 

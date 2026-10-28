@@ -3,9 +3,20 @@
 #include "Util/StringTests.h"
 #include "GameState/GameState.h"
 #include "NitroSDK/Graphics.h"
+#include "NitroSDK/HWRegisters.h"
+#include "NitroSDK/ColorEffects.h"
+#include "Graphics/VRAMStaging.h"
 #include <globaldefs.h>
+#include <asmhacks.h>
 
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
+static void GetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short* outX, short* outY);
+
+static inline void WriteVertex16(unsigned short x, fix32_t y, unsigned short z)
+{
+    GXFIFO_VERTEX_16 = x | ((unsigned short)y << 16);
+    GXFIFO_VERTEX_16 = z;
+}
 
 extern "C"
 {
@@ -24,7 +35,9 @@ extern "C"
     // and wifi players. (Q: Does this count Ivor?)
     unsigned char func_02011538(GameState*);
 
+    void func_0202f380(void*, int);
     void func_0202f404(void*, int, int);
+    void func_0202f6a4(void*);
 
     void* func_0203dce4(void*, int);
     void* func_0203cf4c();
@@ -32,9 +45,11 @@ extern "C"
 
     // set textbox dimensions?
     void func_02042b98(TextManager*, int, int, int, int);
-    void func_02042c24(void*, short, short);
     void func_02043124(TextManager*);
     void func_02043204(TextManager*);
+    void func_02044530(TextManager*, bool);
+    void func_0204459c(TextManager*, bool);
+    void func_02044830(TextManager*, int*, int*);
     void func_020457e8(TextManager*, int);
 
     int func_020546a8(PartyMember*);
@@ -44,10 +59,12 @@ extern "C"
     void func_0205cc50(DialogueOptionManager*, int, int);
     void func_0205cd94(DialogueOptionManager*);
     bool func_0205cde8(DialogueOptionManager*);
+    int func_0205ce28(void*);
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
 
-    void func_02066cc0(void*, short*, short*);
+    void func_020675fc(TextManager*);
+    void func_0206b6b8(TextManager*);
 
     // probably get quest manager instance or something?
     void* func_02094d6c();
@@ -56,6 +73,9 @@ extern "C"
 
     // alternative strlen implementation
     int func_020d2ff0(const char*);
+
+    void func_020e2110(void*);
+    void func_020e2310(void*, int, int, int, const char*, unsigned char, unsigned char);
 }
 
 extern char data_02108760[]; // sound effect system?
@@ -81,8 +101,10 @@ extern const char data_020e7e10[12];
 extern const char data_020e7e1c[12];
 extern const char data_020e7e30[5];
 extern const char data_020e7e35[7];
+extern const short data_020e7e3c[];
 extern const short data_020e7e44[];
 extern const short data_020e7e4c[];
+extern const short data_020e7e54[];
 extern const char* data_020e7e74[6];
 
 extern char data_020f0746[]; // "<INN="
@@ -190,6 +212,13 @@ void ShowBinaryOptionDialogue(DialogueOptionManager* dialogue, int defaultOption
         dialogue->gridMenu_1c_.touchInputEnabled_94_ = false;
 }
 
+static void WriteTextureCoords(fix32_t x, fix32_t y)
+{
+    short xFixed4 = x >> 8;
+    short yFixed4 = y >> 8;
+    GXFIFO_VERTEX_TEXCOORD = (unsigned short)xFixed4 | ((unsigned short)yFixed4 << 16);
+}
+
 void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x, short preShiftY, unsigned char colorIndex)
 {
     if (glyph->indexGlyph == NULL)
@@ -227,7 +256,7 @@ void TextManager::AdvanceAutoTimer(unsigned int ticks)
     if (unknown_19d0_ != 0 || pauseType_9a0_ != 4)
         return;
 
-    unknown_912_ = 0;
+    voiceSoundEffectTimer_912_ = 0;
     if (ticks < autoRemainingTime_195f_)
     {
         autoRemainingTime_195f_ -= ticks;
@@ -267,7 +296,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         int shakeX, shakeY;
         GetBoxShakeOffset(&shakeX, &shakeY);
         short x, y;
-        func_02066cc0(boxHandler, &x, &y);
+        GetCurrentTextBoxPosition(boxHandler, &x, &y);
         y -= 19;
         boxHandler->pCurrentBox = &speakerTextBox_930_;
         if (boxHandler->pCurrentBox != NULL)
@@ -278,10 +307,10 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         if (boxHandler->pCurrentBox != NULL)
             boxHandler->pCurrentBox->unknown_8 = 2;
         if (noOffsets)
-            func_02042c24(boxHandler, x, y);
+            SetCurrentTextBoxPosition(boxHandler, x, y);
         else
         {
-            func_02042c24(boxHandler, x + shakeX, y + shakeY);
+            SetCurrentTextBoxPosition(boxHandler, x + shakeX, y + shakeY);
             func_0202f404(boxHandler, 1, 0);
         }
         short widthRounding = 8 - (speakerNameWidth_1944_ & 7);
@@ -315,11 +344,293 @@ void TextManager::DrawSpeakerName(bool noOffsets)
     boxHandler->pCurrentBox = &mainTextBox_914_;
 }
 
+// probably an inline function that got emitted here
+static void GetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short* outX, short* outY)
+{
+    if (ptr->pCurrentBox == NULL)
+        return;
+    *outX = ptr->pCurrentBox->x;
+    *outY = ptr->pCurrentBox->y;
+}
+
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z)
 {
+    if (ALWAYS_FALSE()) x++; // prevents inlining
     glyph->drawX = x;
     glyph->drawY = y;
     glyph->drawZ = z;
+}
+
+void TextManager::Draw(bool arg)
+{
+    if (unknown_19cc_ != 0)
+        return;
+
+    int shakeX, shakeY;
+    GetBoxShakeOffset(&shakeX, &shakeY);
+
+    if ((unknown_998_ != 0 && showWindow_19b1_) || unknown_19cb_ != 0)
+    {
+        if (unknown_19cb_ != 0 && func_0205ce28(&substruct_19e0_) != 0)
+        {
+            func_0202f6a4(&substruct_19e0_);
+            func_0202f380(&substruct_19e0_, 1);
+        }
+
+        if (unknown_998_ != 0 && showWindow_19b1_)
+            DrawSpeakerName(arg);
+
+        short boxX, boxY;
+        GetCurrentTextBoxPosition(&substruct_19e0_, &boxX, &boxY);
+        SetCurrentTextBoxPosition(&substruct_19e0_, boxX + shakeX, boxY + shakeY);
+
+        if (!arg)
+        {
+            if (unknown_38_ != NULL)
+                func_020e2110(unknown_38_);
+            else
+                func_0202f404(&substruct_19e0_, 1, 1);
+        }
+
+        SetCurrentTextBoxPosition(&substruct_19e0_, boxX, boxY);
+    }
+
+    if (unknown_998_ == 0)
+        return;
+
+    func_020675fc(this);
+    int* pViewport = NULL;
+    if (unknown_19b9_ == 1)
+        pViewport = unknown_1848_;
+    
+    if (unknown_54_ == NULL || unknown_58_ == NULL)
+        return;
+    if (glyphIndexListLength_6c_ == 0)
+        return;
+
+    func_02044530(this, arg);
+
+    int var48 = 0;
+    int lineCenteringX[16] = {0};
+    int lineCenteringY[16] = {0};
+
+    int alphaSrc = 31, alphaDst = 31;
+    if (effects_195b_ & 4)
+    {
+        alphaDst = unknown_9b0_ >> 16;
+        if (arg)
+        {
+            alphaDst &= 31;
+            if (alphaDst != 0)
+                alphaSrc = 15 - (alphaDst >> 1);
+            ColorEffect_ConfigureAlphaBlend(ADDR_BLDCNT, BLEND_TARGET_BG3, BLEND_TARGET_BG0, alphaDst, alphaSrc);
+        }
+    }
+
+    unsigned short nextWord;
+    if (unknown_19c5_ != 0)
+    {
+        nextWord = glyphIndexList_4c_[unknown_78_];
+        if (!IsNextCharacterInteractionControl(&nextWord))
+            return;
+    }
+
+    if (effects_195b_ & 0x40)
+        func_0206b6b8(this);
+
+    if (cenTag_19b8_)
+    {
+        func_02044830(this, lineCenteringX, lineCenteringY);
+        for (int i = 0; i < 16; i++)
+            lineCenteringY[i] = unknown_185c_;
+    }
+    else
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            lineCenteringX[i] = unknown_1858_ + 12;
+            lineCenteringY[i] = unknown_185c_;
+        }
+    }
+
+    RenderGlyph* rglyph;
+    
+    unsigned char lastGlyphIndex = 0xff;
+    unsigned char thisGlyphIndex; // var40
+    unsigned int numWords = unknown_78_;
+    int offsetX, offsetY;
+    unsigned int wordIndex = unknown_74_;
+    unsigned int messageStart = glyphIndexListMainMessageStart_88_;
+    if (wordIndex < messageStart)
+        wordIndex = messageStart;
+
+    unsigned char spaceSize = GetFontSpaceSize(fontIndex_19dc_);
+    offsetY = lineCenteringY[0] - unknown_1868_;
+    offsetX = lineCenteringX[0];
+
+    for (; wordIndex < numWords; wordIndex++)
+    {
+        nextWord = glyphIndexList_4c_[wordIndex];
+        if (IsNextCharacterControlAlt(&nextWord))
+        {
+            if (IsNextCharacterInteractionControl(&nextWord))
+                break;
+            if (nextWord == ControlWord_LineBreak)
+            {
+                int vSpacing = mojiArg2_1864_;
+                offsetX = lineCenteringX[var48 + 1];
+                var48++;
+                offsetY += vSpacing;
+                lastGlyphIndex = 0xff;
+            }
+            else if (nextWord == ControlWord_Unknown_ff19)
+            {
+                offsetX += spaceSize + 1;
+                lastGlyphIndex = 0xff;
+            }
+            continue;
+        }
+
+        rglyph = &glyphs_[nextWord];
+        thisGlyphIndex = rglyph->indexInFontFile;
+        offsetX += GetFontGlyphKerning(lastGlyphIndex, thisGlyphIndex, fontIndex_19dc_);
+        lastGlyphIndex = thisGlyphIndex;
+
+        if (arg)
+        {
+            if (unknown_40_ <= wordIndex)
+                RenderGlyph2D(mainUIElement_34_, rglyph, offsetX, offsetY + 2, 15);
+        }
+        else if (unknown_19ce_)
+        {
+            if (unknown_44_ != unknown_78_)
+            {
+                unsigned char* staging = (unsigned char*)AllocateVRAMStagingMemory(256 * 96 / 2);
+                if (staging != NULL)
+                {
+                    unsigned char i; // cursed
+                    unsigned int vramOffset = textureArena_1e28_->GetImageVRAMOffset();
+                    unsigned char fontIndex = fontIndex_19dc_;
+                    const FontIndexFile::Glyph* glyph = rglyph->indexGlyph;
+                    if (glyph != NULL)
+                    {
+                        unsigned char effects = TextManager::GetInstance()->effects_195b_;
+                        if (effects & 0x80)
+                        {
+                            for (i = 0; i < 4; i++)
+                            {
+                                short baseX = offsetX;
+                                short baseY = offsetY - 116;
+                                BlitGlyphTo4BitPixelBuffer(data_020e7e54[i] + baseX, data_020e7e3c[i] + baseY, 
+                                    glyph, staging, 256, 96, 15, fontIndex);
+                            }
+                            short baseX = offsetX;
+                            short baseY = offsetY - 116;
+                            BlitGlyphTo4BitPixelBuffer(baseX + 1, baseY + 1, glyph, staging,
+                                256, 96, 15, fontIndex);
+                        }
+                        else if (effects & 2)
+                        {
+                            short baseY = offsetY - 116;
+                            short baseX = offsetX;
+                            BlitGlyphTo4BitPixelBuffer(baseX + 1, baseY + 1, glyph, staging, 256, 96, 15, fontIndex);
+                            BlitGlyphTo4BitPixelBuffer(baseX, baseY, glyph, staging, 256, 96, 15, fontIndex);
+                        }
+                        else
+                        {
+                            short baseX = offsetX;
+                            short baseY = offsetY - 116;
+                            BlitGlyphTo4BitPixelBuffer(baseX, baseY, glyph, staging, 256, 96, 15, fontIndex);
+                        }
+                    }
+                    StageMemoryToVRAM(VRAMSubregion_TextureImage, staging, vramOffset, 256 * 96 / 2, true, false);
+                    FreeVRAMStagingMemory(staging);
+                }
+            }
+        }
+        else if (unknown_38_ != NULL)
+        {
+            const char* tag = rglyph->GetGlyphTag();
+            func_020e2310(unknown_38_, 0, offsetX, offsetY - 116, tag, 15, fontIndex_19dc_);
+        }
+        else
+        {
+            SetRenderGlyphPosition(rglyph, offsetX, offsetY, 0);
+            rglyph->Draw(color_187c_, pViewport, alphaDst);
+        }
+
+        if (rglyph->indexGlyph != NULL)
+            offsetX += rglyph->indexGlyph->width + 1;
+    }
+
+    func_0204459c(this, arg);
+    unknown_40_ = numWords;
+
+    if (!unknown_19ce_)
+        return;
+
+    if (textureArena_1e28_ == NULL)
+        return;
+    
+    unsigned int imageVRAMOffsetDiv8 = textureArena_1e28_->textureImageHandle_ << 16;
+    GXFIFO_MATRIX_PUSH = 0;
+    GXFIFO_MATRIX_TRANSLATE = 0;
+    GXFIFO_MATRIX_TRANSLATE = 116 << 12;
+    GXFIFO_MATRIX_TRANSLATE = 1024 << 12;
+    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFIFO_MATRIX_SCALE = 1 << 12;
+
+    GXFIFO_MATRIX_PUSH = 0;
+    GXFIFO_MATRIX_TRANSLATE = 0;
+    GXFIFO_MATRIX_TRANSLATE = 128 << 12;
+    GXFIFO_MATRIX_TRANSLATE = 0;
+    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFIFO_MATRIX_SCALE = -1 << 12;
+    GXFIFO_MATRIX_SCALE = 1 << 12;
+
+    GXFIFO_MATRIX_PUSH = 0;
+    GXFIFO_DIFFUSE_AMBIENT = 0x7fffffff; // both colors white
+    GXFIFO_SPECULAR_EMISSION = 0x4210; // specular (16,16,16), emission 0, don't use table
+    // size 256x128, texture format 3 (4bpp), color 0 transparent, 
+    // transformation mode = texcoord source
+    GXFIFO_TEXIMAGE_PARAMS = 0x6e500000 | (imageVRAMOffsetDiv8 >> 16);
+    GXFIFO_PALETTE_BASE = data_021077fc >> 4;
+    // render both front/back, alpha = 31, id = 0x3e = 62
+    GXFIFO_POLYGON_ATTRIBUTES = 0x3e1f00c0;
+
+    GXFIFO_MATRIX_SCALE = 256 << 12;
+    GXFIFO_MATRIX_SCALE = 128 << 12;
+    GXFIFO_MATRIX_SCALE = 1 << 12;
+
+    GXFIFO_POLYGON_BEGIN = 1;
+    GXFIFO_VERTEX_COLOR = 0x7fff;
+
+    int topYTexcoord = 128;
+    float zero = 0.0f;
+    topYTexcoord *= zero;
+    float topYVertexCoord = 1.0f - zero;
+
+    // top left
+    WriteTextureCoords(0, topYTexcoord << 12);
+    WriteVertex16(0, 4096.0f * topYVertexCoord, 0);
+
+    // top right
+    WriteTextureCoords(256 << 12, topYTexcoord << 12);
+    WriteVertex16(1 << 12, 4096.0f * topYVertexCoord, 0);
+
+    // bottom right
+    WriteTextureCoords(256 << 12, 128 << 12);
+    WriteVertex16(1 << 12, 0, 0);
+
+    // bottom left
+    WriteTextureCoords(0, 128 << 12);
+    WriteVertex16(0, 0, 0);
+
+    GXFIFO_POLYGON_END = 0;
+    GXFIFO_MATRIX_POP = 1;
+    GXFIFO_MATRIX_POP = 1;
+    GXFIFO_MATRIX_POP = 1;
 }
 
 void TextManager::ProcessYesNoInput(int input)
@@ -2657,7 +2968,7 @@ void TextManager::ComputeSpeaker()
             unknown_1946_ = speakerEnd - speakerStart;
             unknown_1946_ += 3;
             unknown_1946_ += numCharsAtStart - 2;
-            unknown_912_ = 4;
+            voiceSoundEffectTimer_912_ = 4;
             short boxWidthRounding = 8 - (speakerNameWidth_1944_ & 7);
             speakerTextBox_930_.width = speakerNameWidth_1944_ + 18 + boxWidthRounding;
             speakerTextBox_930_.height = 22;
@@ -2669,7 +2980,7 @@ void TextManager::ComputeSpeaker()
     }
     else if (noSpeakerStart != NULL || altNoSpeakerStart != NULL)
     {
-        unknown_912_ = 3;
+        voiceSoundEffectTimer_912_ = 3;
     }
     else
     {

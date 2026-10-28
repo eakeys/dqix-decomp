@@ -42,4 +42,14 @@ public:
 
     unsigned int GetImageHandle() const { return textureImageHandle_; }
     unsigned int GetPaletteHandle() const { return texturePaletteHandle_; }
+
+    unsigned int GetImageVRAMOffset() const
+    {
+        return (textureImageHandle_ & 0xffff) << 3;
+    }
+
+    unsigned int GetPaletteVRAMOffset() const
+    {
+        return (texturePaletteHandle_ & 0xffff) << 3;
+    }
 };

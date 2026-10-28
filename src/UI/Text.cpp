@@ -35,7 +35,7 @@ struct Struct_02107800
     char unk_10[8];
     char* primaryScratchBuffer;
     TextManager* manager;
-    char unk_20[0xc];
+    char unk_20[0xc]; // something related to sound
     FontIndexFile* pFontIndexFiles[2];
     FontDataFile* pFontDataFiles[2];
 } extern data_02107800;
@@ -47,6 +47,7 @@ extern const char data_020e7a9c[]; // { 1, 1, 1, 1, 1, 1, 1, 1, 15 }
 extern const short data_020e7aa6[]; // { 1, 2, 2, 3, 2 }
 extern const short data_020e7ab0[]; // { 2, 1, 3, 2, 2 }
 extern const unsigned char data_020e7ade[3][8];
+extern const unsigned short data_020e7af8[];
 
 extern char data_020efe78[]; // "<X=%d>"
 extern char data_020efe7f[]; // "<Y=%d>"
@@ -103,27 +104,18 @@ extern "C"
     // probably atoi
     int func_02005a94(const char*);
 
-    void func_02042af4(TextManager*, void*, int);
     void func_02042b98(TextManager*, int, int, int, int);
     void func_02043040(TextManager*);
     void func_02043124(TextManager*);
     void func_020430b0(TextManager*);
-    void func_0204394c(void*);
     const char* func_020449a4(TextManager*, const char*);
     void func_02044c74(TextManager*, UIElement*);
     void func_02044d0c();
     void func_02044f3c(TextManager*, const char*, int);
 
     void func_0205e944(void*, int);
-
-    void func_02066cf0(TextManager*, int); // maybe bool
-
-    // get offsets among (-3, 0), (0, 0), (0, -2), (0, 0)
-    void func_0206b804(TextManager*, int*, int*);
-
-    void func_0207df50(void*);
-    void func_0207df90(void*);
-    void func_0207dfac(void*);
+    void func_0205eaa0(void*, int, void*);
+    void func_0205eabc(void*, void*, int);
 
     // alternative strlen
     int func_020d2ff0(const char*);
@@ -762,7 +754,7 @@ void LoadCustomFonts(SafeAllocator* alloc)
     BackgroundLoader::RemoveLockGlobal();
 }
 
-int TextManager::AcquireGlyphVRAM(unsigned char *bitfield, unsigned int numBytes)
+int TextManager::MaybeAcquireGlyphVRAM(unsigned char *bitfield, unsigned int numBytes)
 {
     for (unsigned int byteIdx = 0; byteIdx < numBytes; bitfield++, byteIdx++)
     {
@@ -780,9 +772,11 @@ int TextManager::AcquireGlyphVRAM(unsigned char *bitfield, unsigned int numBytes
     return -1;
 }
 
-void TextManager::ReleaseGlyphVRAM(unsigned char* bitfield, int idx)
+void TextManager::MaybeReleaseGlyphVRAM(unsigned char* bitfield, int idx)
 {
-    bitfield[idx >> 3] &= ~(1 << (idx & 7));
+    unsigned int lookupIdx = idx >> 3;
+    unsigned int lookupBit = idx & 7;
+    bitfield[lookupIdx] &= ~(1 << lookupBit);
 }
 
 void TextManager::SetActiveTextBox(TextBox* to)
@@ -795,6 +789,30 @@ void TextManager::SetMainTextBoxActive()
     SetActiveTextBox(&mainTextBox_914_);
 }
 
+void SetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short x, short y)
+{
+    if (ptr->pCurrentBox == NULL)
+        return;
+    ptr->pCurrentBox->x = x;
+    ptr->pCurrentBox->y = y;
+}
+
+void SetCurrentTextBoxDimensions(TextManager::Substruct_19e0* ptr, int w, int h)
+{
+    if (ptr->pCurrentBox == NULL)
+        return;
+    ptr->pCurrentBox->width = w;
+    ptr->pCurrentBox->height = h;
+}
+
+void SetViewport(int* viewport, int left, int top, int right, int bottom)
+{
+    viewport[0] = left;
+    viewport[1] = top;
+    viewport[2] = right;
+    viewport[3] = bottom;
+}
+
 void TextBox::Reset()
 {
     x = y = width = height = 0;
@@ -802,6 +820,19 @@ void TextBox::Reset()
     unknown_c = 0;
     scaleX = scaleY = 0;
     color = 0x7fff;
+}
+
+void TextManager::InitializeRenderGlyphs()
+{
+    if (textureArena_1e28_ != NULL)
+        data_021077fc = textureArena_1e28_->GetPaletteVRAMOffset();
+    StageMemoryToVRAM(VRAMSubregion_TexturePalette, data_020e7af8, data_021077fc, 0x20, true, true);
+    for (int i = 0; i < 0x80; i++)
+    {
+        glyphs_[i].Reset2();
+        glyphRefcounts_17b8_[i] = 0;
+    }
+    RefreshGraphics(false);
 }
 
 struct TextBoxBounds
@@ -893,6 +924,18 @@ void DrawTextBoxBackground(unsigned short* tileBuffer, const TextBoxBounds* boun
     }
 }
 
+void ClearGlyphTextureVRAM(TextureArena* arena)
+{
+    void* staging = AllocateVRAMStagingMemory(0x80 * 96);
+    if (staging == NULL)
+        return;
+    
+    unsigned int vramOffset = (unsigned short)arena->GetImageHandle() << 3;
+    memset(staging, 0, 0x80 * 96);
+    StageMemoryToVRAM(VRAMSubregion_TextureImage, staging, vramOffset, 0x80 * 96, true, false);
+    FreeVRAMStagingMemory(staging);
+}
+
 void TextManager::RefreshGraphics(bool arg)
 {
     if (unknown_19cc_ != 0)
@@ -907,7 +950,7 @@ void TextManager::RefreshGraphics(bool arg)
         {
             ui->pixelBuffer_8_ = pixelBuffer; // wtf?
             unknown_19cc_ = 0;
-            func_02066cf0(this, 1);
+            Draw(true);
             unknown_19cc_ = 1;
             if (maybeBoxShaking_19c0_)
                 unknown_40_ = 0;
@@ -1036,7 +1079,7 @@ void TextManager::RefreshGraphics(bool arg)
     }
 
     if (unknown_19ce_ && unknown_44_ == 0)
-        func_0204394c(unknown_1e28_);
+        ClearGlyphTextureVRAM(textureArena_1e28_);
 
     for (int i = 0; i < 2; i++)
         windows_[i].SetEnabled(false);
@@ -1044,7 +1087,7 @@ void TextManager::RefreshGraphics(bool arg)
     if (arg && unknown_998_ == 0)
         return;
 
-    if (unknown_1e28_ != NULL)
+    if (textureArena_1e28_ != NULL)
     {
         RenderGlyph* rglyph;
         for (int i = 0; i < 0x80; i++)
@@ -1058,11 +1101,11 @@ void TextManager::RefreshGraphics(bool arg)
                 rglyph->unk_16_low = false;
             else
             {
-                func_0207df90(unknown_1e28_);
+                textureArena_1e28_->Restore();
                 rglyph->UploadToVRAM();
-                func_0207dfac(unknown_1e28_);
+                textureArena_1e28_->Save();
             }
-            func_02042af4(this, &substruct_2cc_, rglyph->bitAllocationIndex);
+            MaybeReleaseGlyphVRAM(substruct_2cc_, rglyph->bitAllocationIndex);
         }
     }
 
@@ -1428,7 +1471,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         showWindow_19b1_ = 1;
         centerX_990_ = 128;
         unknown_1868_ = 0;
-        unknown_912_ = 0;
+        voiceSoundEffectTimer_912_ = 0;
         unknown_994_ = -1;
         unknown_94c_ = 0;
         unknown_950_ = 0;
@@ -1464,7 +1507,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         if (unknown_19ce_)
         {
             unknown_44_ = 0;
-            func_0204394c(unknown_1e28_);
+            ClearGlyphTextureVRAM(textureArena_1e28_);
         }
 
         char* tempBufferA = pageScratchBuffer_60_;
@@ -1505,7 +1548,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         unknown_19bc_ = 0;
         pauseType_9a0_ = 5;
         unknown_19b2_ = 1;
-        unknown_99c_ = 0;
+        speakerVoiceType_99c_ = 0;
         unknown_19ae_ = 0;
         unknown_19af_ = 0;
         unknown_19b5_ = 0;
@@ -1514,13 +1557,40 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         unknown_19b4_ = 0;
         for (int i = 0; i < 2; i++)
             windows_[i].SetEnabled(false);
-        if (unknown_1e28_ != NULL)
-            func_0207df50(unknown_1e28_); 
+        if (textureArena_1e28_ != NULL)
+            textureArena_1e28_->Reset(); 
     }
     unknown_30_ = -1;
     unknown_31_ = -1;
     if (probablyItemID > 0)
         gs->unknown_7f58_ = 0;
+}
+
+void TextManager::PlayVoiceSoundEffect()
+{
+    if (voicePlaybackState_19b3_ == 1 || unknown_19b2_ == 0)
+        return;
+    switch (speakerVoiceType_99c_)
+    {
+    case 0: // default / neutral pitch
+        func_0205eaa0(data_02108760, 10, data_02107800.unk_20);
+        break;
+    case 1: // male
+        func_0205eaa0(data_02108760, 12, data_02107800.unk_20);
+        break; 
+    case 2: // female
+        func_0205eaa0(data_02108760, 11, data_02107800.unk_20);
+        break;
+    }
+    voicePlaybackState_19b3_ = 1;
+}
+
+void TextManager::StopVoiceSoundEffect()
+{
+    if (voicePlaybackState_19b3_ == 0 || unknown_19b2_ == 0)
+        return;
+    func_0205eabc(data_02108760, data_02107800.unk_20, 0);
+    voicePlaybackState_19b3_ = 0;
 }
 
 void TextManager::RecordWaitTimeValue(int value)
@@ -1590,16 +1660,6 @@ void BlitGlyphTo4BitPixelBuffer(int x, int y, const FontIndexFile::Glyph* glyph,
     }
 }
 
-static inline unsigned int GetVRAMOffsetFromUnknown(const void* ptr)
-{
-    struct Foo {
-        char unk[0x50];
-        unsigned int offset : 16;
-    };
-    unsigned int offset = ((Foo*)ptr)->offset;
-    return offset * 8;
-}
-
 int TextManager::LoadNewGlyph(unsigned char glyphIndex, const FontIndexFile::Glyph *glyph, unsigned char fontIndex)
 {
     if (glyph == NULL)
@@ -1608,7 +1668,7 @@ int TextManager::LoadNewGlyph(unsigned char glyphIndex, const FontIndexFile::Gly
     GlyphPixelBuffer* pixelBufferArray = data_02107800.tileMapIndices->glyphPixelData;
     unsigned char* refcountArray = glyphRefcounts_17b8_;
     RenderGlyph* renderGlyphs = glyphs_;
-    int vramSlot = AcquireGlyphVRAM(substruct_2cc_, sizeof(substruct_2cc_));
+    int vramSlot = MaybeAcquireGlyphVRAM(substruct_2cc_, sizeof(substruct_2cc_));
     if (vramSlot < 0)
         return 0;
 
@@ -1616,7 +1676,7 @@ int TextManager::LoadNewGlyph(unsigned char glyphIndex, const FontIndexFile::Gly
     {
         if (refcountArray[i] != 0)
             continue;
-        if (unknown_1e28_ != NULL)
+        if (textureArena_1e28_ != NULL)
         {
             GlyphPixelBuffer* chosenPixelBuffer = pixelBufferArray + vramSlot;
             RenderGlyph* targetRenderGlyph = renderGlyphs + i;
@@ -1643,7 +1703,7 @@ int TextManager::LoadNewGlyph(unsigned char glyphIndex, const FontIndexFile::Gly
             }
         
             targetRenderGlyph->Populate(glyphIndex, glyph, chosenPixelBuffer->pixels, vramSlot,
-                GetVRAMOffsetFromUnknown(unknown_1e28_) + i * 128, fontIndex);
+                textureArena_1e28_->GetImageVRAMOffset() + i * 128, fontIndex);
 
             if (b2)
                 targetRenderGlyph->unk_16_2 = true;
@@ -1692,8 +1752,8 @@ void TextManager::ReleaseAllGlyphs()
         glyphs_[i].Reset2();
         glyphRefcounts_17b8_[i] = 0;
     }
-    if (unknown_1e28_ != NULL)
-        func_0207df50(unknown_1e28_);
+    if (textureArena_1e28_ != NULL)
+        textureArena_1e28_->Reset();
 }
 
 unsigned short TextManager::AcquireText16Bit(const char *text, unsigned short *outWords, unsigned char fontIndex)
@@ -1706,8 +1766,8 @@ unsigned short TextManager::AcquireText16Bit(const char *text, unsigned short *o
     unsigned short counter = 0;
     int srcIndex = 0;
     int dstIndex = 0;
-    if (unknown_1e28_ != NULL)
-        func_0207df90(unknown_1e28_);
+    if (textureArena_1e28_ != NULL)
+        textureArena_1e28_->Restore();
 
     while (true)
     {
@@ -1760,8 +1820,8 @@ unsigned short TextManager::AcquireText16Bit(const char *text, unsigned short *o
             counter++;
         }
     }
-    if (unknown_1e28_ != NULL)
-        func_0207dfac(unknown_1e28_);
+    if (textureArena_1e28_ != NULL)
+        textureArena_1e28_->Save();
     return counter;
 }
 

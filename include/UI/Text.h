@@ -8,6 +8,7 @@
 #include "../Util/Grammar.h"
 #include "UIElement.h"
 #include "../Graphics/Font.h"
+#include "../Graphics/TextureArena.h"
 
 // sizeof == 0x1c.
 struct RenderGlyph
@@ -250,9 +251,9 @@ public:
     int unknown_2d0_;
     // has 0x400 bytes allocated to it
     SafeAllocator* pAllocator_2d4_;
-    int unknown_2d8_;
-    int unknown_2dc_;
-    int unknown_2e0_;
+    int unknown_2d8_; // pointer to object of size 0x54, func_0205a444
+    int unknown_2dc_; // pointer to 6 objects of size 0x28 each, func_0205a198
+    int unknown_2e0_; // pointer to object of size 8, func_0205a234
     short unknown_2e4_;
     char unknown_2e6_;
     char unknown_2e7_;
@@ -268,7 +269,7 @@ public:
     unsigned char maybeValuePaddingModes[16];
     char unk_901[1];
     unsigned char valueUnknownArray[16];
-    unsigned char unknown_912_; // 4 when current line has a speaker, 3 when not?
+    unsigned char voiceSoundEffectTimer_912_; // counts up, when >= 4 subtract 4 and play the sound effect
     char unk_913[1];
     TextBox mainTextBox_914_; // func_02042fcc 
     TextBox speakerTextBox_930_;
@@ -282,7 +283,7 @@ public:
     int centerX_990_;
     int unknown_994_;
     int unknown_998_;
-    int unknown_99c_;
+    int speakerVoiceType_99c_; // 0 = neutral, 1 = male, 2 = female
     // should be an enum.
     // 0 = waiting for A (no cursor),
     // 1 = waiting for A (with cursor),
@@ -330,7 +331,7 @@ public:
     char maybeSoundDuration_1959_;
     char unknown_195a_;
     unsigned char effects_195b_;
-    char unknown_195c_;
+    unsigned char unknown_195c_;
     // low 2 bits determine which offset among (-2, 0), (0, 0), (0, -3), (0, 0) to apply to speaker name
     unsigned char unknown_195d_;
     char autoValue_195e_;
@@ -346,14 +347,14 @@ public:
     char unknown_19af_;
     unsigned char unknown_19b0_;
     unsigned char showWindow_19b1_; // probably bool
-    char unknown_19b2_;
-    char unknown_19b3_;
+    unsigned char unknown_19b2_; // if 0, voice sound effects don't activate
+    unsigned char voicePlaybackState_19b3_; // 1 while voice sound effect is playing
     char unknown_19b4_;
     char unknown_19b5_;
     char maybeDoesNPCTurn_19b6_;
     char maybeDoesSoundPlay_19b7_;
-    char cenTag_19b8_;
-    char unknown_19b9_;
+    unsigned char cenTag_19b8_;
+    unsigned char unknown_19b9_;
     unsigned char unknown_19ba_;
     char skipTag_19bb_;
     char unknown_19bc_;
@@ -365,7 +366,7 @@ public:
     unsigned char speakerDifference_19c2_;
     unsigned char unknown_19c3_;
     unsigned char unknown_19c4_;
-    char unknown_19c5_;
+    unsigned char unknown_19c5_;
     bool recoveryParam_19c6_;
     bool recoveryParam_19c7_; 
     char unknown_19c8_;
@@ -398,14 +399,14 @@ public:
         TextBox* pCurrentBox; 
         char unk_444[4];
     } substruct_19e0_; // func_0202f1a4
-    void* unknown_1e28_;
+    TextureArena* textureArena_1e28_;
 
     static TextManager* GetInstance();
 
     // usa: func_02042a90
-    int AcquireGlyphVRAM(unsigned char* bitfield, unsigned int numBytes);
+    int MaybeAcquireGlyphVRAM(unsigned char* bitfield, unsigned int numBytes);
     // usa: func_02042af4
-    void ReleaseGlyphVRAM(unsigned char* bitfield, int idx);
+    void MaybeReleaseGlyphVRAM(unsigned char* bitfield, int idx);
 
     // usa: func_02042b10
     // sets the pointer in substruct_19e0 at offset 0x440
@@ -413,8 +414,8 @@ public:
     // usa: func_02042b1c
     void SetMainTextBoxActive();
 
-    // usa: func_02042c68
-    void Reset();
+    // usa: func_020432c4
+    void InitializeRenderGlyphs();
 
     // usa: func-020439b0
     void RefreshGraphics(bool arg);
@@ -440,6 +441,11 @@ public:
     // graphicsMode = 0 to use the 3D rendering engine, = 1 to use
     // the 2D engine
     void ShowMessage(const char* msg, int graphicsMode, int width);
+
+    // usa: func_020455f8
+    void PlayVoiceSoundEffect();
+    // usa: func_02045688
+    void StopVoiceSoundEffect();
 
     // usa: func_020457e8
     void RecordWaitTimeValue(int value);
@@ -482,6 +488,9 @@ public:
     // usa: func_02066a6c
     // The bool probably has some deeper meaning
     void DrawSpeakerName(bool noOffsets);
+
+    // usa: func_02066cf0
+    void Draw(bool arg);
 
     // usa: func_020676e0
     void CheckAndHandleDialogueOption();
@@ -667,3 +676,9 @@ public:
 };
 
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);
+
+// these need to go somewhere else I think
+void SetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short x, short y);
+void BlitGlyphTo4BitPixelBuffer(int x, int y, const FontIndexFile::Glyph* glyph, unsigned char* dstBuffer,
+    int bufferW, int bufferH, unsigned char color, unsigned char fontIndex);
+extern unsigned int data_021077fc;

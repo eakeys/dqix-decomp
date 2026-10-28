@@ -1,6 +1,9 @@
 #pragma once
 #include "std_library_functions.h"
 
+#define ADDR_BLDCNT 0x04000050
+#define ADDR_BLDCNTSUB 0x04001050
+
 extern "C"
 {
     // Pass e.g. the address of REG_BLDCNT, and both it and REG_BLDALPHA

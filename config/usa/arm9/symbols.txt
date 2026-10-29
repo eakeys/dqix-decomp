@@ -1752,22 +1752,22 @@ func_02046f84 kind:function(arm,size=0x88) addr:0x02046f84
 func_0204700c kind:function(arm,size=0x150) addr:0x0204700c
 func_0204715c kind:function(arm,size=0x3c) addr:0x0204715c
 func_02047198 kind:function(arm,size=0x4) addr:0x02047198
-_ZN9SPRSprite10InitializeEv kind:function(arm,size=0x94) addr:0x0204719c
-_ZN9SPRSprite10MaybeResetEv kind:function(arm,size=0x1c) addr:0x02047230
+_ZN9SPRSprite5ResetEv kind:function(arm,size=0x94) addr:0x0204719c
+_ZN9SPRSprite7ReleaseEv kind:function(arm,size=0x1c) addr:0x02047230
 _ZN9SPRSprite6UpdateEv kind:function(arm,size=0x98) addr:0x0204724c
 _ZN9SPRSprite24DrawAnimatedWithRotationEb kind:function(arm,size=0xe4) addr:0x020472e4
-_ZN9SPRSprite12DrawAnimatedEb kind:function(arm,size=0x80) addr:0x020473c8
-_ZN9SPRSprite34DrawTextureTransformedWithRotationEib kind:function(arm,size=0x10c) addr:0x02047448
-_ZN9SPRSprite22DrawTextureTransformedEib kind:function(arm,size=0xf4) addr:0x02047554
-_ZN9SPRSprite11DrawTextureEib kind:function(arm,size=0xd0) addr:0x02047648
+_ZN9SPRSprite22DrawAnimatedNoRotationEb kind:function(arm,size=0x80) addr:0x020473c8
+_ZN9SPRSprite31DrawTextureScaleRotateTranslateEib kind:function(arm,size=0x10c) addr:0x02047448
+_ZN9SPRSprite25DrawTextureScaleTranslateEib kind:function(arm,size=0xf4) addr:0x02047554
+_ZN9SPRSprite17DrawTextureStaticEib kind:function(arm,size=0xd0) addr:0x02047648
 _ZN9SPRSprite16DrawTexturePieceEPNS_12TexturePieceEb kind:function(arm,size=0x170) addr:0x02047718
 _Z14WriteTexCoordsii kind:function(arm,size=0x34) addr:0x02047888 local
 _ZN9SPRSprite12SetAnimationEi kind:function(arm,size=0x70) addr:0x020478bc
-func_0204792c kind:function(arm,size=0x8c) addr:0x0204792c
-func_020479b8 kind:function(arm,size=0x44) addr:0x020479b8
-func_020479fc kind:function(arm,size=0x40) addr:0x020479fc
-func_02047a3c kind:function(arm,size=0x20) addr:0x02047a3c
-func_02047a5c kind:function(arm,size=0x1c) addr:0x02047a5c
+_ZN9SPRSprite22SetAnimationRandomTimeEPKc kind:function(arm,size=0x8c) addr:0x0204792c
+_ZNK9SPRSprite23GetCurrentTextureHeightEv kind:function(arm,size=0x44) addr:0x020479b8
+_ZNK9SPRSprite22GetCurrentTextureWidthEv kind:function(arm,size=0x40) addr:0x020479fc
+_ZNK9SPRSprite16GetTextureHeightEi kind:function(arm,size=0x20) addr:0x02047a3c
+_ZNK9SPRSprite15GetTextureWidthEi kind:function(arm,size=0x1c) addr:0x02047a5c
 _ZN9SPRSprite21LoadAnimationFromFileEPKcP13SafeAllocator kind:function(arm,size=0xb8) addr:0x02047a78
 _ZN9SPRSprite11LoadFromSPREPKvjP13SafeAllocator kind:function(arm,size=0x10) addr:0x02047b30
 _ZN9SPRSprite11LoadFromSPREPKvP13SafeAllocator kind:function(arm,size=0x394) addr:0x02047b40
@@ -4617,13 +4617,13 @@ CreateTextureMatrix_v3_Rotate kind:function(arm,size=0xa4) addr:0x020bb194
 CreateTextureMatrix_v3_Scale kind:function(arm,size=0x40) addr:0x020bb238
 CreateTextureMatrix_v3_NoExtensions kind:function(arm,size=0x24) addr:0x020bb278
 _Z35MaterialTextureMatrixLoadProc_Type3P18MaterialRenderData kind:function(arm,size=0x188) addr:0x020bb29c
-_Z23InvalidTextureVRAMAllocjii kind:function(arm,size=0x8) addr:0x020bb424
-_Z22InvalidTextureVRAMFreej kind:function(arm,size=0x8) addr:0x020bb42c
-_Z23InvalidPaletteVRAMAllocjii kind:function(arm,size=0x8) addr:0x020bb434
-_Z22InvalidPaletteVRAMFreej kind:function(arm,size=0x8) addr:0x020bb43c
-_Z30SetTextureImageAllocationOrderiiiii kind:function(arm,size=0x48) addr:0x020bb444
+_Z23InvalidTextureVRAMAllocjii kind:function(arm,size=0x8) addr:0x020bb424 local
+_Z22InvalidTextureVRAMFreej kind:function(arm,size=0x8) addr:0x020bb42c local
+_Z23InvalidPaletteVRAMAllocjii kind:function(arm,size=0x8) addr:0x020bb434 local
+_Z22InvalidPaletteVRAMFreej kind:function(arm,size=0x8) addr:0x020bb43c local
+_Z30SetTextureImageAllocationOrderiiiii kind:function(arm,size=0x48) addr:0x020bb444 local
 _Z32InitializeTextureImageAllocationji kind:function(arm,size=0x88) addr:0x020bb48c
-_Z32InitializeTextureImageVRAMBlocksv kind:function(arm,size=0x74) addr:0x020bb514
+_Z32InitializeTextureImageVRAMBlocksv kind:function(arm,size=0x74) addr:0x020bb514 local
 _Z29FrameAllocateTextureImageVRAMjii kind:function(arm,size=0x170) addr:0x020bb588
 _Z25FrameFreeTextureImageVRAMj kind:function(arm,size=0x8) addr:0x020bb6f8
 _Z31SaveTextureImageAllocationStatePj kind:function(arm,size=0x40) addr:0x020bb700
@@ -6920,7 +6920,7 @@ data_020f00b6 kind:data(any) addr:0x020f00b6
 data_020f00bc kind:data(any) addr:0x020f00bc
 data_020f00c3 kind:data(any) addr:0x020f00c3
 data_020f00cc kind:data(any) addr:0x020f00cc
-data_020f0118 kind:data(any) addr:0x020f0118
+@stringBase0 kind:data(byte[0xd]) addr:0x020f0118 local
 data_020f0128 kind:data(any) addr:0x020f0128
 data_020f0129 kind:data(any) addr:0x020f0129
 data_020f012c kind:data(any) addr:0x020f012c
@@ -7423,12 +7423,13 @@ data_020f1e08 kind:data(any) addr:0x020f1e08
 data_020f1e88 kind:data(any) addr:0x020f1e88
 data_020f1ea8 kind:data(any) addr:0x020f1ea8
 data_020f1ec8 kind:data(any) addr:0x020f1ec8
-data_020f1ee8 kind:data(any) addr:0x020f1ee8
-data_020f1eec kind:data(any) addr:0x020f1eec
-data_020f1ef0 kind:data(any) addr:0x020f1ef0
-data_020f1ef4 kind:data(any) addr:0x020f1ef4
-data_020f1ef8 kind:data(any) addr:0x020f1ef8
-data_020f1f14 kind:data(any) addr:0x020f1f14
+g_pfnAllocTextureImage kind:data(any) addr:0x020f1ee8
+g_pfnFreeTextureImage kind:data(any) addr:0x020f1eec
+g_pfnAllocTexturePalette kind:data(any) addr:0x020f1ef0
+g_pfnFreeTexturePalette kind:data(any) addr:0x020f1ef4
+s_compressedBlockPriorityList kind:data(any) addr:0x020f1ef8 local
+s_blockPriorityList kind:data(any) addr:0x020f1f00 local
+s_blocks kind:data(any) addr:0x020f1f14 local
 data_020f1f8c kind:data(any) addr:0x020f1f8c
 data_020f1f90 kind:data(any) addr:0x020f1f90
 data_020f2050 kind:data(any) addr:0x020f2050
@@ -7785,8 +7786,8 @@ data_0210b678 kind:bss addr:0x0210b678
 data_0210b6b8 kind:bss addr:0x0210b6b8
 data_0210cf78 kind:bss addr:0x0210cf78
 data_0210cf7c kind:bss addr:0x0210cf7c
-data_0210cf84 kind:data(byte[0x2]) addr:0x0210cf84
-data_0210cf88 kind:bss addr:0x0210cf88
+s_numImageBanks kind:data(byte[0x2]) addr:0x0210cf84 local
+s_paletteData kind:bss addr:0x0210cf88 local
 data_0210cf94 kind:bss addr:0x0210cf94
 data_0210cfc0 kind:bss addr:0x0210cfc0
 data_0210cfd0 kind:bss addr:0x0210cfd0

@@ -58,7 +58,7 @@ typedef char int8_t;
 typedef unsigned int uintptr_t;
 typedef signed int intptr_t;
 
-typedef unsigned int size_t;
+typedef unsigned long size_t;
 
 // not really standard library but used in a bunch of places
 typedef int CBool;

@@ -781,7 +781,7 @@ void TextManager::MaybeReleaseGlyphVRAM(unsigned char* bitfield, int idx)
 
 void TextManager::SetActiveTextBox(TextBox* to)
 {
-    substruct_19e0_.pCurrentBox = to;
+    substruct_19e0_.activeBox_ = to;
 }
 
 void TextManager::SetMainTextBoxActive()
@@ -789,20 +789,20 @@ void TextManager::SetMainTextBoxActive()
     SetActiveTextBox(&mainTextBox_914_);
 }
 
-void SetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short x, short y)
+void SetCurrentTextBoxPosition(TextBoxGraphics* ptr, short x, short y)
 {
-    if (ptr->pCurrentBox == NULL)
+    if (ptr->activeBox_ == NULL)
         return;
-    ptr->pCurrentBox->x = x;
-    ptr->pCurrentBox->y = y;
+    ptr->activeBox_->x = x;
+    ptr->activeBox_->y = y;
 }
 
-void SetCurrentTextBoxDimensions(TextManager::Substruct_19e0* ptr, int w, int h)
+void SetCurrentTextBoxDimensions(TextBoxGraphics* ptr, int w, int h)
 {
-    if (ptr->pCurrentBox == NULL)
+    if (ptr->activeBox_ == NULL)
         return;
-    ptr->pCurrentBox->width = w;
-    ptr->pCurrentBox->height = h;
+    ptr->activeBox_->width = w;
+    ptr->activeBox_->height = h;
 }
 
 void SetViewport(int* viewport, int left, int top, int right, int bottom)
@@ -816,7 +816,7 @@ void SetViewport(int* viewport, int left, int top, int right, int bottom)
 void TextBox::Reset()
 {
     x = y = width = height = 0;
-    unknown_8 = 0;
+    status = 0;
     unknown_c = 0;
     scaleX = scaleY = 0;
     color = 0x7fff;
@@ -972,28 +972,28 @@ void TextManager::RefreshGraphics(bool arg)
 
                 if (unknown_19c4_ != 0 && unknown_19c3_ != 0)
                 {
-                    Substruct_19e0* substruct = &substruct_19e0_;
-                    substruct->pCurrentBox = &speakerTextBox_930_;
+                    TextBoxGraphics* substruct = &substruct_19e0_;
+                    substruct->activeBox_ = &speakerTextBox_930_;
                     // fix this with, most likely, an inline call
-                    bool speakerBoxReady = (substruct->pCurrentBox != NULL) ? (substruct->pCurrentBox->unknown_8 == 2) : false;
+                    bool speakerBoxReady = (substruct->activeBox_ != NULL) ? (substruct->activeBox_->status == 2) : false;
                     if (speakerBoxReady)
                     {
                         short boxX, boxY, boxW, boxH;
-                        if (substruct->pCurrentBox != NULL)
+                        if (substruct->activeBox_ != NULL)
                         {
-                            boxX = substruct->pCurrentBox->x;
-                            boxY = substruct->pCurrentBox->y;
+                            boxX = substruct->activeBox_->x;
+                            boxY = substruct->activeBox_->y;
                         }
-                        if (substruct->pCurrentBox != NULL)
+                        if (substruct->activeBox_ != NULL)
                         {
-                            boxW = substruct->pCurrentBox->width;
-                            boxH = substruct->pCurrentBox->height;
+                            boxW = substruct->activeBox_->width;
+                            boxH = substruct->activeBox_->height;
                         }
                         speakerBoxBounds.SetBounds(boxX + shakeX, boxY + shakeY, boxW, boxH);
                         DrawTextBoxBorder2D(mainUIElement_34_, &speakerBoxBounds);
                         speakerBoxBounds.SetBounds(boxX, boxY, boxW, boxH);
                     }
-                    substruct->pCurrentBox = &mainTextBox_914_;
+                    substruct->activeBox_ = &mainTextBox_914_;
                 }
 
                 if (pauseType_9a0_ == 6 && unknown_19ba_ != 0 && dialogueOptions_90_.unknown_233_ != 0)
@@ -1109,14 +1109,14 @@ void TextManager::RefreshGraphics(bool arg)
         }
     }
 
-    if (mainTextBox_914_.unknown_8 >= 2)
+    if (mainTextBox_914_.status >= 2)
     {
         windows_[0].SetBoundsXYWH(4, 118, 248, 70);
         if (unknown_1962_ != 0)
             windows_[0].SetEnabled(true);
     }
 
-    if (dialogueOptions_90_.textBox_b4_.unknown_8 >= 2)
+    if (dialogueOptions_90_.textBox_b4_.status >= 2)
     {
         windows_[1].SetBoundsXYWH(dialogueOptions_90_.textBox_b4_.x + 2,
             dialogueOptions_90_.textBox_b4_.y + 2,

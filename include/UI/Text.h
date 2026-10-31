@@ -9,6 +9,7 @@
 #include "UIElement.h"
 #include "../Graphics/Font.h"
 #include "../Graphics/TextureArena.h"
+#include "../Graphics/TextBoxGraphics.h"
 
 // sizeof == 0x1c.
 struct RenderGlyph
@@ -393,12 +394,7 @@ public:
     short unknown_19da_;
     unsigned char fontIndex_19dc_;
     char unk_19dd[3];
-    struct Substruct_19e0
-    {
-        struct InnerElement { char unk_0[0x88]; } elements[8];
-        TextBox* pCurrentBox; 
-        char unk_444[4];
-    } substruct_19e0_; // func_0202f1a4
+    TextBoxGraphics substruct_19e0_;
     TextureArena* textureArena_1e28_;
 
     static TextManager* GetInstance();
@@ -678,7 +674,7 @@ public:
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);
 
 // these need to go somewhere else I think
-void SetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short x, short y);
+void SetCurrentTextBoxPosition(TextBoxGraphics* ptr, short x, short y);
 void BlitGlyphTo4BitPixelBuffer(int x, int y, const FontIndexFile::Glyph* glyph, unsigned char* dstBuffer,
     int bufferW, int bufferH, unsigned char color, unsigned char fontIndex);
 extern unsigned int data_021077fc;

@@ -10,7 +10,8 @@ struct TextBox
     short y;
     short width;
     short height;
-    int unknown_8;
+    // enum: 0 = destroyed, 1 = ready to create, 2 = exists, 3 = fading out?
+    int status;
     int unknown_c;
     fix32_t scaleX;
     fix32_t scaleY;

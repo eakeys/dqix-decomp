@@ -41,10 +41,14 @@ src/Grotto/Main/TileFeatures.cpp:
     complete
     .text start:0x0201ea54 end:0x0201ebc4
 
+src/Graphics/TextBoxGraphics.cpp:
+    complete
+    .text start:0x0202f1a4 end:0x0202f700
+
 src/Filesystem/BackgroundLoader.cpp:
     complete
-    .bss start:0x02104304 end:0x02104b0c
     .text start:0x0202f700 end:0x02030634
+    .bss start:0x02104304 end:0x02104b0c
 
 src/Resource/Script.cpp:
     complete

@@ -10,7 +10,7 @@
 #include <asmhacks.h>
 
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
-static void GetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short* outX, short* outY);
+static void GetCurrentTextBoxPosition(TextBoxGraphics* ptr, short* outX, short* outY);
 
 static inline void WriteVertex16(unsigned short x, fix32_t y, unsigned short z)
 {
@@ -34,10 +34,6 @@ extern "C"
     // get total number of player characters, including companions
     // and wifi players. (Q: Does this count Ivor?)
     unsigned char func_02011538(GameState*);
-
-    void func_0202f380(void*, int);
-    void func_0202f404(void*, int, int);
-    void func_0202f6a4(void*);
 
     void* func_0203dce4(void*, int);
     void* func_0203cf4c();
@@ -280,7 +276,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
 {
     if (!unknown_19c4_)
         return;
-    Substruct_19e0* boxHandler = &substruct_19e0_;
+    TextBoxGraphics* boxHandler = &substruct_19e0_;
     int count;
     unsigned short* indices;
     RenderGlyph* glyph;
@@ -298,20 +294,20 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         short x, y;
         GetCurrentTextBoxPosition(boxHandler, &x, &y);
         y -= 19;
-        boxHandler->pCurrentBox = &speakerTextBox_930_;
-        if (boxHandler->pCurrentBox != NULL)
+        boxHandler->activeBox_ = &speakerTextBox_930_;
+        if (boxHandler->activeBox_ != NULL)
         {
-            boxHandler->pCurrentBox->scaleX = 1 << 12;
-            boxHandler->pCurrentBox->scaleY = 1 << 12;
+            boxHandler->activeBox_->scaleX = 1 << 12;
+            boxHandler->activeBox_->scaleY = 1 << 12;
         }
-        if (boxHandler->pCurrentBox != NULL)
-            boxHandler->pCurrentBox->unknown_8 = 2;
+        if (boxHandler->activeBox_ != NULL)
+            boxHandler->activeBox_->status = 2;
         if (noOffsets)
             SetCurrentTextBoxPosition(boxHandler, x, y);
         else
         {
             SetCurrentTextBoxPosition(boxHandler, x + shakeX, y + shakeY);
-            func_0202f404(boxHandler, 1, 0);
+            boxHandler->Draw(true, 0);
         }
         short widthRounding = 8 - (speakerNameWidth_1944_ & 7);
         x += (widthRounding + 18) >> 1;
@@ -341,16 +337,16 @@ void TextManager::DrawSpeakerName(bool noOffsets)
                 x += glyph->indexGlyph->width + 1;
         }
     }
-    boxHandler->pCurrentBox = &mainTextBox_914_;
+    boxHandler->activeBox_ = &mainTextBox_914_;
 }
 
 // probably an inline function that got emitted here
-static void GetCurrentTextBoxPosition(TextManager::Substruct_19e0* ptr, short* outX, short* outY)
+static void GetCurrentTextBoxPosition(TextBoxGraphics* ptr, short* outX, short* outY)
 {
-    if (ptr->pCurrentBox == NULL)
+    if (ptr->activeBox_ == NULL)
         return;
-    *outX = ptr->pCurrentBox->x;
-    *outY = ptr->pCurrentBox->y;
+    *outX = ptr->activeBox_->x;
+    *outY = ptr->activeBox_->y;
 }
 
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z)
@@ -373,8 +369,8 @@ void TextManager::Draw(bool arg)
     {
         if (unknown_19cb_ != 0 && func_0205ce28(&substruct_19e0_) != 0)
         {
-            func_0202f6a4(&substruct_19e0_);
-            func_0202f380(&substruct_19e0_, 1);
+            substruct_19e0_.BeginDisplay();
+            substruct_19e0_.Update(1);
         }
 
         if (unknown_998_ != 0 && showWindow_19b1_)
@@ -389,7 +385,7 @@ void TextManager::Draw(bool arg)
             if (unknown_38_ != NULL)
                 func_020e2110(unknown_38_);
             else
-                func_0202f404(&substruct_19e0_, 1, 1);
+                substruct_19e0_.Draw(true, 1);
         }
 
         SetCurrentTextBoxPosition(&substruct_19e0_, boxX, boxY);

@@ -768,6 +768,11 @@ void TextManager::SetMainTextBoxActive()
     SetActiveTextBox(&mainTextBox_914_);
 }
 
+void TextManager::SetTextureArena(TextureArena* to)
+{
+    textureArena_1e28_ = to;
+}
+
 void SetViewport(int* viewport, int left, int top, int right, int bottom);
 
 void TextManager::ConfigureMainTextBox(int x, int y, int width, int height)

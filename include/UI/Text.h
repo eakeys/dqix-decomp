@@ -419,13 +419,16 @@ public:
     // usa: func_02042b1c
     void SetMainTextBoxActive();
 
+    // usa: func_02042b30
+    void SetTextureArena(TextureArena*);
+
+    // usa: func_02042b98
+    void ConfigureMainTextBox(int x, int y, int width, int height);
+
     // usa: func_02042c68
     // seems to be called once at startup, once at title screen and
     // once after loading a save
     void Initialize();
-
-    // usa: func_02042b98
-    void ConfigureMainTextBox(int x, int y, int width, int height);
 
     // usa: func_020432c4
     void InitializeRenderGlyphs();

@@ -2,7 +2,7 @@
 #include "Filesystem/BackgroundLoader.h"
 #include "Filesystem/FileIO.h"
 #include "NitroSDK/Filesystem/NarcHandle.h"
-#include "NitroSDK/HWRegisters.h"
+#include "NitroSDK/Graphics.h"
 
 #if defined(jpn)
 #define data_02114e20 data_02114ac0
@@ -17,26 +17,6 @@ extern "C"
 {
     void* func_02012d88(AllocatorUnion*, size_t);
     void func_02012da4(AllocatorUnion*, void*);
-}
-
-static inline void WriteVertex16(fix32_t x, fix32_t y, fix32_t z)
-{
-    GXFIFO_VERTEX_16 = (unsigned short)x | ((unsigned short)y << 16);
-    GXFIFO_VERTEX_16 = (unsigned short)z;
-}
-
-static inline void WriteTranslate(fix32_t x, fix32_t y, fix32_t z)
-{
-    GXFIFO_MATRIX_TRANSLATE = x;
-    GXFIFO_MATRIX_TRANSLATE = y;
-    GXFIFO_MATRIX_TRANSLATE = z;
-}
-
-static inline void WriteScale(fix32_t x, fix32_t y, fix32_t z)
-{
-    GXFIFO_MATRIX_SCALE = x;
-    GXFIFO_MATRIX_SCALE = y;
-    GXFIFO_MATRIX_SCALE = z;
 }
 
 void TextBoxGraphics::Reset()
@@ -117,12 +97,12 @@ void TextBoxGraphics::Update(int numTicks)
         break;
     case 1:
         activeBox_->status = 2;
-        activeBox_->scaleY = 1 << 12;
+        activeBox_->scaleY = MAKEFIX32(1);
         break;
     case 2:
         break;
     case 3:
-        activeBox_->scaleY -= (int)(0.1f * 4096) * numTicks;
+        activeBox_->scaleY -= MAKEFIX32(0.1f) * numTicks;
         if (activeBox_->scaleY <= 0)
         {
             activeBox_->status = 0;
@@ -143,7 +123,7 @@ void TextBoxGraphics::Draw(CBool drawBorder, int unused)
 
 void TextBoxGraphics::Draw(fix32_t x, fix32_t y, fix32_t w, fix32_t h, CBool drawBorder, int unused)
 {
-    if (w < (8 << 12) || h < (8 << 12))
+    if (w < MAKEFIX32(8) || h < MAKEFIX32(8))
         return;
 
     // color 0 transparent, repeat texture in both directions
@@ -151,51 +131,47 @@ void TextBoxGraphics::Draw(fix32_t x, fix32_t y, fix32_t w, fix32_t h, CBool dra
     // show both faces, alpha = 18 (0x12), id 61 (0x3b)
     GXFIFO_POLYGON_ATTRIBUTES = 0x3b1200c0;
     GXFIFO_MATRIX_PUSH = 0;
-    GXFIFO_MATRIX_TRANSLATE = x + (3 << 12);
-    GXFIFO_MATRIX_TRANSLATE = y + (3 << 12);
-    GXFIFO_MATRIX_TRANSLATE = 1024 << 12;
-    GXFIFO_MATRIX_SCALE = w - (6 << 12);
-    GXFIFO_MATRIX_SCALE = h - (6 << 12);
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteTranslate(x + MAKEFIX32(3), y + MAKEFIX32(3), MAKEFIX32(1024));
+    GXFifoWriteScale(w - MAKEFIX32(6), h - MAKEFIX32(6), MAKEFIX32(1));
     GXFIFO_POLYGON_BEGIN = 1;
     GXFIFO_VERTEX_COLOR = 0;
-    WriteVertex16(0, 0, 0);
-    WriteVertex16(1 << 12, 0, 0);
-    WriteVertex16(1 << 12, 1 << 12, 0);
-    WriteVertex16(0, 1 << 12, 0);
+    GXFifoWriteVertex16Float(0.0f, 0.0f, 0.0f);
+    GXFifoWriteVertex16Float(1.0f, 0.0f, 0.0f);
+    GXFifoWriteVertex16Float(1.0f, 1.0f, 0.0f);
+    GXFifoWriteVertex16Float(0.0f, 1.0f, 0.0f);
     GXFIFO_POLYGON_END = 0;
     GXFIFO_MATRIX_POP = 1;
 
     if (drawBorder)
     {
-        fix32_t xEdgeScale = (w - (8 << 12)) / 6.0f;
-        fix32_t yEdgeScale = (h - (8 << 12)) / 6.0f;
+        fix32_t xEdgeScale = (w - MAKEFIX32(8)) / 6.0f;
+        fix32_t yEdgeScale = (h - MAKEFIX32(8)) / 6.0f;
 
-        fix32_t floorXEdgeScale = xEdgeScale & ~0xfff;
-        fix32_t floorYEdgeScale = yEdgeScale & ~0xfff;
+        fix32_t floorXScale = xEdgeScale & ~0xfff;
+        fix32_t floorYScale = yEdgeScale & ~0xfff;
 
         fix32_t positions[8][2] =
         {
-            { x - (1 << 12),                   y - (1 << 12) },
-            { x + (3 << 12) - floorXEdgeScale, y - (1 << 12) },
-            { x + w - (7 << 12),               y - (1 << 12) },
-            { x + w - (7 << 12),               y + (3 << 12) - floorYEdgeScale },
-            { x + w - (7 << 12),               y + h - (7 << 12) },
-            { x + (3 << 12) - floorXEdgeScale, y + h - (7 << 12) },
-            { x - (1 << 12),                   y + h - (7 << 12) },
-            { x - (1 << 12),                   y + (3 << 12) - floorYEdgeScale }
+            { x - MAKEFIX32(1),               y - MAKEFIX32(1) },
+            { x + MAKEFIX32(3) - floorXScale, y - MAKEFIX32(1) },
+            { x + w - MAKEFIX32(7),           y - MAKEFIX32(1) },
+            { x + w - MAKEFIX32(7),           y + MAKEFIX32(3) - floorYScale },
+            { x + w - MAKEFIX32(7),           y + h - MAKEFIX32(7) },
+            { x + MAKEFIX32(3) - floorXScale, y + h - MAKEFIX32(7) },
+            { x - MAKEFIX32(1),               y + h - MAKEFIX32(7) },
+            { x - MAKEFIX32(1),               y + MAKEFIX32(3) - floorYScale }
         };
 
         fix32_t dimensions[8][2] = 
         {
-            { 1 << 12, 1 << 12 },
-            { 0,       1 << 12 },
-            { 1 << 12, 1 << 12 },
-            { 1 << 12, 0       },
-            { 1 << 12, 1 << 12 },
-            { 0,       1 << 12 },
-            { 1 << 12, 1 << 12 },
-            { 1 << 12, 0       }
+            { MAKEFIX32(1), MAKEFIX32(1) },
+            { MAKEFIX32(0), MAKEFIX32(1) },
+            { MAKEFIX32(1), MAKEFIX32(1) },
+            { MAKEFIX32(1), MAKEFIX32(0) },
+            { MAKEFIX32(1), MAKEFIX32(1) },
+            { MAKEFIX32(0), MAKEFIX32(1) },
+            { MAKEFIX32(1), MAKEFIX32(1) },
+            { MAKEFIX32(1), MAKEFIX32(0) }
         };
         dimensions[1][0] = xEdgeScale;
         dimensions[5][0] = xEdgeScale;
@@ -208,8 +184,8 @@ void TextBoxGraphics::Draw(fix32_t x, fix32_t y, fix32_t w, fix32_t h, CBool dra
             int* pos = positions[i];
             int* dim = dimensions[i];
             GXFIFO_MATRIX_PUSH = 0;
-            WriteTranslate(pos[0], pos[1], 1024 << 12);
-            WriteScale(dim[0], dim[1], 1 << 12);
+            GXFifoWriteTranslate(pos[0], pos[1], MAKEFIX32(1024));
+            GXFifoWriteScale(dim[0], dim[1], MAKEFIX32(1));
             tile->tint_ = activeBox_->color;
             tile->DrawTextureScaleTranslate(0, true);
             GXFIFO_MATRIX_POP = 1;
@@ -221,8 +197,8 @@ void TextBoxGraphics::BeginDisplay()
 {
     if (activeBox_ == NULL)
         return;
-    activeBox_->scaleX = 1 << 12;
-    activeBox_->scaleY = 0;
+    activeBox_->scaleX = MAKEFIX32(1);
+    activeBox_->scaleY = MAKEFIX32(0);
     activeBox_->status = 1;
 }
 
@@ -230,7 +206,7 @@ void TextBoxGraphics::EndDisplay()
 {
     if (activeBox_ == NULL)
         return;
-    activeBox_->scaleX = 1 << 12;
-    activeBox_->scaleY = 1 << 12;
+    activeBox_->scaleX = MAKEFIX32(1);
+    activeBox_->scaleY = MAKEFIX32(1);
     activeBox_->status = 3;
 }

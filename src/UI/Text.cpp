@@ -131,17 +131,6 @@ extern "C"
     void func_020e2478(void*);
 }
 
-static inline void WriteVertex16(unsigned short x, fix32_t y, unsigned short z)
-{
-    GXFIFO_VERTEX_16 = x | ((unsigned short)y << 16);
-    GXFIFO_VERTEX_16 = z;
-}
-
-static inline int Foo(float x)
-{
-    return 16 * x;
-}
-
 void WriteTexCoords(fix32_t x, fix32_t y); // can be made static
 
 void RenderGlyph::Reset()
@@ -214,22 +203,12 @@ void RenderGlyph::Draw(int color, void *unknown, int alpha)
     fix32_t fixPointY = drawY << 12;
     float zero = 0.0f;
     
-    GXFIFO_MATRIX_TRANSLATE = fixPointX;
-    GXFIFO_MATRIX_TRANSLATE = fixPointY;
-    GXFIFO_MATRIX_TRANSLATE = fixPointZ;
-
-    GXFIFO_MATRIX_SCALE = 1 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteTranslate(fixPointX, fixPointY, fixPointZ);
+    GXFifoWriteScaleFloat(1.0f, 1.0f, 1.0f);
 
     GXFIFO_MATRIX_PUSH = 0;
-    GXFIFO_MATRIX_TRANSLATE = 0 << 12;
-    GXFIFO_MATRIX_TRANSLATE = 16 << 12;
-    GXFIFO_MATRIX_TRANSLATE = 0 << 12;
-
-    GXFIFO_MATRIX_SCALE = 1 << 12;
-    GXFIFO_MATRIX_SCALE = -1 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteTranslateFloat(0.0f, 16.0f, 0.0f);
+    GXFifoWriteScaleFloat(1.0f, -1.0f, 1.0f);
 
     GXFIFO_MATRIX_PUSH = 0;
 
@@ -239,9 +218,7 @@ void RenderGlyph::Draw(int color, void *unknown, int alpha)
     GXFIFO_PALETTE_BASE = data_021077fc >> 4;
     GXFIFO_POLYGON_ATTRIBUTES = (alpha << 16) | 0x3e0000c0;
 
-    GXFIFO_MATRIX_SCALE = 16 << 12;
-    GXFIFO_MATRIX_SCALE = 16 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteScaleFloat(16.0f, 16.0f, 1.0f);
 
     GXFIFO_POLYGON_BEGIN = 1;
     GXFIFO_VERTEX_COLOR = color;
@@ -261,19 +238,19 @@ void RenderGlyph::Draw(int color, void *unknown, int alpha)
     }
     // top left
     WriteTexCoords(0, topYTexcoord << 12);
-    WriteVertex16(0, 4096.0f * topYVertexCoord, 0);
+    GXFifoWriteVertex16Float(0, topYVertexCoord, 0);
 
     // top right
     WriteTexCoords(16 << 12, topYTexcoord << 12);
-    WriteVertex16(1 << 12, 4096.0f * topYVertexCoord, 0);
+    GXFifoWriteVertex16Float(1, topYVertexCoord, 0);
 
     // bottom right
     WriteTexCoords(16 << 12, 16 << 12);
-    WriteVertex16(1 << 12, 0, 0);
+    GXFifoWriteVertex16Float(1, 0, 0);
 
     // bottom left
     WriteTexCoords(0, 16 << 12);
-    WriteVertex16(0, 0, 0);
+    GXFifoWriteVertex16Float(0, 0, 0);
 
     GXFIFO_POLYGON_END = 0;
     GXFIFO_MATRIX_POP = 1;

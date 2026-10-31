@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../NitroSDK/HWRegisters.h"
+#include "HWRegisters.h"
+#include "Matrix.h"
 
 #define BLEND_TARGET_BG0 1
 #define BLEND_TARGET_BG1 2
@@ -33,4 +34,39 @@
 inline int GetCurrentMainScreen()
 {
     return (POWCNT & 0x8000) >> 15;
+}
+
+static inline void GXFifoWriteVertex16(fix16_t x, fix16_t y, fix16_t z)
+{
+    GXFIFO_VERTEX_16 = (unsigned short)x | ((unsigned short)y << 16);
+    GXFIFO_VERTEX_16 = (unsigned short)z;
+}
+
+static inline void GXFifoWriteVertex16Float(float x, float y, float z)
+{
+    GXFifoWriteVertex16(4096.0f * x, 4096.0f * y, 4096.0f * z);
+}
+
+static inline void GXFifoWriteTranslate(fix32_t x, fix32_t y, fix32_t z)
+{
+    GXFIFO_MATRIX_TRANSLATE = x;
+    GXFIFO_MATRIX_TRANSLATE = y;
+    GXFIFO_MATRIX_TRANSLATE = z;
+}
+
+static inline void GXFifoWriteTranslateFloat(float x, float y, float z)
+{
+    GXFifoWriteTranslate(MAKEFIX32(x), MAKEFIX32(y), MAKEFIX32(z));
+}
+
+static inline void GXFifoWriteScale(fix32_t x, fix32_t y, fix32_t z)
+{
+    GXFIFO_MATRIX_SCALE = x;
+    GXFIFO_MATRIX_SCALE = y;
+    GXFIFO_MATRIX_SCALE = z;
+}
+
+static inline void GXFifoWriteScaleFloat(float x, float y, float z)
+{
+    GXFifoWriteScale(4096.0f * x, 4096.0f * y, 4096.0f * z);
 }

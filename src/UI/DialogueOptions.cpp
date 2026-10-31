@@ -4,11 +4,7 @@
 
 extern "C"
 {
-    void func_0202f6a4(void*); // makes current box visible?
-
     void func_0205c73c(void*);
-    void func_0205c53c(void*);
-    void func_0205c564(void*);
 
     int func_0205cd6c(void*);
 
@@ -17,7 +13,7 @@ extern "C"
 void DialogueOptionManager::Reset()
 {
     func_0205c73c(&substruct_4_);
-    func_0205c53c(&gridMenu_1c_);
+    gridMenu_1c_.Reset();
     textBox_b4_.Reset();
     textWidth_d0_ = 0;
     unknown_d4_ = 52;
@@ -39,7 +35,7 @@ void DialogueOptionManager::Release()
 {
     TextManager::GetInstance()->unknown_19b0_ = 0;
     func_0205c73c(&substruct_4_);
-    func_0205c564(&gridMenu_1c_);
+    gridMenu_1c_.Destroy();
     textBox_b4_.Reset();
     textWidth_d0_ = 0;
     if (numOptions_232_ != 0)
@@ -115,7 +111,7 @@ void DialogueOptionManager::ShowBackground3D()
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
     if (func_0205cd6c(&mgr->substruct_19e0_) == 0)
-        func_0202f6a4(&mgr->substruct_19e0_);
+        mgr->substruct_19e0_.BeginDisplay();
     mgr->SetMainTextBoxActive();
 }
 

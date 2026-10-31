@@ -12,7 +12,7 @@
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
 static void GetCurrentTextBoxPosition(TextBoxGraphics* ptr, short* outX, short* outY);
 
-static inline void WriteVertex16(unsigned short x, fix32_t y, unsigned short z)
+static inline void fakeWriteVertex16(unsigned short x, fix32_t y, unsigned short z)
 {
     GXFIFO_VERTEX_16 = x | ((unsigned short)y << 16);
     GXFIFO_VERTEX_16 = z;
@@ -46,7 +46,6 @@ extern "C"
     void func_02044530(TextManager*, bool);
     void func_0204459c(TextManager*, bool);
     void func_02044830(TextManager*, int*, int*);
-    void func_020457e8(TextManager*, int);
 
     int func_020546a8(PartyMember*);
     void func_0205c77c(void*, int);
@@ -570,20 +569,12 @@ void TextManager::Draw(bool arg)
     
     unsigned int imageVRAMOffsetDiv8 = textureArena_1e28_->textureImageHandle_ << 16;
     GXFIFO_MATRIX_PUSH = 0;
-    GXFIFO_MATRIX_TRANSLATE = 0;
-    GXFIFO_MATRIX_TRANSLATE = 116 << 12;
-    GXFIFO_MATRIX_TRANSLATE = 1024 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteTranslateFloat(0, 116, 1024);
+    GXFifoWriteScaleFloat(1, 1, 1);
 
     GXFIFO_MATRIX_PUSH = 0;
-    GXFIFO_MATRIX_TRANSLATE = 0;
-    GXFIFO_MATRIX_TRANSLATE = 128 << 12;
-    GXFIFO_MATRIX_TRANSLATE = 0;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
-    GXFIFO_MATRIX_SCALE = -1 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteTranslateFloat(0, 128, 0);
+    GXFifoWriteScaleFloat(1, -1, 1);
 
     GXFIFO_MATRIX_PUSH = 0;
     GXFIFO_DIFFUSE_AMBIENT = 0x7fffffff; // both colors white
@@ -595,9 +586,7 @@ void TextManager::Draw(bool arg)
     // render both front/back, alpha = 31, id = 0x3e = 62
     GXFIFO_POLYGON_ATTRIBUTES = 0x3e1f00c0;
 
-    GXFIFO_MATRIX_SCALE = 256 << 12;
-    GXFIFO_MATRIX_SCALE = 128 << 12;
-    GXFIFO_MATRIX_SCALE = 1 << 12;
+    GXFifoWriteScaleFloat(256, 128, 1);
 
     GXFIFO_POLYGON_BEGIN = 1;
     GXFIFO_VERTEX_COLOR = 0x7fff;
@@ -609,19 +598,19 @@ void TextManager::Draw(bool arg)
 
     // top left
     WriteTextureCoords(0, topYTexcoord << 12);
-    WriteVertex16(0, 4096.0f * topYVertexCoord, 0);
+    GXFifoWriteVertex16Float(0, topYVertexCoord, 0);
 
     // top right
     WriteTextureCoords(256 << 12, topYTexcoord << 12);
-    WriteVertex16(1 << 12, 4096.0f * topYVertexCoord, 0);
+    GXFifoWriteVertex16Float(1, topYVertexCoord, 0);
 
     // bottom right
     WriteTextureCoords(256 << 12, 128 << 12);
-    WriteVertex16(1 << 12, 0, 0);
+    GXFifoWriteVertex16Float(1, 0, 0);
 
     // bottom left
     WriteTextureCoords(0, 128 << 12);
-    WriteVertex16(0, 0, 0);
+    GXFifoWriteVertex16Float(0, 0, 0);
 
     GXFIFO_POLYGON_END = 0;
     GXFIFO_MATRIX_POP = 1;
@@ -851,6 +840,7 @@ void ProcessVALTag(const char* input, char** ppOutput, TextManager* manager, int
             break;
         default:
             *ppOutput += sprintf(*ppOutput, data_020f08f1, value);
+            break;
         }
     }
     else
@@ -875,22 +865,22 @@ void TextManager::SubstituteValueTags(const char *input, char *argOutput)
         
         if (*input == '<')
         {
-            const char* tagEnd = GetTextTagEnd(input);
+            const char* tagEnd = GetTextTagEnd((char*)input); // don't remove this cast
             if (tagEnd != NULL)
             {
                 bool processedTag = false;
                 const TextProcessingCallback<PFNProcessVALTag>* candidate;
                 const char* tagInterior = input + 1;
-                
                 for (candidate = data_020e7e5c; candidate->tag != NULL; candidate++)
                 {
-                    if (!DoesStringBeginWith(input + 1, candidate->tag))
+                    if (!DoesStringBeginWith(tagInterior, candidate->tag))
                         continue;
                     if (candidate->callback != NULL)
                     {
                         int valueIndex = 0;
                         int tagPrefixLength = func_020d2ff0(candidate->tag);
-                        if (tagInterior[tagPrefixLength] >= '1' && tagInterior[tagPrefixLength] <= '9')
+                        char digit = tagInterior[tagPrefixLength];
+                        if (digit >= '1' && digit <= '9')
                             valueIndex = func_02005a94(tagInterior + tagPrefixLength) - 1;
                         candidate->callback(tagInterior, &output, this, valueIndex);
                     }
@@ -904,8 +894,7 @@ void TextManager::SubstituteValueTags(const char *input, char *argOutput)
             }
         }
 
-        *output = *input;
-        input++;
+        *output = *input++;
         output++;
     }
 
@@ -1966,7 +1955,7 @@ int ConvertTimeTag(char** ppOutput, char* tagExtras)
 {
     int duration;
     ReadNumbersInTag(tagExtras, &duration, 1);
-    func_020457e8(TextManager::GetInstance(), duration);
+    TextManager::GetInstance()->RecordWaitTimeValue(duration);
     char* dest = *ppOutput;
     unsigned short controlWord = ControlWord_Time;
     memcpy(dest, &controlWord, 2);
@@ -1985,7 +1974,7 @@ int ConvertPadTTag(char** ppOutput, char* tagExtras)
 {
     int duration;
     ReadNumbersInTag(tagExtras, &duration, 1);
-    func_020457e8(TextManager::GetInstance(), duration);
+    TextManager::GetInstance()->RecordWaitTimeValue(duration);
     char* dest = *ppOutput;
     unsigned short controlWord = ControlWord_PadT;
     memcpy(dest, &controlWord, 2);

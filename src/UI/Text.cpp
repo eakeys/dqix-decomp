@@ -1,3 +1,5 @@
+#pragma ipa file
+
 #include "UI/Text.h"
 #include "NitroSDK/Graphics.h"
 #include "Graphics/Vector.h"
@@ -104,11 +106,9 @@ extern "C"
     // probably atoi
     int func_02005a94(const char*);
 
-    void func_02042b98(TextManager*, int, int, int, int);
     void func_02043040(TextManager*);
     void func_02043124(TextManager*);
     void func_020430b0(TextManager*);
-    const char* func_020449a4(TextManager*, const char*);
     void func_02044c74(TextManager*, UIElement*);
     void func_02044d0c();
     void func_02044f3c(TextManager*, const char*, int);
@@ -116,6 +116,8 @@ extern "C"
     void func_0205e944(void*, int);
     void func_0205eaa0(void*, int, void*);
     void func_0205eabc(void*, void*, int);
+
+    void func_020bc078(void*);
 
     // alternative strlen
     int func_020d2ff0(const char*);
@@ -204,11 +206,11 @@ void RenderGlyph::Draw(int color, void *unknown, int alpha)
     float zero = 0.0f;
     
     GXFifoWriteTranslate(fixPointX, fixPointY, fixPointZ);
-    GXFifoWriteScaleFloat(1.0f, 1.0f, 1.0f);
+    GXFifoWriteScale(MAKEFIX32(1), MAKEFIX32(1), MAKEFIX32(1));
 
     GXFIFO_MATRIX_PUSH = 0;
-    GXFifoWriteTranslateFloat(0.0f, 16.0f, 0.0f);
-    GXFifoWriteScaleFloat(1.0f, -1.0f, 1.0f);
+    GXFifoWriteTranslate(MAKEFIX32(0), MAKEFIX32(16), MAKEFIX32(0));
+    GXFifoWriteScale(MAKEFIX32(1), MAKEFIX32(-1), MAKEFIX32(1));
 
     GXFIFO_MATRIX_PUSH = 0;
 
@@ -242,11 +244,11 @@ void RenderGlyph::Draw(int color, void *unknown, int alpha)
 
     // top right
     WriteTexCoords(16 << 12, topYTexcoord << 12);
-    GXFifoWriteVertex16Float(1, topYVertexCoord, 0);
+    GXFifoWriteVertex16(MAKEFIX32(1), topYVertexCoord * 4096.0f, MAKEFIX32(0));
 
     // bottom right
     WriteTexCoords(16 << 12, 16 << 12);
-    GXFifoWriteVertex16Float(1, 0, 0);
+    GXFifoWriteVertex16(MAKEFIX32(1), MAKEFIX32(0), MAKEFIX32(0));
 
     // bottom left
     WriteTexCoords(0, 16 << 12);
@@ -766,20 +768,16 @@ void TextManager::SetMainTextBoxActive()
     SetActiveTextBox(&mainTextBox_914_);
 }
 
-void SetCurrentTextBoxPosition(TextBoxGraphics* ptr, short x, short y)
-{
-    if (ptr->activeBox_ == NULL)
-        return;
-    ptr->activeBox_->x = x;
-    ptr->activeBox_->y = y;
-}
+void SetViewport(int* viewport, int left, int top, int right, int bottom);
 
-void SetCurrentTextBoxDimensions(TextBoxGraphics* ptr, int w, int h)
+void TextManager::ConfigureMainTextBox(int x, int y, int width, int height)
 {
-    if (ptr->activeBox_ == NULL)
-        return;
-    ptr->activeBox_->width = w;
-    ptr->activeBox_->height = h;
+    centerX_990_ = x + (width >> 1);
+    substruct_19e0_.SetBoxPosition(x, y);
+    substruct_19e0_.SetBoxSize(width, height);
+    unknown_1858_ = x;
+    unknown_185c_ = y + 8;
+    SetViewport(unknown_1848_, x, y + 8, x + width, y + height);
 }
 
 void SetViewport(int* viewport, int left, int top, int right, int bottom)
@@ -788,6 +786,107 @@ void SetViewport(int* viewport, int left, int top, int right, int bottom)
     viewport[1] = top;
     viewport[2] = right;
     viewport[3] = bottom;
+}
+
+void TextManager::Initialize()
+{
+    unknown_30_ = 0xff;
+    unknown_31_ = 0xff;
+    unknown_38_ = NULL;
+    unknown_3c_ = 9;
+    unknown_8c_ = 0;
+    dialogueOptions_90_.Reset();
+    unknown_2c8_ = 0;
+    memset(substruct_2cc_, 0, sizeof(substruct_2cc_));
+    unknown_2d0_ = -1;
+    unknown_2d8_ = 0;
+    unknown_2dc_ = 0;
+    unknown_2e0_ = 0;
+    unknown_2e4_ = 0;
+    unknown_2e6_ = 1;
+    unknown_2e7_ = 0;
+    unknown_2e8_ = 0;
+    memset(customStrings_4ac_, 0, sizeof(customStrings_4ac_));
+    unknown_8ac_ = 0;
+    memset(valueLookup, 0, sizeof(valueLookup));
+    voiceSoundEffectTimer_912_ = 0;
+    unknown_19b0_ = 0;
+    unknown_9b0_ = 0;
+    for (int i = 0; i < 0x80; i++)
+    {
+        glyphs_[i].Reset();
+        glyphRefcounts_17b8_[i] = 0;
+    }
+    unknown_954_ = 0;
+    unknown_958_ = 0;
+    unknown_1962_ = 0;
+    windows_[0].Initialize(0, 0);
+    windows_[1].Initialize(0, 1);
+    mainTextBox_914_.Reset();
+    speakerTextBox_930_.Reset();
+    substruct_19e0_.Reset();
+    substruct_19e0_.activeBox_ = &mainTextBox_914_;
+    substruct_19e0_.SetBoxPosition(0, 128);
+    substruct_19e0_.SetBoxSize(256, 64);
+    showWindow_19b1_ = true;
+    textureArena_1e28_ = NULL;
+    unknown_19cc_ = 0;
+    func_02043124(this);
+    skipTag_19bb_ = 1;
+    unknown_994_ = -1;
+    unknown_19bc_ = 0;
+    unknown_19b2_ = 1;
+    speakerVoiceType_99c_ = 0;
+    voicePlaybackState_19b3_ = 0;
+    unknown_19b4_ = 0;
+    unknown_19b5_ = 0;
+    pauseType_9a0_ = 0;
+    color_187c_ = 0x7fff;
+    gyouParameter_9a4_ = 3;
+    numGlyphsInUse_9b4_ = 0;
+    unknown_19ac_ = 0;
+    waitTimeQueueIndex_19ad_ = 0;
+    RecordWaitTimeValue(0, -1);
+    cenTag_19b8_ = 0;
+    unknown_1848_[0] = 0;
+    unknown_1848_[1] = 0;
+    unknown_1848_[2] = 256;
+    unknown_1848_[3] = 192;
+    SetViewport(unknown_1848_, 0, 136, 256, 192);
+    unknown_19b9_ = 1;
+    unknown_1858_ = 0;
+    unknown_185c_ = 136;
+    mojiArg1_1860_ = 12;
+    mojiArg2_1864_ = 16;
+    unknown_19ae_ = 0;
+    unknown_19af_ = 0;
+    unknown_1868_ = 0;
+    npcID_1838_ = -1;
+    npcPriorRotation_183c_ = 0;
+    centerX_990_ = 128;
+    memset(substructOrArray_95c_, 0, sizeof(substructOrArray_95c_));
+    memset(substructOrArray_97c_, 0, sizeof(substructOrArray_97c_));
+    speakerDifference_19c2_ = 1;
+    memset(indexBuffer_1882_, 0xff01, sizeof(indexBuffer_1882_));
+    memset(buffer_1902_, 0, sizeof(buffer_1902_));
+    unknown_1942_ = 0;
+    speakerNameWidth_1944_ = 0;
+    unknown_19be_ = 0;
+    questIndex_1948_ = -1;
+    voiceVolumeLookup_194a_[0] = voiceVolumeLookup_194a_[1] = voiceVolumeLookup_194a_[2]
+        = voiceVolumeLookup_194a_[3] = 127;
+    unknown_195a_ = 8;
+    effects_195b_ = 0;
+    unknown_19bf_ = 0;
+    unknown_19cf_ = 0;
+    unknown_19cb_ = 0;
+    unknown_19cc_ = 0;
+    unknown_19ce_ = 0;
+    func_020bc078(data_02107800.unk_20);
+    unknown_19d0_ = 0;
+    unknown_19da_ = -1;
+    fontIndex_19dc_ = 1;
+    showWindow_19b1_ = false;
 }
 
 void TextBox::Reset()
@@ -941,7 +1040,7 @@ void TextManager::RefreshGraphics(bool arg)
             {
                 if (showWindow_19b1_)
                 {
-                    func_02042b98(this, 2, 116, 252, 74);
+                    ConfigureMainTextBox(2, 116, 252, 74);
                     mainBoxBounds.SetBounds(shakeX + 2, shakeY + 116, 252, 74);
                     DrawTextBoxBorder2D(mainUIElement_34_, &mainBoxBounds);
                     mainBoxBounds.SetBounds(2, 116, 252, 74);
@@ -1163,7 +1262,7 @@ void TextManager::ConvertBoxModifierTags(const char *in, char *out)
     if (in == NULL || out == NULL)
         return;
 
-    in = func_020449a4(this, in);
+    in = HandleImmediateBoxTags(in);
     while (true)
     {
         if (*in == 0)
@@ -1299,7 +1398,7 @@ const char* TextManager::HandleImmediateBoxTags(const char* in)
                 rectH = 192 - rectY;
             if (rectH > 192)
                 rectH = 192 - rectY;
-            func_02042b98(this, rectX, rectY, rectW, rectH);
+            ConfigureMainTextBox(rectX, rectY, rectW, rectH);
             in += tagLength + 1;
         }
         else if (CaseInsensitiveDoesStringBeginWith(in, data_020f00b0))
@@ -1442,7 +1541,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         mojiArg2_1864_ = 16;
         color_187c_ = 0x7fff;
         gyouParameter_9a4_ = 3;
-        func_02042b98(this, 2, 128, 252, 62);
+        ConfigureMainTextBox(2, 128, 252, 62);
         speakerTextBox_930_.Reset();
         cenTag_19b8_ = 0;
         showWindow_19b1_ = 1;
@@ -1496,7 +1595,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         SubstituteCaps(tempBufferB, tempBufferA, fontIndex_19dc_);
         SubstituteControlTags(tempBufferA, tempBufferB);
         LoadFirstPage(tempBufferB, width);
-        func_02042b98(this, 2, 116, 252, 74);
+        ConfigureMainTextBox(2, 116, 252, 74);
         unknown_1858_ = 2;
         unknown_185c_ = 126;
         mojiArg1_1860_ = 12;

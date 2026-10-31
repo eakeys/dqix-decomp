@@ -31,4 +31,20 @@ public:
     // Should cause a collapsing fade out effect, but I don't recognise it
     // anywhere
     void EndDisplay();
+
+    inline void SetBoxPosition(short x, short y)
+    {
+        if (activeBox_ == NULL)
+            return;
+        activeBox_->x = x;
+        activeBox_->y = y;
+    }
+
+    inline void SetBoxSize(short w, short h)
+    {
+        if (activeBox_ == NULL)
+            return;
+        activeBox_->width = w;
+        activeBox_->height = h;
+    }
 };

@@ -410,6 +410,14 @@ public:
     // usa: func_02042b1c
     void SetMainTextBoxActive();
 
+    // usa: func_02042c68
+    // seems to be called once at startup, once at title screen and
+    // once after loading a save
+    void Initialize();
+
+    // usa: func_02042b98
+    void ConfigureMainTextBox(int x, int y, int width, int height);
+
     // usa: func_020432c4
     void InitializeRenderGlyphs();
 
@@ -674,7 +682,6 @@ public:
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);
 
 // these need to go somewhere else I think
-void SetCurrentTextBoxPosition(TextBoxGraphics* ptr, short x, short y);
 void BlitGlyphTo4BitPixelBuffer(int x, int y, const FontIndexFile::Glyph* glyph, unsigned char* dstBuffer,
     int bufferW, int bufferH, unsigned char color, unsigned char fontIndex);
 extern unsigned int data_021077fc;

@@ -39,8 +39,6 @@ extern "C"
     void* func_0203cf4c();
     Vector3fix func_020406f8(void*);
 
-    // set textbox dimensions?
-    void func_02042b98(TextManager*, int, int, int, int);
     void func_02043124(TextManager*);
     void func_02043204(TextManager*);
     void func_02044530(TextManager*, bool);
@@ -302,10 +300,10 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         if (boxHandler->activeBox_ != NULL)
             boxHandler->activeBox_->status = 2;
         if (noOffsets)
-            SetCurrentTextBoxPosition(boxHandler, x, y);
+            boxHandler->SetBoxPosition(x, y);
         else
         {
-            SetCurrentTextBoxPosition(boxHandler, x + shakeX, y + shakeY);
+            boxHandler->SetBoxPosition(x + shakeX, y + shakeY);
             boxHandler->Draw(true, 0);
         }
         short widthRounding = 8 - (speakerNameWidth_1944_ & 7);
@@ -377,7 +375,7 @@ void TextManager::Draw(bool arg)
 
         short boxX, boxY;
         GetCurrentTextBoxPosition(&substruct_19e0_, &boxX, &boxY);
-        SetCurrentTextBoxPosition(&substruct_19e0_, boxX + shakeX, boxY + shakeY);
+        substruct_19e0_.SetBoxPosition(boxX + shakeX, boxY + shakeY);
 
         if (!arg)
         {
@@ -387,7 +385,7 @@ void TextManager::Draw(bool arg)
                 substruct_19e0_.Draw(true, 1);
         }
 
-        SetCurrentTextBoxPosition(&substruct_19e0_, boxX, boxY);
+        substruct_19e0_.SetBoxPosition(boxX, boxY);
     }
 
     if (unknown_998_ == 0)
@@ -2578,7 +2576,7 @@ char* TextManager::HandleImmediateTags(char* input)
             if (rectHeight > 192)
                 rectHeight = 192 - rectY;
 
-            func_02042b98(this, rectX, rectY, rectWidth, rectHeight);
+            ConfigureMainTextBox(rectX, rectY, rectWidth, rectHeight);
             input += totalTagLength + 1;
             continue;
         }

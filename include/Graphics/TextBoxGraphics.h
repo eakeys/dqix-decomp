@@ -32,6 +32,14 @@ public:
     // anywhere
     void EndDisplay();
 
+    inline void GetBoxPosition(short* outX, short* outY)
+    {
+        if (activeBox_ == NULL)
+            return;
+        *outX = activeBox_->x;
+        *outY = activeBox_->y;
+    }
+
     inline void SetBoxPosition(short x, short y)
     {
         if (activeBox_ == NULL)

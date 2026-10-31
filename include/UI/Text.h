@@ -10,6 +10,7 @@
 #include "../Graphics/Font.h"
 #include "../Graphics/TextureArena.h"
 #include "../Graphics/TextBoxGraphics.h"
+#include <asmhacks.h>
 
 // sizeof == 0x1c.
 struct RenderGlyph
@@ -38,6 +39,14 @@ struct RenderGlyph
 
     // uses 3D system
     void Draw(int color, void* unknown, int alpha);
+
+    inline void SetPosition(int x, int y, short z)
+    {
+        if (ALWAYS_FALSE()) return; // forces emission
+        drawX = x;
+        drawY = y;
+        drawZ = z;
+    }
     
 };
 

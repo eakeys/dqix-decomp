@@ -1,3 +1,5 @@
+#pragma ipa file
+
 #include "UI/Text.h"
 #include "std_library_functions.h"
 #include "Util/StringTests.h"
@@ -10,7 +12,6 @@
 #include <asmhacks.h>
 
 void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
-static void GetCurrentTextBoxPosition(TextBoxGraphics* ptr, short* outX, short* outY);
 
 static inline void fakeWriteVertex16(unsigned short x, fix32_t y, unsigned short z)
 {
@@ -289,7 +290,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         int shakeX, shakeY;
         GetBoxShakeOffset(&shakeX, &shakeY);
         short x, y;
-        GetCurrentTextBoxPosition(boxHandler, &x, &y);
+        boxHandler->GetBoxPosition(&x, &y);
         y -= 19;
         boxHandler->activeBox_ = &speakerTextBox_930_;
         if (boxHandler->activeBox_ != NULL)
@@ -327,7 +328,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
                 RenderGlyph2D(mainUIElement_34_, glyph, x, y, 15);
             else
             {
-                SetRenderGlyphPosition(glyph, x, y, 0);
+                glyph->SetPosition(x, y, 0);
                 glyph->Draw(color_187c_, 0, 31);
             }
             if (glyph->indexGlyph != NULL)
@@ -335,23 +336,6 @@ void TextManager::DrawSpeakerName(bool noOffsets)
         }
     }
     boxHandler->activeBox_ = &mainTextBox_914_;
-}
-
-// probably an inline function that got emitted here
-static void GetCurrentTextBoxPosition(TextBoxGraphics* ptr, short* outX, short* outY)
-{
-    if (ptr->activeBox_ == NULL)
-        return;
-    *outX = ptr->activeBox_->x;
-    *outY = ptr->activeBox_->y;
-}
-
-void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z)
-{
-    if (ALWAYS_FALSE()) x++; // prevents inlining
-    glyph->drawX = x;
-    glyph->drawY = y;
-    glyph->drawZ = z;
 }
 
 void TextManager::Draw(bool arg)
@@ -374,7 +358,7 @@ void TextManager::Draw(bool arg)
             DrawSpeakerName(arg);
 
         short boxX, boxY;
-        GetCurrentTextBoxPosition(&substruct_19e0_, &boxX, &boxY);
+        substruct_19e0_.GetBoxPosition(&boxX, &boxY);
         substruct_19e0_.SetBoxPosition(boxX + shakeX, boxY + shakeY);
 
         if (!arg)
@@ -548,7 +532,7 @@ void TextManager::Draw(bool arg)
         }
         else
         {
-            SetRenderGlyphPosition(rglyph, offsetX, offsetY, 0);
+            rglyph->SetPosition(offsetX, offsetY, 0);
             rglyph->Draw(color_187c_, pViewport, alphaDst);
         }
 
@@ -567,12 +551,12 @@ void TextManager::Draw(bool arg)
     
     unsigned int imageVRAMOffsetDiv8 = textureArena_1e28_->textureImageHandle_ << 16;
     GXFIFO_MATRIX_PUSH = 0;
-    GXFifoWriteTranslateFloat(0, 116, 1024);
-    GXFifoWriteScaleFloat(1, 1, 1);
+    GXFifoWriteTranslate(MAKEFIX32(0), MAKEFIX32(116), MAKEFIX32(1024));
+    GXFifoWriteScale(MAKEFIX32(1), MAKEFIX32(1), MAKEFIX32(1));
 
     GXFIFO_MATRIX_PUSH = 0;
-    GXFifoWriteTranslateFloat(0, 128, 0);
-    GXFifoWriteScaleFloat(1, -1, 1);
+    GXFifoWriteTranslate(MAKEFIX32(0), MAKEFIX32(128), MAKEFIX32(0));
+    GXFifoWriteScale(MAKEFIX32(1), MAKEFIX32(-1), MAKEFIX32(1));
 
     GXFIFO_MATRIX_PUSH = 0;
     GXFIFO_DIFFUSE_AMBIENT = 0x7fffffff; // both colors white
@@ -584,7 +568,7 @@ void TextManager::Draw(bool arg)
     // render both front/back, alpha = 31, id = 0x3e = 62
     GXFIFO_POLYGON_ATTRIBUTES = 0x3e1f00c0;
 
-    GXFifoWriteScaleFloat(256, 128, 1);
+    GXFifoWriteScale(MAKEFIX32(256), MAKEFIX32(128), MAKEFIX32(1));
 
     GXFIFO_POLYGON_BEGIN = 1;
     GXFIFO_VERTEX_COLOR = 0x7fff;
@@ -595,20 +579,20 @@ void TextManager::Draw(bool arg)
     float topYVertexCoord = 1.0f - zero;
 
     // top left
-    WriteTextureCoords(0, topYTexcoord << 12);
-    GXFifoWriteVertex16Float(0, topYVertexCoord, 0);
+    WriteTextureCoords(MAKEFIX32(0), MAKEFIX32(topYTexcoord));
+    GXFifoWriteVertex16(MAKEFIX32(0), 4096.0f * topYVertexCoord, MAKEFIX32(0));
 
     // top right
-    WriteTextureCoords(256 << 12, topYTexcoord << 12);
-    GXFifoWriteVertex16Float(1, topYVertexCoord, 0);
+    WriteTextureCoords(MAKEFIX32(256), MAKEFIX32(topYTexcoord));
+    GXFifoWriteVertex16(MAKEFIX32(1), 4096.0f * topYVertexCoord, MAKEFIX32(0));
 
     // bottom right
-    WriteTextureCoords(256 << 12, 128 << 12);
-    GXFifoWriteVertex16Float(1, 0, 0);
+    WriteTextureCoords(MAKEFIX32(256), MAKEFIX32(128));
+    GXFifoWriteVertex16(MAKEFIX32(1), MAKEFIX32(0), MAKEFIX32(0));
 
     // bottom left
-    WriteTextureCoords(0, 128 << 12);
-    GXFifoWriteVertex16Float(0, 0, 0);
+    WriteTextureCoords(MAKEFIX32(0), MAKEFIX32(128));
+    GXFifoWriteVertex16(MAKEFIX32(0), MAKEFIX32(0), MAKEFIX32(0));
 
     GXFIFO_POLYGON_END = 0;
     GXFIFO_MATRIX_POP = 1;
@@ -626,9 +610,8 @@ void TextManager::ProcessYesNoInput(int input)
     {
     case 0: // yes
         ReleaseMainMessageGlyphs();
-        if (!silentYesNo) {
+        if (!silentYesNo)
             func_0205eaa0(data_02108760, 1, 0);
-        }
         SubmitQuestionResponse(ControlWord_Yes, unknown_58_);
         dialogueOptions_90_.Release();
         unknown_19cd_ = 1;

@@ -6271,7 +6271,7 @@ data_020e73b4 kind:data(any) addr:0x020e73b4
 data_020e73c0 kind:data(any) addr:0x020e73c0
 data_020e73cc kind:data(any) addr:0x020e73cc
 data_020e73e4 kind:data(any) addr:0x020e73e4
-data_020e73fc kind:data(any) addr:0x020e73fc
+@685 kind:data(any) addr:0x020e73fc local
 data_020e743c kind:data(any) addr:0x020e743c
 data_020e74bc kind:data(any) addr:0x020e74bc
 data_020e74c8 kind:data(any) addr:0x020e74c8
@@ -6762,9 +6762,7 @@ data_020ef797 kind:data(any) addr:0x020ef797
 data_020ef79a kind:data(any) addr:0x020ef79a
 data_020ef7a0 kind:data(any) addr:0x020ef7a0
 data_020ef7a8 kind:data(any) addr:0x020ef7a8
-data_020ef7ac kind:data(any) addr:0x020ef7ac
-data_020ef7c0 kind:data(any) addr:0x020ef7c0
-data_020ef7c4 kind:data(any) addr:0x020ef7c4
+@stringBase0 kind:data(byte[0x26]) addr:0x020ef7ac local
 data_020ef7d4 kind:data(any) addr:0x020ef7d4
 data_020ef7d9 kind:data(any) addr:0x020ef7d9
 data_020ef7de kind:data(any) addr:0x020ef7de

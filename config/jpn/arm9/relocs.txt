@@ -5294,12 +5294,12 @@ from:0x0202ee60 kind:arm_call to:0x0202f358 module:main
 from:0x0202ee6c kind:load to:0x02114ac0 module:main
 from:0x0202ee74 kind:load to:0x020ef69c module:main
 from:0x0202ee78 kind:load to:0x0211fb64 module:main
-from:0x0202ee7c kind:load to:0x020ef6b0 module:main
+from:0x0202ee7c kind:load to:0x020ef69c add:0x14 module:main
 from:0x0202eeac kind:arm_call to:0x02003c04 module:main
 from:0x0202eeb4 kind:arm_call to:0x020b17d8 module:main
 from:0x0202eec0 kind:arm_call to:0x02047fbc module:main
 from:0x0202eed0 kind:arm_call to:0x02048960 module:main
-from:0x0202eeec kind:load to:0x020ef6b4 module:main
+from:0x0202eeec kind:load to:0x020ef69c add:0x18 module:main
 from:0x0202efc0 kind:arm_call to:0x0202efcc module:main
 from:0x0202f098 kind:arm_call to:0x0200c534 module:main
 from:0x0202f0a0 kind:arm_call to:0x0200c084 module:main

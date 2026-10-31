@@ -998,15 +998,15 @@ func_0202ea74 kind:function(arm,size=0x10) addr:0x0202ea74
 func_0202ea84 kind:function(arm,size=0x1b0) addr:0x0202ea84
 func_0202ec34 kind:function(arm,size=0x1c) addr:0x0202ec34
 func_0202ec50 kind:function(arm,size=0xc4) addr:0x0202ec50
-func_0202ed14 kind:function(arm,size=0x38) addr:0x0202ed14
-func_0202ed4c kind:function(arm,size=0x70) addr:0x0202ed4c
-func_0202edbc kind:function(arm,size=0xc4) addr:0x0202edbc
-func_0202ee80 kind:function(arm,size=0x70) addr:0x0202ee80
-func_0202eef0 kind:function(arm,size=0x84) addr:0x0202eef0
-func_0202ef74 kind:function(arm,size=0x58) addr:0x0202ef74
-func_0202efcc kind:function(arm,size=0x248) addr:0x0202efcc
-func_0202f214 kind:function(arm,size=0x30) addr:0x0202f214
-func_0202f244 kind:function(arm,size=0x2c) addr:0x0202f244
+_ZN15TextBoxGraphics5ResetEv kind:function(arm,size=0x38) addr:0x0202ed14
+_ZN15TextBoxGraphics7DestroyEv kind:function(arm,size=0x70) addr:0x0202ed4c
+_ZN15TextBoxGraphics6CreateEv kind:function(arm,size=0xc4) addr:0x0202edbc
+_ZN15TextBoxGraphics12LoadFromFileEP13SafeAllocatorPKv kind:function(arm,size=0x70) addr:0x0202ee80
+_ZN15TextBoxGraphics6UpdateEi kind:function(arm,size=0x84) addr:0x0202eef0
+_ZN15TextBoxGraphics4DrawEii kind:function(arm,size=0x58) addr:0x0202ef74
+_ZN15TextBoxGraphics4DrawEiiiiii kind:function(arm,size=0x248) addr:0x0202efcc
+_ZN15TextBoxGraphics12BeginDisplayEv kind:function(arm,size=0x30) addr:0x0202f214
+_ZN15TextBoxGraphics10EndDisplayEv kind:function(arm,size=0x2c) addr:0x0202f244
 _ZN16BackgroundLoader4Task14ZeroInitializeEv kind:function(arm,size=0x44) addr:0x0202f270
 _Z30BackgroundLoaderThreadFunctionP16BackgroundLoader kind:function(arm,size=0x1c) addr:0x0202f2b4
 _ZN16BackgroundLoader4Task15GetFullFilenameEPc kind:function(arm,size=0x38) addr:0x0202f2d0
@@ -6101,7 +6101,7 @@ data_020e7cf8 kind:data(any) addr:0x020e7cf8
 data_020e7d04 kind:data(any) addr:0x020e7d04
 data_020e7d10 kind:data(any) addr:0x020e7d10
 data_020e7d28 kind:data(any) addr:0x020e7d28
-data_020e7d40 kind:data(any) addr:0x020e7d40
+@685 kind:data(any) addr:0x020e7d40 local
 data_020e7d80 kind:data(any) addr:0x020e7d80
 data_020e7e00 kind:data(any) addr:0x020e7e00
 data_020e7e0c kind:data(any) addr:0x020e7e0c
@@ -6575,9 +6575,7 @@ data_020ef687 kind:data(any) addr:0x020ef687
 data_020ef68a kind:data(any) addr:0x020ef68a
 data_020ef690 kind:data(any) addr:0x020ef690
 data_020ef698 kind:data(any) addr:0x020ef698
-data_020ef69c kind:data(any) addr:0x020ef69c
-data_020ef6b0 kind:data(any) addr:0x020ef6b0
-data_020ef6b4 kind:data(any) addr:0x020ef6b4
+@stringBase0 kind:data(byte[0x26]) addr:0x020ef69c local
 data_020ef6c4 kind:data(any) addr:0x020ef6c4
 data_020ef6c9 kind:data(any) addr:0x020ef6c9
 data_020ef6ce kind:data(any) addr:0x020ef6ce

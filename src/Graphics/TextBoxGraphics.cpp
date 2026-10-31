@@ -4,20 +4,20 @@
 #include "NitroSDK/Filesystem/NarcHandle.h"
 #include "NitroSDK/HWRegisters.h"
 
+#if defined(jpn)
+#define data_02114e20 data_02114ac0
+
+#define func_02012d88 func_02012b50
+#define func_02012da4 func_02012b6c
+#endif
+
 extern AllocatorUnion data_02114e20;
 
 extern "C"
 {
     void* func_02012d88(AllocatorUnion*, size_t);
-
     void func_02012da4(AllocatorUnion*, void*);
 }
-
-extern const fix32_t data_020e73fc[8][2];
-
-extern char data_020ef7ac[];
-extern char data_020ef7c0[];
-extern char data_020ef7c4[];
 
 static inline void WriteVertex16(fix32_t x, fix32_t y, fix32_t z)
 {
@@ -79,10 +79,10 @@ void TextBoxGraphics::Create()
     BackgroundLoader::AddLockGlobal();
     NarcHandle narc;
     unsigned int fileLength;
-    void* iconArchive = LoadFileIntoMemory(data_020ef7ac, data_0211e33c, &fileLength);
+    void* iconArchive = LoadFileIntoMemory("data/bin/icon.nsarc", data_0211e33c, &fileLength);
     if (iconArchive != NULL)
     {
-        if (narc.Initialize(data_020ef7c0, (const unsigned char*)iconArchive))
+        if (narc.Initialize("ARC", (const unsigned char*)iconArchive))
         {
             LoadFromFile(allocator_, iconArchive);
             narc.Destroy();
@@ -97,7 +97,7 @@ void TextBoxGraphics::LoadFromFile(SafeAllocator* alloc, const void*)
     SPRSprite* tile = tiles_;
     for (int i = 0; i < 8; tile++, i++)
     {
-        sprintf(innerFilename, data_020ef7c4, i);
+        sprintf(innerFilename, "ARC:win%d.spr", i);
         const void* innerFile = GetFileFromNARCInMemory(innerFilename);
         tile->Reset();
         tile->LoadFromSPR(innerFile, alloc);
@@ -186,8 +186,17 @@ void TextBoxGraphics::Draw(fix32_t x, fix32_t y, fix32_t w, fix32_t h, CBool dra
             { x - (1 << 12),                   y + (3 << 12) - floorYEdgeScale }
         };
 
-        fix32_t dimensions[8][2];
-        COPY_ARRAY(dimensions, data_020e73fc);
+        fix32_t dimensions[8][2] = 
+        {
+            { 1 << 12, 1 << 12 },
+            { 0,       1 << 12 },
+            { 1 << 12, 1 << 12 },
+            { 1 << 12, 0       },
+            { 1 << 12, 1 << 12 },
+            { 0,       1 << 12 },
+            { 1 << 12, 1 << 12 },
+            { 1 << 12, 0       }
+        };
         dimensions[1][0] = xEdgeScale;
         dimensions[5][0] = xEdgeScale;
         dimensions[3][1] = yEdgeScale;

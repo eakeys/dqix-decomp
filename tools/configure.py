@@ -10,6 +10,7 @@ from get_platform import get_platform
 
 
 DEFAULT_WIBO_PATH = "./wibo"
+DEFAULT_LINK_WIBO_PATH = "./wibo-link"
 
 
 parser = argparse.ArgumentParser(description="Generates build.ninja")
@@ -17,15 +18,16 @@ parser.add_argument('-w', type=str, default=DEFAULT_WIBO_PATH, dest="wine", requ
 parser.add_argument("--compiler", type=Path, required=False, help="Path to pre-installed compiler root directory")
 parser.add_argument("--no-extract", action="store_true", help="Skip extract step")
 parser.add_argument("--dsd", type=Path, required=False, help="Path to pre-installed dsd CLI")
-parser.add_argument('version', help='Game version')
+parser.add_argument('version', choices=["usa", "jpn", "eur"], help='Game version')
 args = parser.parse_args()
 
 
 # Config
 GAME = "dqix"
 DSD_VERSION = 'v0.10.2'
-WIBO_VERSION = '0.6.16'
-OBJDIFF_VERSION = 'v2.7.1'
+WIBO_VERSION = 'sha256:bab06c516326680535fe1d35594a1b4640ea9da4663affd874d5cbe76463d42f' # master 355e082: decompals/wibo#137 (53-bit x87) is in no release yet
+LINK_WIBO_VERSION = '0.6.16' # mwldarm runs ~15x slower under wibo master and needs no x87 fix
+OBJDIFF_VERSION = 'v3.8.1'
 
 DEFAULT_MWCC_VERSION = "2.0/sp2p2"
 SDK_MWCC_VERSION = "2.0/sp1p2"
@@ -107,6 +109,9 @@ if platform is None:
 EXE = platform.exe
 WINE = args.wine if platform.system != "windows" else ""
 WINE_DEP = [WINE] if platform.system != "windows" and WINE == DEFAULT_WIBO_PATH else []
+SHELL = "cmd /c " if platform.system == "windows" else ""
+LINK_WINE = DEFAULT_LINK_WIBO_PATH if WINE_DEP else WINE
+LINK_WINE_DEP = [LINK_WINE] if WINE_DEP else []
 DSD = str(args.dsd or os.path.join('.', str(root_path / f"dsd{EXE}")))
 OBJDIFF = os.path.join('.', str(root_path / f"objdiff-cli{EXE}"))
 LD = os.path.join('.', str(mwcc_root / DEFAULT_MWCC_VERSION / "mwldarm.exe"))
@@ -119,10 +124,6 @@ class Project:
         '''Version of the game'''
         self.game_config = config_path / game_version
         '''Root directory for dsd configs'''
-
-        if not self.game_config.is_dir():
-            print(f"Version '{game_version}' not recognized")
-            exit(1)
 
         self.game_build = build_path / game_version
         '''Path to build directory'''
@@ -141,6 +142,9 @@ class Project:
 
     def arm9_config_yaml(self) -> Path:
         return self.game_config / "arm9" / "config.yaml"
+
+    def is_initialized(self) -> bool:
+        return self.arm9_config_yaml().is_file()
 
     def baserom(self) -> Path:
         return extract_path / f'baserom_{GAME}_{self.game_version}.nds'
@@ -185,9 +189,12 @@ def main():
     with build_ninja_path.open("w") as file:
         n = ninja_syntax.Writer(file)
 
+        n.variable("python", f'"{PYTHON}"')
+        n.newline()
+
         n.rule(
             name="download_tool",
-            command=f'{PYTHON} tools/download_tool.py $tool $tag --path $path'
+            command=f'$python tools/download_tool.py $tool $tag --path $path'
         )
         n.newline()
 
@@ -205,14 +212,15 @@ def main():
 
         n.rule(
             name="delink",
-            command=f"{DSD} delink --config-path $config_path"
+            command=f'{SHELL}{DSD} delink --config-path $config_path && $python tools/stamp.py $out'
         )
         n.newline()
 
         
         n.variable("opt_level", "-O2")
         # -MMD excludes all includes instead of just system includes for some reason, so use -MD instead.
-        mwcc_cmd = f'{WINE} "$mwcc_version" $opt_level {CC_FLAGS} {CC_INCLUDES} $cc_flags -d $game_version -MD -c $in -o $basedir'
+        region_defines = "-d usa -d eur" if args.version == "eur" else "-d $game_version"
+        mwcc_cmd = f'{WINE} "$mwcc_version" $opt_level {CC_FLAGS} {CC_INCLUDES} $cc_flags {region_defines} -MD -c $in -o $basedir'
         mwcc_implicit = [get_compiler_version("")] + WINE_DEP
         if platform.system != "windows":
             transform_dep = "tools/transform_dep.py"
@@ -234,7 +242,7 @@ def main():
 
         n.rule(
             name="mwld",
-            command=f'{WINE} "{LD}" {LD_FLAGS} @$objects_file $lcf_file -o $out'
+            command=f'{LINK_WINE} "{LD}" {LD_FLAGS} @$objects_file $lcf_file -o $out'
         )
         n.newline()
 
@@ -258,13 +266,13 @@ def main():
 
         n.rule(
             name="objdiff_report",
-            command=f"{OBJDIFF} report generate -o $out"
+            command=f"{OBJDIFF} report generate -c combineTextSections=false -o $out"
         )
         n.newline()
 
         n.rule(
             name="m2ctx",
-            command=f"{PYTHON} tools/m2ctx.py -f $out $in"
+            command=f"$python tools/m2ctx.py -f $out $in"
         )
         n.newline()
 
@@ -282,12 +290,17 @@ def main():
 
         n.rule(
             name="sha1",
-            command=f"{PYTHON} tools/sha1.py $in -c $sha1_file"
+            command=f"$python tools/sha1.py $in -c $sha1_file"
         )
         n.newline()
 
         add_download_tool_builds(n)
         add_extract_build(n, project)
+        if not project.is_initialized():
+            if not args.no_extract:
+                n.default("extract")
+            print(f"{project.arm9_config_yaml()} not found, so only the extract step was generated.")
+            return
         add_delink_and_lcf_builds(n, project)
         add_mwcc_builds(n, project, mwcc_implicit)
         add_mwld_and_rom_builds(n, project)
@@ -342,6 +355,16 @@ def add_download_tool_builds(n: ninja_syntax.Writer):
             },
         )
         n.newline()
+        n.build(
+            rule="download_tool",
+            outputs=LINK_WINE,
+            variables={
+                "tool": "wibo",
+                "tag": LINK_WIBO_VERSION,
+                "path": LINK_WINE,
+            },
+        )
+        n.newline()
 
 
 def add_extract_build(n: ninja_syntax.Writer, project: Project):
@@ -357,6 +380,13 @@ def add_extract_build(n: ninja_syntax.Writer, project: Project):
         )
         n.newline()
 
+        n.build(
+            inputs=str(project.baserom_config()),
+            rule="phony",
+            outputs="extract",
+        )
+        n.newline()
+
 
 def add_mwld_and_rom_builds(n: ninja_syntax.Writer, project: Project):
     lcf_file = str(project.arm9_lcf())
@@ -365,7 +395,7 @@ def add_mwld_and_rom_builds(n: ninja_syntax.Writer, project: Project):
     elf_file = str(project.arm9_o())
     n.build(
         inputs=project.source_object_files() + [lcf_file, objects_file, delink_file],
-        implicit=[LD] + WINE_DEP,
+        implicit=[LD] + LINK_WINE_DEP,
         rule="mwld",
         outputs=elf_file,
         variables={
@@ -491,7 +521,7 @@ def add_delink_and_lcf_builds(n: ninja_syntax.Writer, project: Project):
     delinks_path = project.arm9_delinks()
     n.build(
         inputs=project.dsd_configs() + [rom_config],
-        implicit=DSD,
+        implicit=[DSD, "tools/stamp.py"],
         rule="delink",
         outputs=str(delinks_path / "delink.yaml"),
         variables={

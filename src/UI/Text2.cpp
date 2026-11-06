@@ -1,5 +1,7 @@
 #pragma ipa file
 
+#ifndef jpn
+
 #include "UI/Text.h"
 #include "std_library_functions.h"
 #include "Util/StringTests.h"
@@ -10,14 +12,6 @@
 #include "Graphics/VRAMStaging.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
-
-void SetRenderGlyphPosition(RenderGlyph* glyph, int x, int y, short z);
-
-static inline void fakeWriteVertex16(unsigned short x, fix32_t y, unsigned short z)
-{
-    GXFIFO_VERTEX_16 = x | ((unsigned short)y << 16);
-    GXFIFO_VERTEX_16 = z;
-}
 
 extern "C"
 {
@@ -228,11 +222,11 @@ void ShowBinaryOptionDialogue(DialogueOptionManager* dialogue, int defaultOption
     dialogue->gridMenu_1c_.touchInput_4_.SetCurrentElementAndRemoveHighlight(defaultOption);
     dialogue->gridMenu_1c_.keyInput_54_.SetCurrentElementIndex(defaultOption);
     dialogue->unknown_234_ = true;
-    func_0205c77c(&dialogue->substruct_4_, 1);
+    func_0205c77c(&dialogue->unknown_4_, 1);
     dialogue->unknown_233_ = true;
     dialogue->unknown_234_ = true;
-    func_0205c77c(&dialogue->substruct_4_, 1);
-    dialogue->ShowBackground3D();
+    func_0205c77c(&dialogue->unknown_4_, 1);
+    dialogue->Show();
     if (GetCurrentMainScreen() == 1)
         dialogue->gridMenu_1c_.touchInputEnabled_94_ = false;
 }
@@ -1175,7 +1169,7 @@ void TextManager::ProcessYesNoInput(int input)
         if (!silentYesNo)
             func_0205eaa0(data_02108760, 1, 0);
         SubmitQuestionResponse(ControlWord_Yes, unknown_58_);
-        dialogueOptions_90_.Release();
+        dialogueOptions_90_.Destroy();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -1187,7 +1181,7 @@ void TextManager::ProcessYesNoInput(int input)
         chosenAnswer_954_ = 1;
         ReleaseMainMessageGlyphs();
         SubmitQuestionResponse(ControlWord_No, unknown_58_);
-        dialogueOptions_90_.Release();
+        dialogueOptions_90_.Destroy();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -1204,7 +1198,7 @@ void TextManager::ProcessUkeYameInput(int input)
         ReleaseMainMessageGlyphs();
         func_0205eaa0(data_02108760, 1, 0);
         SubmitQuestionResponse(ControlWord_Uke, unknown_58_);
-        dialogueOptions_90_.Release();
+        dialogueOptions_90_.Destroy();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -1215,7 +1209,7 @@ void TextManager::ProcessUkeYameInput(int input)
         chosenAnswer_954_ = 1;
         ReleaseMainMessageGlyphs();
         SubmitQuestionResponse(ControlWord_Yame, unknown_58_);
-        dialogueOptions_90_.Release();
+        dialogueOptions_90_.Destroy();
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
@@ -4076,3 +4070,5 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
 
     *output = *input;
 }
+
+#endif

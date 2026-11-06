@@ -128,6 +128,9 @@ public:
     bool keyInputEnabled_95_;
     char pad_96[2];
 
+    int GetCurrentX() const { return keyInput_54_.currentX_18_; }
+    int GetCurrentY() const { return keyInput_54_.currentY_1c_; }
+
 public:
     void Reset();
     void Destroy();

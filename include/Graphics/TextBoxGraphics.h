@@ -65,10 +65,17 @@ public:
     }
 
     // emitted at 0205cd6c (usa)
-    inline bool IsBoxActive() const
+    inline CBool IsBoxActive() const
     {
         if (activeBox_ != NULL)
             return activeBox_->status == 2;
         return false;
+    }
+
+    inline CBool IsBoxHidden() const
+    {
+        if (activeBox_ != NULL)
+            return activeBox_->status == 0;
+        return true;
     }
 };

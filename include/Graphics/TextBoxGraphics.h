@@ -55,4 +55,20 @@ public:
         activeBox_->width = w;
         activeBox_->height = h;
     }
+
+    // emitted at 02043110 (usa)
+    inline void ResetBoxStatus()
+    {
+        if (activeBox_ == NULL)
+            return;
+        activeBox_->status = 0;
+    }
+
+    // emitted at 0205cd6c (usa)
+    inline bool IsBoxActive() const
+    {
+        if (activeBox_ != NULL)
+            return activeBox_->status == 2;
+        return false;
+    }
 };

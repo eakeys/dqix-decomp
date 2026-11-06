@@ -3,11 +3,13 @@
 #include "UI/Text.h"
 #include "NitroSDK/Graphics.h"
 #include "Graphics/Vector.h"
+#include "NitroSDK/BGBases.h"
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"
 #include "Graphics/VRAMStaging.h"
 #include "GameState/GameState.h"
 #include "Util/StringTests.h"
+#include "Resource/PAC.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
@@ -106,9 +108,7 @@ extern "C"
     // probably atoi
     int func_02005a94(const char*);
 
-    void func_02043040(TextManager*);
-    void func_02043124(TextManager*);
-    void func_020430b0(TextManager*);
+    void func_02043224(TextManager*);
     void func_02044c74(TextManager*, UIElement*);
     void func_02044d0c();
     void func_02044f3c(TextManager*, const char*, int);
@@ -127,6 +127,7 @@ extern "C"
 
     unsigned char* func_020e1b24(void*);
     void func_020e1b2c(void*, int);
+    void func_020e1cb8(void*);
     bool func_020e1f1c(void*);
     void func_020e2110(void*);
     void func_020e23f4(void*);
@@ -803,13 +804,13 @@ void TextManager::Initialize()
     dialogueOptions_90_.Reset();
     unknown_2c8_ = 0;
     memset(substruct_2cc_, 0, sizeof(substruct_2cc_));
-    unknown_2d0_ = -1;
-    unknown_2d8_ = 0;
-    unknown_2dc_ = 0;
-    unknown_2e0_ = 0;
+    cursorObjectsLoadHandle_2d0_ = -1;
+    cursorObjects_2d8_ = NULL;
+    cursorMetatiles_2dc_ = NULL;
+    cursorSpriteList_2e0_ = NULL;
     unknown_2e4_ = 0;
     unknown_2e6_ = 1;
-    unknown_2e7_ = 0;
+    cursorObjectLoadStatus_2e7_ = 0;
     unknown_2e8_ = 0;
     memset(customStrings_4ac_, 0, sizeof(customStrings_4ac_));
     unknown_8ac_ = 0;
@@ -822,7 +823,7 @@ void TextManager::Initialize()
         glyphs_[i].Reset();
         glyphRefcounts_17b8_[i] = 0;
     }
-    unknown_954_ = 0;
+    chosenAnswer_954_ = 0;
     unknown_958_ = 0;
     unknown_1962_ = 0;
     windows_[0].Initialize(0, 0);
@@ -836,7 +837,7 @@ void TextManager::Initialize()
     showWindow_19b1_ = true;
     textureArena_1e28_ = NULL;
     unknown_19cc_ = 0;
-    func_02043124(this);
+    ResetTextBGLayers();
     skipTag_19bb_ = 1;
     unknown_994_ = -1;
     unknown_19bc_ = 0;
@@ -863,8 +864,8 @@ void TextManager::Initialize()
     unknown_185c_ = 136;
     mojiArg1_1860_ = 12;
     mojiArg2_1864_ = 16;
-    unknown_19ae_ = 0;
-    unknown_19af_ = 0;
+    cursorBlinkTimer_19ae_ = 0;
+    cursorVisibleThisFrame_19af_ = 0;
     unknown_1868_ = 0;
     npcID_1838_ = -1;
     npcPriorRotation_183c_ = 0;
@@ -903,6 +904,75 @@ void TextBox::Reset()
     color = 0x7fff;
 }
 
+void TextManager::Destroy()
+{
+    substruct_19e0_.Destroy();
+    func_02043224(this);
+    DestroyRenderGlyphs();
+    ResetTextBGLayers();
+    ResetBoxes();
+    unknown_38_ = NULL;
+}
+
+void TextManager::DestroyRenderGlyphs()
+{
+    memset(substruct_2cc_, 0, sizeof(substruct_2cc_));
+    numGlyphsInUse_9b4_ = 0;
+    for (int i = 0; i < 0x80; i++)
+    {
+        glyphs_[i].Reset2();
+        glyphRefcounts_17b8_[i] = 0;
+    }
+    unknown_1868_ = 0;
+    pauseType_9a0_ = 0;
+    unknown_19b2_ = 0;
+    unknown_19b4_ = 0;
+}
+
+void TextManager::ResetBoxes()
+{
+    substruct_19e0_.ResetBoxStatus();
+    substruct_19e0_.activeBox_ = &speakerTextBox_930_;
+    substruct_19e0_.ResetBoxStatus();
+    substruct_19e0_.activeBox_ = &mainTextBox_914_;
+    showWindow_19b1_ = false;
+    cursorBlinkTimer_19ae_ = 0;
+    cursorVisibleThisFrame_19af_ = 0;
+    unknown_19bd_ = 0;
+    npcID_1838_ = -1;
+    npcPriorRotation_183c_ = 0;
+}
+
+void TextManager::ResetTextBGLayers()
+{
+    pauseType_9a0_ = 0;
+    unknown_998_ = 0;
+    if (unknown_19cc_ != 0)
+    {
+        unknown_19cc_ = 0;
+        TileMapIndexData* indices = data_02107800.tileMapIndices;
+        memset(indices, 0, sizeof(TileMapIndexData));
+        StageMemoryToVRAM(VRAMSubregion_MainBG2Screen, indices->backgroundIndexBuffer, 0, 0x800, true, false);
+        StageMemoryToVRAM(VRAMSubregion_MainBG3Screen, indices->backgroundIndexBuffer, 0, 0x800, true, false);
+        void* bg1screen = (void*)GetMainBG1ScreenBase();
+        if (bg1screen != NULL)
+            memset(bg1screen, 0, 0x800);
+        BG2OFS = 0;
+        // set enabled layers: enable bg0, bg1, obj, disable bg2, bg3
+        DISPCNT = (DISPCNT & ~0x1f00) | 0x1300;
+    }
+    if (unknown_38_ != NULL)
+        func_020e1cb8(unknown_38_);
+    unknown_38_ = NULL;
+}
+
+void TextManager::Close()
+{
+    DestroyRenderGlyphs();
+    ResetTextBGLayers();
+    ResetBoxes();
+}
+
 void TextManager::InitializeRenderGlyphs()
 {
     if (textureArena_1e28_ != NULL)
@@ -916,6 +986,74 @@ void TextManager::InitializeRenderGlyphs()
     RefreshGraphics(false);
 }
 
+void TextManager::LoadCursorGraphics()
+{
+    if (cursorObjectsAllocator_2d4_ == NULL)
+        return;
+    
+    BackgroundLoader* loader = BackgroundLoader::GetInstance();
+    if (cursorObjectLoadStatus_2e7_ == 0)
+    {
+        if (cursorObjects_2d8_ == NULL)
+        {
+            GrottoStruct* grotto = GameState::GetInstance()->GetGrottoStruct();
+            if (grotto == NULL || grotto->unknown_0 == 0 || grotto->unknown_2 != 0)
+            {
+                cursorObjectsLoadHandle_2d0_ = loader->QueueLoadFileInGP2(data_020f007f, data_020f0093, NULL);
+                cursorObjectLoadStatus_2e7_++;
+            }
+        }
+    }
+    else if (cursorObjectLoadStatus_2e7_ == 1)
+    {
+        if (loader->GetTaskStatus(cursorObjectsLoadHandle_2d0_) != 0)
+        {
+            cursorObjectsAllocator_2d4_->Reset();
+            cursorObjects_2d8_ = (OBJSpriteSet*)cursorObjectsAllocator_2d4_->Allocate(sizeof(OBJSpriteSet));
+            cursorMetatiles_2dc_ = (OBJSpriteSet::Metatile*)cursorObjectsAllocator_2d4_->Allocate(6 * sizeof(OBJSpriteSet::Metatile));
+            cursorSpriteList_2e0_ = (OBJSpriteSet::List*)cursorObjectsAllocator_2d4_->Allocate(sizeof(OBJSpriteSet::List));
+            if (cursorObjects_2d8_ != NULL && cursorMetatiles_2dc_ != NULL && cursorSpriteList_2e0_ != NULL)
+            {
+                cursorObjects_2d8_->Reset();
+                for (unsigned short i = 0; i < 6; i++)
+                    cursorMetatiles_2dc_[i].Reset();
+                cursorSpriteList_2e0_->Reset();
+                cursorObjects_2d8_->engine_ = 0;
+                cursorObjects_2d8_->SetMetatiles(cursorMetatiles_2dc_, 6);
+                cursorObjects_2d8_->sprites_ = cursorSpriteList_2e0_;
+                unknown_2e4_ = 0;
+                
+                const char* filename;
+                void* pacData;
+                unsigned int pacLength;
+                loader->GetLoadedFileByID(cursorObjectsLoadHandle_2d0_, &pacData, &pacLength);
+                int fileCount = GetNumFilesInPAC(pacData);
+                for (int i = 0; i < fileCount; i++)
+                {
+                    unsigned int subfileLength;
+                    void* subfile = GetFileInPACByIndex(pacData, i, &filename, &subfileLength);
+                    cursorObjects_2d8_->LoadFromNitroFile(subfile, subfileLength, cursorObjectsAllocator_2d4_);
+                }
+            }
+            loader->RemoveTask(cursorObjectsLoadHandle_2d0_);
+            cursorObjectsLoadHandle_2d0_ = -1;
+            cursorObjectLoadStatus_2e7_++;
+        }
+    }
+    else if (cursorObjectLoadStatus_2e7_ == 2)
+    {
+        if (cursorObjects_2d8_ == NULL || cursorSpriteList_2e0_ == NULL)
+        {
+            cursorObjects_2d8_ = NULL;
+            cursorMetatiles_2dc_ = NULL;
+            cursorSpriteList_2e0_ = NULL;
+            unknown_2e4_ = 0;
+            cursorObjectsLoadHandle_2d0_ = -1;
+            cursorObjectLoadStatus_2e7_ = 0;
+        }
+    }
+}
+
 struct TextBoxBounds
 {
     short x, y, width, height;
@@ -923,8 +1061,21 @@ struct TextBoxBounds
     short Left() const { return x; }
     short Top() const { return y; }
 
-    void Clear();
-    void SetBounds(short ax, short ay, short aw, short ah);
+    void Clear()
+    {
+        x = 0;
+        y = 0;
+        width = 0;
+        height = 0;
+    }
+
+    void SetBounds(short ax, short ay, short aw, short ah)
+    {
+        x = ax;
+        y = ay;
+        width = aw;
+        height = ah;
+    }
 };
 
 void DrawTextBoxBorderTile(UIElement* renderer, short x, short y, int idx)
@@ -1153,9 +1304,10 @@ void TextManager::RefreshGraphics(bool arg)
 
         if (unknown_998_ == 0)
         {
-            func_02043040(this);
-            func_02043124(this);
-            func_020430b0(this);
+            // equivalent to calling Close() and inlining it
+            DestroyRenderGlyphs();
+            ResetTextBGLayers();
+            ResetBoxes();
         }
     }
 
@@ -1211,20 +1363,14 @@ void TextManager::RefreshGraphics(bool arg)
         windows_[i].Apply();
 }
 
-void TextBoxBounds::Clear()
+void TextManager::CreateTextBoxGraphics()
 {
-    x = 0;
-    y = 0;
-    width = 0;
-    height = 0;
+    substruct_19e0_.Create();
 }
 
-void TextBoxBounds::SetBounds(short toX, short toY, short toWidth, short toHeight)
+void TextManager::LoadTextBoxGraphics(SafeAllocator *alloc, const void *data)
 {
-    x = toX;
-    y = toY;
-    width = toWidth;
-    height = toHeight;
+    substruct_19e0_.LoadFromFile(alloc, data);
 }
 
 int TextManager::GetControlWordNumExtraWords(const void* text) const
@@ -1556,7 +1702,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         unknown_994_ = -1;
         unknown_94c_ = 0;
         unknown_950_ = 0;
-        unknown_954_ = 0;
+        chosenAnswer_954_ = 0;
         unknown_958_ = 0;
         unknown_19ac_ = 0;
         waitTimeQueueIndex_19ad_ = 0;
@@ -1630,11 +1776,11 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         pauseType_9a0_ = 5;
         unknown_19b2_ = 1;
         speakerVoiceType_99c_ = 0;
-        unknown_19ae_ = 0;
-        unknown_19af_ = 0;
+        cursorBlinkTimer_19ae_ = 0;
+        cursorVisibleThisFrame_19af_ = 0;
         unknown_19b5_ = 0;
         unknown_19c5_ = 0;
-        unknown_19ca_ = 1;
+        cursorPresent_19ca_ = true;
         unknown_19b4_ = 0;
         for (int i = 0; i < 2; i++)
             windows_[i].SetEnabled(false);
@@ -1672,6 +1818,29 @@ void TextManager::StopVoiceSoundEffect()
         return;
     func_0205eabc(data_02108760, data_02107800.unk_20, 0);
     voicePlaybackState_19b3_ = 0;
+}
+
+void TextManager::UpdateCursorBlink()
+{
+    if (pauseType_9a0_ == 1 || pauseType_9a0_ == 3 || pauseType_9a0_ == 2)
+    {
+        if (cursorPresent_19ca_)
+        {
+            cursorBlinkTimer_19ae_++;
+            cursorBlinkTimer_19ae_ &= 0x1f;
+            cursorVisibleThisFrame_19af_ = cursorBlinkTimer_19ae_ > 15;
+        }
+    }
+    else
+    {
+        cursorBlinkTimer_19ae_ = 0;
+        cursorVisibleThisFrame_19af_ = false;
+    }
+}
+
+int TextManager::GetChosenAnswer() const
+{
+    return chosenAnswer_954_;
 }
 
 void TextManager::RecordWaitTimeValue(int value)

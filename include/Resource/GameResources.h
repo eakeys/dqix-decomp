@@ -159,7 +159,9 @@ struct GameResources
     void* unknown_ptr_4328;
 
 #if defined(usa)
-    char unknown_432c[0xf0];
+    char unknown_432c[0x4354 - 0x432c];
+    unsigned char unknown_4354;
+    char unk_4355[0x441c - 0x4355];
 #elif defined(jpn)
     char unknown_432c[0x60]; // jpn: 0x410c
 #endif

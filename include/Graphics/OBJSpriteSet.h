@@ -143,6 +143,12 @@ public:
 
     int GetMetatileObjMode(const Metatile* metatile) const;
     unsigned int GetMetatilePaletteInternal(const Metatile* metatile) const;
+
+    inline void SetMetatiles(Metatile* metatiles, unsigned short count)
+    {
+        metatiles_ = metatiles;
+        numMetatiles_ = count;
+    }
 };
 
 bool GetCharBlockFromNitroFile(Nitro2DCharacter** out, void* data, unsigned int length);

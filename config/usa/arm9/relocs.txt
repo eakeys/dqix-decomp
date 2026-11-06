@@ -12011,12 +12011,12 @@ from:0x02066060 kind:arm_call to:0x02045688 module:main
 from:0x020660cc kind:arm_call to:0x0218b5b0 module:overlay(17)
 from:0x020660d4 kind:arm_call to:0x0218d7b0 module:overlay(17)
 from:0x02066134 kind:arm_call to:0x0205eaa0 module:main
-from:0x0206614c kind:arm_call to:0x0218b5c0 module:overlays(16,17)
+from:0x0206614c kind:arm_call to:0x0218b5c0 module:overlay(17)
 from:0x02066154 kind:arm_call to:0x0218b5f8 module:overlay(17)
 from:0x02066170 kind:arm_call to:0x0200cf44 module:main
-from:0x020661a0 kind:arm_call to:0x0218b5c0 module:overlays(16,17)
+from:0x020661a0 kind:arm_call to:0x0218b5c0 module:overlay(17)
 from:0x020661ac kind:arm_call to:0x0218b5f8 module:overlay(17)
-from:0x020661ec kind:arm_call to:0x0218b5c0 module:overlays(16,17)
+from:0x020661ec kind:arm_call to:0x0218b5c0 module:overlay(17)
 from:0x020661f8 kind:arm_call to:0x0218b5f8 module:overlay(17)
 from:0x020661fc kind:arm_call to:0x0218b5b0 module:overlay(17)
 from:0x02066210 kind:arm_call to:0x02046b60 module:main

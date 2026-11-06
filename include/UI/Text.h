@@ -10,6 +10,7 @@
 #include "../Graphics/Font.h"
 #include "../Graphics/TextureArena.h"
 #include "../Graphics/TextBoxGraphics.h"
+#include "../Graphics/OBJSpriteSet.h"
 #include <asmhacks.h>
 
 // sizeof == 0x1c.
@@ -251,22 +252,22 @@ public:
     unsigned int unknown_74_;
     unsigned int unknown_78_;
     int unknown_7c_;
-    char unk_80[4];
+    int unknown_80_;
     int mainMessageStartOffset_84_;
     unsigned int glyphIndexListMainMessageStart_88_;
     int unknown_8c_;
     DialogueOptionManager dialogueOptions_90_; // func_0205c790
     int unknown_2c8_;
     unsigned char substruct_2cc_[4];
-    int unknown_2d0_;
+    int cursorObjectsLoadHandle_2d0_;
     // has 0x400 bytes allocated to it
-    SafeAllocator* pAllocator_2d4_;
-    int unknown_2d8_; // pointer to object of size 0x54, func_0205a444
-    int unknown_2dc_; // pointer to 6 objects of size 0x28 each, func_0205a198
-    int unknown_2e0_; // pointer to object of size 8, func_0205a234
+    SafeAllocator* cursorObjectsAllocator_2d4_;
+    OBJSpriteSet* cursorObjects_2d8_; // pointer to object of size 0x54, func_0205a444
+    OBJSpriteSet::Metatile* cursorMetatiles_2dc_; // array of size 6
+    OBJSpriteSet::List* cursorSpriteList_2e0_; // pointer to object of size 8, func_0205a234
     short unknown_2e4_;
-    char unknown_2e6_;
-    char unknown_2e7_;
+    unsigned char unknown_2e6_;
+    unsigned char cursorObjectLoadStatus_2e7_;
     int unknown_2e8_;
     char tmapSecStrings_2ec_[7][0x40];
     char customStrings_4ac_[16][0x40];
@@ -279,13 +280,13 @@ public:
     unsigned char maybeValuePaddingModes[16];
     char unk_901[1];
     unsigned char valueUnknownArray[16];
-    unsigned char voiceSoundEffectTimer_912_; // counts up, when >= 4 subtract 4 and play the sound effect
+    char voiceSoundEffectTimer_912_; // counts up, when >= 4 subtract 4 and play the sound effect
     char unk_913[1];
     TextBox mainTextBox_914_; // func_02042fcc 
     TextBox speakerTextBox_930_;
     int unknown_94c_;
     int unknown_950_;
-    int unknown_954_;
+    int chosenAnswer_954_;
     int unknown_958_;
     char substructOrArray_95c_[0x20];
     char substructOrArray_97c_[0x10];
@@ -297,10 +298,11 @@ public:
     // should be an enum.
     // 0 = waiting for A (no cursor),
     // 1 = waiting for A (with cursor),
-    // 2 = similar to above, used by zoom,
-    // 3 = continuation of message?
+    // 2 = pad wait (this seems identical in practice though?) used by e.g. zoom
+    // 3 = continuation of message from <ADD> tag (used in cutscenes where the)
+    //     textbox normally disappears in between messages
     // 4 = auto-advance (<AUTO=...>),
-    // 5 = ?,
+    // 5 = not waiting (written when you respond to a question or when text advances)
     // 6 = awaiting yes/no or uke/yame choice
     int pauseType_9a0_;
     int gyouParameter_9a4_;
@@ -344,22 +346,22 @@ public:
     unsigned char unknown_195c_;
     // low 2 bits determine which offset among (-2, 0), (0, 0), (0, -3), (0, 0) to apply to speaker name
     unsigned char unknown_195d_;
-    char autoValue_195e_;
+    unsigned char autoValue_195e_;
     unsigned char autoRemainingTime_195f_;
-    char pageTValue_1960_; // seems to be time until dialogue advances automatically?
-    char unk_1961[1];
+    unsigned char pageTValue_1960_; // seems to be time until dialogue advances automatically?
+    char unknown_1961_;
     unsigned char unknown_1962_;
     char unk_1963[1];
     ClipWindow windows_[2];
     char unknown_19ac_;
     char waitTimeQueueIndex_19ad_;
-    char unknown_19ae_;
-    char unknown_19af_;
+    char cursorBlinkTimer_19ae_;
+    bool cursorVisibleThisFrame_19af_;
     unsigned char unknown_19b0_;
     unsigned char showWindow_19b1_; // probably bool
     unsigned char unknown_19b2_; // if 0, voice sound effects don't activate
     unsigned char voicePlaybackState_19b3_; // 1 while voice sound effect is playing
-    char unknown_19b4_;
+    unsigned char unknown_19b4_;
     char unknown_19b5_;
     char maybeDoesNPCTurn_19b6_;
     char maybeDoesSoundPlay_19b7_;
@@ -367,7 +369,7 @@ public:
     unsigned char unknown_19b9_;
     unsigned char unknown_19ba_;
     char skipTag_19bb_;
-    char unknown_19bc_;
+    unsigned char unknown_19bc_;
     char unknown_19bd_;
     char unknown_19be_;
     char unknown_19bf_;
@@ -379,16 +381,16 @@ public:
     unsigned char unknown_19c5_;
     bool recoveryParam_19c6_;
     bool recoveryParam_19c7_; 
-    char unknown_19c8_;
-    char unknown_19c9_;
-    char unknown_19ca_;
+    unsigned char unknown_19c8_;
+    unsigned char unknown_19c9_;
+    bool cursorPresent_19ca_;
     unsigned char unknown_19cb_;
     unsigned char unknown_19cc_;
     unsigned char unknown_19cd_;
     bool unknown_19ce_;
     char unknown_19cf_;
     unsigned char unknown_19d0_;
-    char unknown_19d1_;
+    unsigned char unknown_19d1_;
     char unknown_19d2_;
     char unknown_19d3_;
     char unknown_19d4_;
@@ -430,11 +432,38 @@ public:
     // once after loading a save
     void Initialize();
 
+    // usa: func_02043000
+    // called when resetting after a quicksave, getting past the splash screens
+    // and after completing initial character creation
+    void Destroy();
+
+    // usa: func_02043040
+    void DestroyRenderGlyphs();
+    // usa: func_020430b0
+    // also clears some bools and NPC data
+    void ResetBoxes();
+
+    // usa: func_02043124
+    // clears BG layers 1,2,3 and hides layers 2 & 3
+    void ResetTextBGLayers();
+
+    // usa: func_02043204
+    void Close();
+
     // usa: func_020432c4
     void InitializeRenderGlyphs();
 
+    // usa: func_02043368
+    void LoadCursorGraphics();
+
     // usa: func-020439b0
     void RefreshGraphics(bool arg);
+
+    // usa: func_020440a4
+    void CreateTextBoxGraphics();
+    // usa: func_020440b8
+    // the data isn't used, it's reached from GetFileFromNARCInMemory
+    void LoadTextBoxGraphics(SafeAllocator* alloc, const void* data);
 
     // usa: func_02044420
     int GetControlWordNumExtraWords(const void* text) const;
@@ -462,7 +491,11 @@ public:
     void PlayVoiceSoundEffect();
     // usa: func_02045688
     void StopVoiceSoundEffect();
+    // usa: func_020456d0
+    void UpdateCursorBlink();
 
+    // usa: func_020457e0
+    int GetChosenAnswer() const;
     // usa: func_020457e8
     void RecordWaitTimeValue(int value);
     // usa: func_02045824
@@ -498,8 +531,13 @@ public:
     // usa: func_020654b8
     void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
 
+    // usa: func_020656d0
+    unsigned short GetNextWord() const;
+
     // usa: func_02065920
     void AdvanceAutoTimer(unsigned int ticks);
+    // usa: func_02065990
+    void Update(unsigned int numTicks);
 
     // usa: func_02066a6c
     // The bool probably has some deeper meaning

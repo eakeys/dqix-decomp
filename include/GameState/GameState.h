@@ -61,7 +61,9 @@ public:
     unsigned char partySize_; // doesn't count characters from multiplayer
     char unk_3981[0x5721 - 0x3981];
     unsigned char partySizeAndOtherPlayers_;
-    char unk_5722[0x63e0 - 0x5722];
+    char unk_5722[0x5cc8 - 0x5722];
+    unsigned char unknown_5cc8_;
+    char unk_5cc9[0x63e0 - 0x5cc9];
     unsigned char* treasureMapLanguageData_;
     GrottoStruct grottoInfo_;
 

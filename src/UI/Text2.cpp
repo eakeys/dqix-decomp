@@ -40,11 +40,13 @@ extern "C"
     void* func_0203cf4c();
     Vector3fix func_020406f8(void*);
 
-    void func_02043124(TextManager*);
-    void func_02043204(TextManager*);
+    int func_020440cc(TextManager*);
     void func_02044530(TextManager*, bool);
     void func_0204459c(TextManager*, bool);
     void func_02044830(TextManager*, int*, int*);
+    void func_02045740(TextManager*);
+
+    int func_02046b60(void*, int);
 
     int func_020546a8(PartyMember*);
     void func_0205c77c(void*, int);
@@ -54,24 +56,53 @@ extern "C"
     void func_0205cd94(DialogueOptionManager*);
     bool func_0205cde8(DialogueOptionManager*);
     int func_0205ce28(void*);
+
+    void func_0205e944(void*, int);
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
 
+    void func_02065418(int);
+    void func_020656e4(TextManager*, int);
+    int func_02065758(TextManager*, int);
+    int func_020657c8(TextManager*, int);
     void func_020675fc(TextManager*);
+    void func_020676e0(TextManager*, int);
+    void func_020658ac(TextManager*, int);
     void func_0206b6b8(TextManager*);
+
+    void func_0208be94(void*);
+    void func_0208beb4(void*);
+    void func_0208bf28(int, int, int);
+
 
     // probably get quest manager instance or something?
     void* func_02094d6c();
+    int func_020965ac(void*, unsigned char);
     // maybe convert quest ID to real quest ID?
     unsigned char func_020965c0(void*, unsigned char);
+    void func_0209c830(void*, int);
+    int func_0209ca2c(void*);
+
+    // based on usage with quests, probably get day/time data
+    void func_020cf0fc(int*);
+    void func_020cf1a8(int*);
 
     // alternative strlen implementation
     int func_020d2ff0(const char*);
 
     void func_020e2110(void*);
     void func_020e2310(void*, int, int, int, const char*, unsigned char, unsigned char);
+
+    const char* func_020e51cc(int);
+
+    // heal the party?
+    void func_ov017_0218d7b0(GameResources*, void*);
+    void func_ov017_0218b5c0(int, char);
+    void func_ov017_0218b5f8(char);
+    void func_ov017_021a5ab0(void*);
 }
 
+extern char data_02109bf4[];
 extern char data_02108760[]; // sound effect system?
 
 template<class FuncPtr>
@@ -245,6 +276,11 @@ void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x
     }
 }
 
+unsigned short TextManager::GetNextWord() const
+{
+    return glyphIndexList_4c_[unknown_78_];
+}
+
 void TextManager::AdvanceAutoTimer(unsigned int ticks)
 {
     if (unknown_19d0_ != 0 || pauseType_9a0_ != 4)
@@ -259,8 +295,8 @@ void TextManager::AdvanceAutoTimer(unsigned int ticks)
 
     // timer ran out
     autoRemainingTime_195f_ = 0;
-    unknown_19ae_ = 0;
-    unknown_19af_ = 0;
+    cursorBlinkTimer_19ae_ = 0;
+    cursorVisibleThisFrame_19af_ = 0;
     unknown_19cd_ = 1;
     unknown_40_ = 0;
     unknown_44_ = 0;
@@ -268,6 +304,532 @@ void TextManager::AdvanceAutoTimer(unsigned int ticks)
     ReleaseMainMessageGlyphs();
     pauseType_9a0_ = 5;
     LoadNextPage();
+}
+
+void TextManager::Update(unsigned int argNumTicks)
+{
+    int numTicks = argNumTicks;
+    if (numTicks == 0)
+        numTicks = 1;
+    if (cursorSpriteList_2e0_ != NULL && unknown_2e6_ != 0 && pauseType_9a0_ == 6)
+    {
+        if (GetCurrentMainScreen() == 1) // main engine on top screen
+        {
+            cursorSpriteList_2e0_->SetSpriteOBJIndex(0, 30);
+        }
+        cursorSpriteList_2e0_->UpdateAll(numTicks);
+    }
+
+    if (unknown_998_ == 0)
+        return;
+
+    if (unknown_19d1_ != 0)
+    {
+        unknown_1958_ -= numTicks;
+        if (unknown_1958_ < 0)
+        {
+            ReleaseMainMessageGlyphs();
+            Close();
+        }
+        return;
+    }
+
+    func_020656e4(this, numTicks);
+    if (func_02065758(this, numTicks) != 0)
+        return;
+    
+    if (showWindow_19b1_)
+    {
+        substruct_19e0_.Update(numTicks);
+        if (func_0205ce28(&substruct_19e0_) != 0)
+            substruct_19e0_.BeginDisplay();
+        if (!substruct_19e0_.IsBoxActive())
+            return;
+    }
+
+    if (unknown_19ce_)
+        unknown_44_ = unknown_78_;
+    
+    if (unknown_19b4_)
+    {
+        unknown_1868_ += numTicks;
+        if (unknown_1868_ >= mojiArg2_1864_)
+        {
+            unknown_1868_ = 0;
+            AdvanceLine();
+            unknown_19b4_ = 0;
+            pauseType_9a0_ = 5;
+            unknown_19b5_ = 0;
+        }
+        return;
+    }
+
+    if (func_020657c8(this, numTicks) != 0)
+        return;
+    func_020658ac(this, numTicks);
+
+    if (effects_195b_ & 1)
+    {
+        if (func_0209ca2c(data_02109bf4) == 0)
+            effects_195b_ &= ~1;
+    }
+    else
+    {
+        if (unknown_8c_ != 0 && ((unsigned char*)unknown_8c_)[0xd4] == 2)
+            return;
+
+        if (unknown_19c9_)
+        {
+            if (func_0209ca2c(data_02109bf4) == 0)
+            {
+                unknown_78_++;
+                unknown_19c9_ = 0;
+            }
+            return;
+        }
+
+        UpdateCursorBlink();
+        if (func_020440cc(this) != 0)
+        {
+            unknown_19d1_ = true;
+            unknown_1958_ = 5;
+            return;
+        }
+
+        if (pauseType_9a0_ != 5)
+        {
+            AdvanceAutoTimer(numTicks);
+            if (unknown_19bc_ != 0)
+                func_02045740(this);
+            func_020676e0(this, numTicks);
+            StopVoiceSoundEffect();
+            return;
+        }
+    }
+
+    if (unknown_1946_ < 0 && unknown_19c8_ == 0)
+    {
+        voiceSoundEffectTimer_912_ = 0;
+        StopVoiceSoundEffect();
+    }
+    else if (glyphIndexListMainMessageStart_88_ < unknown_78_)
+    {
+        if (voiceSoundEffectTimer_912_>= 4)
+        {
+            voiceSoundEffectTimer_912_ -= 4;
+            StopVoiceSoundEffect();
+            PlayVoiceSoundEffect();
+        }
+        // why not use the numTicks argument?
+        voiceSoundEffectTimer_912_ += GameState::GetInstance()->GetTickCount();
+    }
+
+    // wtf?
+    if (unknown_19c5_ != 0)
+        numTicks = 16;
+    if ((effects_195b_ & 4) && pauseType_9a0_ != 0)
+        numTicks = 24;
+    int var13 = unknown_80_ >> 4;
+    unknown_80_ += numTicks * 16;
+    int numLoopIterations = (unknown_80_ >> 4) - var13;
+    if (unknown_80_ >= 0xffffff)
+        unknown_80_ = 0;
+
+    while (numLoopIterations != 0)
+    {
+        if (glyphIndexListLength_6c_ <= unknown_78_)
+            return;
+        unsigned short glyph = glyphIndexList_4c_[unknown_78_];
+        if (IsNextCharacterControlAlt(&glyph))
+        {
+            int numExtraWords = GetControlWordNumExtraWords(&glyph);
+            if (numExtraWords != 0)
+            {
+                unknown_78_ += numExtraWords;
+                unknown_78_++;
+                continue;
+            }
+            if (glyph == ControlWord_End)
+            {
+                if (effects_195b_ & 4)
+                {
+                    effects_195b_ |= 8;
+                }
+                pauseType_9a0_ = 0;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_EndRTurn)
+            {
+                pauseType_9a0_ = 0;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_Close)
+            {
+                pauseType_9a0_ = 0;
+                StopVoiceSoundEffect();
+                Close();
+                ResetTextBGLayers();
+                return;
+            }
+            else if (glyph == ControlWord_Auto)
+            {
+                pauseType_9a0_ = 4;
+                StopVoiceSoundEffect();
+                autoRemainingTime_195f_ = autoValue_195e_;
+                voiceSoundEffectTimer_912_ = 0;
+                if (unknown_19da_ >= 0)
+                {
+                    autoRemainingTime_195f_ = unknown_19da_;
+                    unknown_19da_ = -1;
+                }
+                return;
+            }
+            else if (glyph == ControlWord_PageT)
+            {
+                unknown_1961_ = pageTValue_1960_;
+                pauseType_9a0_ = 1;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_Page)
+            {
+                pauseType_9a0_ = 1;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_Add)
+            {
+                pauseType_9a0_ = 3;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_AllRecover)
+            {
+                struct RecoveryData {
+                    bool unknown_0;
+                    bool unknown_1;
+                    unsigned short recoveryAmount;
+                    bool unknown_4;
+                    bool unknown_5;
+                } recoveryData;
+                recoveryData.unknown_0 = false;
+                recoveryData.unknown_1 = false;
+                recoveryData.recoveryAmount = 0;
+                recoveryData.unknown_4 = false;
+                recoveryData.unknown_5 = false;
+                recoveryData.unknown_0 = recoveryParam_19c6_ == 0;
+                recoveryData.unknown_1 = recoveryParam_19c7_ == 0;
+                recoveryData.recoveryAmount = recoveryAmount_187e_;
+                recoveryData.unknown_4 = true;
+                func_ov017_0218d7b0(GetGameResources(), &recoveryData);
+                unknown_78_++;
+                return;
+            }
+            else if (glyph == ControlWord_ST)
+            {
+                int var16 = unknown_1957_;
+                if (var16 >= 0 && var16 < tagSTArrayIndex_1956_)
+                {
+                    int var17;
+                    int var18 = tagSTArray2_1952_[var16];
+                    var17 = tagSTArray1_194e_[var16];
+                    if (var18 > 0)
+                    {
+                        func_0205eaa0(data_02108760, 0x65, 0); // heal sound effect
+                        if (var18 == 2) // used for "... returns to life" & "is no longer poisoned"
+                        {
+                            var17 = -1;
+                            func_ov017_0218b5c0(1, -1);
+                            func_ov017_0218b5f8(-1);
+                        }
+                    }
+                    if (var17 >= 10 && var17 <= 50)
+                    {
+                        int numTens = (var17 / 10) - 1;
+                        if ((numTens >= 0 && numTens <= 3) ? 1 : 0)
+                        {
+                            func_ov017_0218b5c0(1, numTens);
+                            func_ov017_0218b5f8(numTens);
+                        }
+                        var17 -= (numTens + 1) * 10;
+                    }
+                    if ((var17 >= 0 && var17 <= 3) ? 1 : 0)
+                    {
+                        func_ov017_0218b5c0(1, var17);
+                        func_ov017_0218b5f8(var17);
+                        GameResources* res = GetGameResources();
+                        if (func_02046b60(res->unknown_ptr_array_36fc[0], 12) != 0)
+                            func_ov017_021a5ab0(res->unknown_ptr_array_371c[0]);
+                    }
+                }
+                unknown_1957_++;
+                unknown_78_++;
+                return;
+            }
+            else if (glyph == ControlWord_Time)
+            {
+                if (unknown_19d0_ != 0)
+                    return;
+                StopVoiceSoundEffect();
+                waitTimeLengths_186c_[unknown_19ac_]--;
+                if (waitTimeLengths_186c_[unknown_19ac_] <= 0)
+                {
+                    waitTimeLengths_186c_[unknown_19ac_] = 0;
+                    unknown_78_++;
+                    unknown_19ac_++;
+                    unknown_19ac_ &= 3;
+                    voiceSoundEffectTimer_912_ = 0;
+                }
+                return;
+            }
+            else if (glyph == ControlWord_PadWait)
+            {
+                pauseType_9a0_ = 2;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_PadT)
+            {
+                StopVoiceSoundEffect();
+                waitTimeLengths_186c_[unknown_19ac_]--;
+                if (waitTimeLengths_186c_[unknown_19ac_] > 0)
+                {
+                    if (g_keyManager.TestKeysPressed(0xfe3) == 0 && !g_touchInput.pressed_)
+                        return;
+                }
+                waitTimeLengths_186c_[unknown_19ac_] = 0;
+                unknown_78_++;
+                unknown_19ac_++;
+                unknown_19ac_ &= 3;
+                voiceSoundEffectTimer_912_ = 0;
+                return;
+            }
+            else if (glyph == ControlWord_PadWaitNoCursor)
+            {
+                cursorPresent_19ca_ = false;
+                pauseType_9a0_ = 2;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_WinOn)
+            {
+                showWindow_19b1_ = true;
+                unknown_19cd_ = true;
+            }
+            else if (glyph == ControlWord_WinOff)
+            {
+                showWindow_19b1_ = false;
+                unknown_19cd_ = true;
+            }
+            else if (glyph == ControlWord_CenOn)
+            {
+                cenTag_19b8_ = true;
+            }
+            else if (glyph == ControlWord_CenOff)
+            {
+                cenTag_19b8_ = false;
+            }
+            else if (glyph == ControlWord_Turn)
+            {
+                npcAngleToUse_1844_ = turnAngle_1840_;
+                maybeDoesNPCTurn_19b6_ = true;
+                unknown_78_++;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_RTurn)
+            {
+                npcAngleToUse_1844_ = npcPriorRotation_183c_;
+                maybeDoesNPCTurn_19b6_ = true;
+                unknown_78_++;
+                StopVoiceSoundEffect();
+                return;
+            }
+            else if (glyph == ControlWord_TurnP)
+            {
+                PartyMember* leader = GameState::GetInstance()->GetPartyLeader();
+                void* npc = func_0203dce4(func_0203cf4c(), npcID_1838_);
+                if (leader != NULL && npc != NULL)
+                {
+                    Vector3fix leaderPos = leader->position_;
+                    Vector3fix npcPos = func_020406f8(npc);
+                    npcAngleToUse_1844_ = fix32ReduceAngle0To2Pi(fix32_Atan2(
+                        leaderPos.x - npcPos.x, leaderPos.z - npcPos.z
+                    ));
+                    maybeDoesNPCTurn_19b6_ = true;
+                    StopVoiceSoundEffect();
+                }
+                unknown_78_++;
+                return;
+            }
+            else if (glyph == ControlWord_Exclamation)
+            {
+                StopVoiceSoundEffect();
+                maybeSoundDuration_1959_ = 60;
+                maybeDoesSoundPlay_19b7_ = true;
+                unknown_195c_ = 0;
+                unknown_78_++;
+                voiceSoundEffectTimer_912_ = 0;
+                func_0205eaa0(data_02108760, 6, 0);
+                return;
+            }
+            else if (glyph == ControlWord_Question)
+            {
+                StopVoiceSoundEffect();
+                maybeSoundDuration_1959_ = 60;
+                maybeDoesSoundPlay_19b7_ = true;
+                unknown_195c_ = true;
+                unknown_78_++;
+                voiceSoundEffectTimer_912_ = 0;
+                func_0205eaa0(data_02108760, 28, 0);
+                return;
+            }
+            else if (glyph == ControlWord_YesNo || glyph == ControlWord_NoYes ||
+                glyph == ControlWord_YesNo_NotSe || glyph == ControlWord_YesNo_NotSe_IIE)
+            {
+                func_02065418(unknown_19cc_);
+                int var25 = 0;
+                if (unknown_2c8_ == 1 || glyph == ControlWord_NoYes)
+                    var25 = 1;
+                unknown_2c8_ = 0;
+                const char* yesString = func_020e51cc(27);
+                const char* noString = func_020e51cc(28);
+                // why does the compiler not allow overloading these?
+                ::ShowBinaryOptionDialogue(&dialogueOptions_90_, var25, yesString, noString);
+                chosenAnswer_954_ = var25;
+                unknown_19ba_ = true;
+                unknown_98c_ = 0;
+                pauseType_9a0_ = 6;
+                StopVoiceSoundEffect();
+                func_0205eaa0(data_02108760, 5, 0);
+                bool var28 = true;
+                GameState* gs = GameState::GetInstance();
+                GameResources* res = func_0200fb8c(gs);
+                if (gs->unknown_5cc8_ == 2)
+                    var28 = false;
+                if (res != NULL && var28)
+                    res->unknown_4354 = 10;
+                return;
+            }
+            else if (glyph == ControlWord_UkeYame)
+            {
+                // enable OBJ layer
+                unsigned int enabledLayers = (DISPCNT & 0x1f00) >> 8;
+                unsigned int remainingMask = DISPCNT & ~0x1f00;
+                DISPCNT = remainingMask | ((enabledLayers | 0x10) << 8);
+                func_02065418(unknown_19cc_);
+                const char* acceptString = func_020e51cc(29);
+                const char* declineString = func_020e51cc(30);
+                ::ShowBinaryOptionDialogue(&dialogueOptions_90_, 0, acceptString, declineString);
+                chosenAnswer_954_ = 0;
+                unknown_19ba_ = true;
+                unknown_98c_ = 1;
+                pauseType_9a0_ = 6;
+                StopVoiceSoundEffect();
+                func_0205eaa0(data_02108760, 5, 0);
+                GameResources* res = func_0200fb8c(GameState::GetInstance());
+                if (res != NULL)
+                    res->unknown_4354 = 10;
+                return;
+            }
+            else if (glyph == ControlWord_QuestSE)
+            {
+                unsigned short* var37 = (unsigned short*)unknown_8c_;
+                if (var37 != NULL)
+                {
+                    var37[0x6d] |= 0x40;
+                    func_0208bf28(unknown_8c_, questIndex_1948_, 0);
+                    effects_195b_ |= 1;
+                    void* quests = func_02094d6c();
+                    int var39 = func_020965ac(quests, questIndex_1948_);
+
+                    int maybeDayData[4];
+                    int maybeTimeData[3];
+                    func_020cf0fc(maybeDayData);
+                    func_020cf1a8(maybeTimeData);
+
+                    struct QuestData {
+                        unsigned int unknown_0 : 7;
+                        unsigned int unknown_7 : 4;
+                        unsigned int unknown_b : 5;
+                        unsigned int unknown_10 : 5;
+                        unsigned int unknown_15 : 6;
+                    } data;
+                    data.unknown_0 = maybeDayData[0];
+                    data.unknown_7 = maybeDayData[1];
+                    data.unknown_b = maybeDayData[2];
+                    data.unknown_10 = maybeTimeData[0];
+                    data.unknown_15 = maybeTimeData[1];
+                    ((QuestData*)((char*)quests + 0x178))[var39] = data;
+                    func_0209c830(data_02109bf4, 50);
+                }
+            }
+            else if (glyph > ControlWord_MEBase && glyph < ControlWord_MEBase + 21)
+            {
+                StopVoiceSoundEffect();
+                func_0209c830(data_02109bf4, glyph - ControlWord_MEBase + 49);
+                unknown_19c9_ = true;
+                return;
+            }
+            else if (glyph >= ControlWord_SEBase - 1 && glyph <= ControlWord_SEBase + 1)
+            {
+                int effectID = -1;
+                if (glyph == ControlWord_SEBase)
+                    effectID = 14;
+                if (effectID >= 0)
+                    func_0205eaa0(data_02108760, 14, 0);
+            }
+            else if (glyph == ControlWord_Quest)
+            {
+                short* questData = (short*)unknown_8c_;
+                if (questData != NULL)
+                    questData[0x69] = questIndex_1948_;
+            }
+            else if (glyph == ControlWord_QuestHan)
+            {
+                unsigned short* questData = (unsigned short*)unknown_8c_;
+                if (questData != NULL)
+                {
+                    questData[0x6d] |= 0x200;
+                    func_0208be94((void*)unknown_8c_);
+                    effects_195b_ |= 1;
+                    func_0209c830(data_02109bf4, 51);
+                }
+            }
+            else if (glyph == ControlWord_QuestFailed)
+            {
+                unsigned short* questData = (unsigned short*)unknown_8c_;
+                if (questData != NULL)
+                {
+                    questData[0x6d] |= 0x300;
+                    func_0208be94((void*)unknown_8c_);
+                    effects_195b_ |= 1;
+                    func_0209c830(data_02109bf4, 68);
+                }
+            }
+            else if (glyph == ControlWord_SlashQuest)
+            {
+                if (unknown_8c_ != NULL)
+                    func_0208beb4((void*)unknown_8c_);
+            }
+            else if (glyph >= ControlWord_VoiceVolumeBase && glyph <= ControlWord_VoiceVolumeBase + 3)
+            {
+                int volume = voiceVolumeLookup_194a_[glyph - ControlWord_VoiceVolumeBase];
+                // approximation to map [0, 15] to [0, 127]
+                func_0205e944(data_02108760, ((volume * 0x21dd) >> 10) & 0x7f);
+            }
+            else if (glyph == ControlWord_Shake)
+            {
+                maybeBoxShaking_19c0_ = true;
+                unknown_195d_ = 30;
+            }
+        }
+        pauseType_9a0_ = 5;
+        unknown_78_++;
+        numLoopIterations--;
+    }
 }
 
 void TextManager::DrawSpeakerName(bool noOffsets)
@@ -622,7 +1184,7 @@ void TextManager::ProcessYesNoInput(int input)
             func_0205eaa0(data_02108760, 1, 0);
         // fallthrough
     case -2: // cancel (no)
-        unknown_954_ = 1;
+        chosenAnswer_954_ = 1;
         ReleaseMainMessageGlyphs();
         SubmitQuestionResponse(ControlWord_No, unknown_58_);
         dialogueOptions_90_.Release();
@@ -636,11 +1198,9 @@ void TextManager::ProcessYesNoInput(int input)
 
 void TextManager::ProcessUkeYameInput(int input)
 {
-    unsigned short control = glyphIndexList_4c_[unknown_78_];
-
     switch (input)
     {
-    case 0: // yes (uke)
+    case 0: // accept (uke)
         ReleaseMainMessageGlyphs();
         func_0205eaa0(data_02108760, 1, 0);
         SubmitQuestionResponse(ControlWord_Uke, unknown_58_);
@@ -648,11 +1208,11 @@ void TextManager::ProcessUkeYameInput(int input)
         unknown_19cd_ = 1;
         unknown_40_ = 0;
         break;
-    case 1: // no (yame)
+    case 1: // decline (yame)
         func_0205eaa0(data_02108760, 1, 0);
         // fallthrough
     case -2: // cancel (no/yame)
-        unknown_954_ = 1;
+        chosenAnswer_954_ = 1;
         ReleaseMainMessageGlyphs();
         SubmitQuestionResponse(ControlWord_Yame, unknown_58_);
         dialogueOptions_90_.Release();
@@ -2757,8 +3317,8 @@ void TextManager::CopyPage()
                     break;
                 }
                 unsigned char old = unknown_19cc_;
-                func_02043204(this);
-                func_02043124(this);
+                Close();
+                ResetTextBGLayers();
                 unknown_19cc_ = old;
                 break;
             }
@@ -2772,8 +3332,8 @@ void TextManager::CopyPage()
                 if (source == NULL)
                 {
                     unsigned char old = unknown_19cc_;
-                    func_02043204(this);
-                    func_02043124(this);
+                    Close();
+                    ResetTextBGLayers();
                     unknown_19cc_ = old;
                     break;
                 }
@@ -3054,8 +3614,8 @@ void TextManager::SubmitQuestionResponse(unsigned short response, char* searchSt
     char* newPos = FindControlCharacter(response, searchStart);
     if (newPos == NULL)
     {
-        func_02043204(this);
-        func_02043124(this);
+        Close();
+        ResetTextBGLayers();
         return;
     }
 

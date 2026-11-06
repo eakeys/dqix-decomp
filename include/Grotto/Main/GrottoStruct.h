@@ -9,7 +9,10 @@ struct DetailedTreasureMapData;
 // which only holds data about a single grotto while you're inside it.
 struct GrottoStruct
 {
-    unsigned char unknown_0[5];
+    unsigned char unknown_0;
+    char unk_1[1];
+    unsigned char unknown_2;
+    char unk_3[2];
     // still a bit unsure of these, though seems correct.
     unsigned char activeEnviron;
     unsigned char activeStartingMonsterRank;

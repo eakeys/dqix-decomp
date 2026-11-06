@@ -5367,12 +5367,12 @@ from:0x0202f300 kind:arm_call to:0x0202f7f8 module:main
 from:0x0202f30c kind:load to:0x02114e20 module:main
 from:0x0202f314 kind:load to:0x020ef7ac module:main
 from:0x0202f318 kind:load to:0x0211e33c module:main
-from:0x0202f31c kind:load to:0x020ef7c0 module:main
+from:0x0202f31c kind:load to:0x020ef7ac add:0x14 module:main
 from:0x0202f34c kind:arm_call to:0x02003ce8 module:main
 from:0x0202f354 kind:arm_call to:0x020afd1c module:main
 from:0x0202f360 kind:arm_call to:0x020471ac module:main
 from:0x0202f370 kind:arm_call to:0x02047b50 module:main
-from:0x0202f38c kind:load to:0x020ef7c4 module:main
+from:0x0202f38c kind:load to:0x020ef7ac add:0x18 module:main
 from:0x0202f460 kind:arm_call to:0x0202f46c module:main
 from:0x0202f538 kind:arm_call to:0x0200c670 module:main
 from:0x0202f540 kind:arm_call to:0x0200c1c0 module:main

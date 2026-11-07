@@ -22,7 +22,9 @@ struct GameResources
     bool subBrightnessDirty; // 0x27
     bool allowBrightnessApply; // 0x28
 
-    char unk_29[0x38 - 0x29];
+    char unk_29[0x2c - 0x29];
+    unsigned short* paletteData_2c;
+    char unk_30[0x8];
 
     SafeAllocator allocator_array_38[17];
     SafeAllocator lootableContainerAllocator_18c_;

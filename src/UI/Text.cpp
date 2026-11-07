@@ -1406,6 +1406,26 @@ bool TextManager::IsNextCharacterControlAlt(const void* text) const
     return false;
 }
 
+void TextManager::DrawDialogueOptions(bool use2D)
+{
+    if (pauseType_9a0_ == 6 && unknown_19ba_ != 0)
+        dialogueOptions_90_.Draw(use2D);
+}
+
+void GetUIElementTopRight(const UIElement* elt, short* outX, short* outY)
+{
+    if (elt == NULL)
+        return;
+    short width = elt->numTilesX_a8_;
+    short left = elt->leftTile_ac_;
+    short height = elt->numTilesY_aa_;
+    width *= 8;
+    left *= 8;
+    height *= 8;
+    *outX = left + (width >> 1);
+    *outY = height - 10;
+}
+
 void WriteControlWord(char**, int control);
 
 void TextManager::ConvertBoxModifierTags(const char *in, char *out)
@@ -2227,4 +2247,9 @@ void TextManager::ReleaseText16Bit(unsigned short *wordList, int len)
             numGlyphsInUse_9b4_ &= 0x7f;
         }
     }
+}
+
+void TextManager::StorePartyMemberIndex(char idx)
+{
+    partyMemberIndex_1880_ = idx;
 }

@@ -472,6 +472,9 @@ public:
     // identical to func_0206ac6c, might take unsigned short* instead?
     bool IsNextCharacterControlAlt(const void* text) const;
 
+    // usa: func_02044530
+    void DrawDialogueOptions(bool use2D);
+
     // usa: func_0204483c
     // replaces TIME, RECT, WIN, CEN, MOJI and SKIP tags as well as newlines
     // with control characters
@@ -524,6 +527,8 @@ public:
     
     // usa: func_020462d0
     void ReleaseText16Bit(unsigned short* words, int len);
+    // usa: func_020464dc
+    void StorePartyMemberIndex(char idx);
 
     // usa: func_020652d0
     void ShowBinaryOptionDialogue(int defaultOption, const char* optionA, const char* optionB);

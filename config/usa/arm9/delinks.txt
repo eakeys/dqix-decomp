@@ -463,6 +463,11 @@ src/Graphics/VRAMStaging.cpp:
     .text start:0x020dc07c end:0x020dc214
     .bss start:0x0214e5e4 end:0x02153628
 
+src/Resource/StringList.cpp:
+    complete
+    .text start:0x020dfbd4 end:0x020e063c
+    .data start:0x020f2b6c end:0x020f2b78
+
 src/Graphics/AnotherRenderer.cpp:
     .text start:0x020e12a8 end:0x020e29b8
 
@@ -472,4 +477,9 @@ src/Graphics/ClipWindow.cpp:
     .data start:0x020f2bdc end:0x020f2c14
 
 src/Util/Grammar.cpp:
-    .text start:0x020e462c end:0x020e5728
+    .text start:0x020e462c end:0x020e5058
+
+src/Resource/GameStrings.cpp:
+    complete
+    .text start:0x020e5058 end:0x020e51fc
+    .data start:0x020f2dd4 end:0x020f2e20

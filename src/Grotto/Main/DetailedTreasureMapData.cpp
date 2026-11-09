@@ -6,6 +6,7 @@
 #include "Filesystem/BackgroundLoader.h"
 #include "NitroSDK/Memory.h"
 #include "UI/Text.h"
+#include "Resource/GameStrings.h"
 #include "std_library_functions.h"
 #include <asmhacks.h>
 
@@ -26,10 +27,8 @@ extern "C"
     void func_020a1df8(unsigned int);
     void func_020a1e54(unsigned int);
 
-    // Based on where it's called, this is probably returning a language-
-    // dependent string for "Lv. " (at least, if called with 1011 as arg).
-    // Not used in jpn version
-    const char* func_020e51cc(int);
+    // copies character name into the buffer? (not used in jpn version)
+    void func_020426bc(void*, char* buffer, int);
 
     // seems to get the game language. In the USA version, if it would
     // return a value other than 2 or 5, it returns 1, which seems to reflect
@@ -412,7 +411,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
 #if defined(usa)
     sprintf(mapNameNoLevel_v2_, data_020f1ac0, mapNameNoLevel_);
     strcpy(seeminglyEmptyBuffer_, data_020f1ac3);
-    sprintf(mapLevelString_, data_020f1ac4, func_020e51cc(1011), level_);
+    sprintf(mapLevelString_, data_020f1ac4, GetGameString(GameString_Lv), level_);
     sprintf(topScreenName_, data_020f1ac9, mapNameNoLevel_, mapLevelString_);
     sprintf(popupName_, data_020f1ac9, bossName_, mapLevelString_);
 #elif defined(jpn)
@@ -434,7 +433,7 @@ void DetailedTreasureMapData::LegacyBossMapData::Populate(
 void DetailedTreasureMapData::LegacyBossMapData::WriteMapLevelString()
 {
 #if defined(usa)
-    const char* lvlPrefix = func_020e51cc(1011);
+    const char* lvlPrefix = GetGameString(GameString_Lv);
     sprintf(mapLevelString_, data_020f1ac4, lvlPrefix, level_);
 #elif defined(jpn)
     sprintf(mapLevelString_, data_020f1c27, level_);
@@ -918,7 +917,7 @@ void DetailedTreasureMapData::RegularMapData::GenerateNameBuffers()
         }
     }
 
-    sprintf(levelString_, data_020f1ad0, func_020e51cc(1011), level_);
+    sprintf(levelString_, data_020f1ad0, GetGameString(GameString_Lv), level_);
     sprintf(topScreenName_, data_020f1ad5, nameNoLevel_, levelString_);
 }
 
@@ -1031,7 +1030,7 @@ void DetailedTreasureMapData::RegularMapData::GeneratePopupName()
         }
     }
 
-    sprintf(tempBuffer, data_020f1adb, func_020e51cc(1011), level_);
+    sprintf(tempBuffer, data_020f1adb, GetGameString(GameString_Lv), level_);
     strcat(popupName_, tempBuffer);
 }
 

@@ -42,10 +42,10 @@
 // actually gets inlined) 
 inline unsigned int UNSIGNED_ZERO() { return 0; }
 
-// For use with optimizations, e.g. if you have a variable that is only ever
-// written to but never used, but isn't optimized out, you can write some nonsense
-// usage and guard it with this function. (The if block is removed later in
-// the optimization process than the part that removes unused variable assignments)
+// Probably a remnant of asserts or similar. Prevents variables from being
+// optimized out if e.g. they're only ever written to and never used - you
+// can e.g. write its value to some member variable if (ALWAYS_FALSE()).
+// can also prevent inlining a function within its TU
 inline bool ALWAYS_FALSE()
 {
     int x = 0;

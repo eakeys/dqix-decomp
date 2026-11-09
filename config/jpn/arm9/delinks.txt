@@ -448,6 +448,11 @@ src/Graphics/VRAMStaging.cpp:
     .bss start:0x0214fdac end:0x02154df0
     .text start:0x020dda84 end:0x020ddc1c
 
+src/Resource/StringList.cpp:
+    complete
+    .text start:0x020e17a8 end:0x020e2284
+    .data start:0x020f2cc4 end:0x020f2cd0
+    
 src/Graphics/ClipWindow.cpp:
     complete
     .text start:0x020e4558 end:0x020e48ec

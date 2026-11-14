@@ -122,7 +122,7 @@ src/Graphics/OBJSpriteSet.cpp:
     .text start:0x0205a198 end:0x0205b1ac
     .data start:0x020f0504 end:0x020f0518
 
-src/Graphics/Blitter.cpp:
+src/Graphics/OBJBlitter.cpp:
     .text start:0x0205b1ac end:0x0205ba2c
 
 src/UI/GridMenu.cpp:

@@ -1,6 +1,6 @@
 #include "UI/Text.h"
 #include "UI/UIElement.h"
-#include "Graphics/Blitter.h"
+#include "Graphics/OBJBlitter.h"
 #include "NitroSDK/Cache.h"
 #include "NitroSDK/BGBases.h"
 #include "NitroSDK/LoadToVRAM.h"
@@ -802,7 +802,7 @@ void UIElement::BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y, u
 {
     if (glyph == NULL)
         return;
-    Blitter4Bit::BlitRegion region;
+    OBJBlitter::BlitRegion region;
     region.offset = 0;
     region.originX = 0;
     region.originY = 0;
@@ -810,7 +810,7 @@ void UIElement::BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y, u
     region.height = 0;
     region.width = numTilesX_a8_ * 8;
     region.height = numTilesY_aa_ * 8;
-    Blitter4Bit blitter;
+    OBJBlitter blitter;
     blitter.Reset();
     blitter.SetDestination(pixelBuffer_8_);
     blitter.SetRegions(&region, 1);

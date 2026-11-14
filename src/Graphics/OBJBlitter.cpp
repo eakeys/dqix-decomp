@@ -1,8 +1,11 @@
-#include "Graphics/Blitter.h"
+#pragma ipa file
+#include "Graphics/OBJBlitter.h"
 
-Blitter4Bit::BlitRegion* GetBlitRegion(Blitter4Bit::BlitRegion* regions, unsigned int count, int x, int y)
+extern char data_020f0518[];
+
+static OBJBlitter::BlitRegion* GetBlitRegion(OBJBlitter::BlitRegion* regions, unsigned int count, int x, int y)
 {
-    Blitter4Bit::BlitRegion* candidate = regions;
+    OBJBlitter::BlitRegion* candidate = regions;
     for (unsigned char i = 0; i < count; candidate++, i++)
     {
         if (candidate->originX <= x && x < candidate->originX + candidate->width &&
@@ -12,25 +15,25 @@ Blitter4Bit::BlitRegion* GetBlitRegion(Blitter4Bit::BlitRegion* regions, unsigne
     return NULL;
 }
 
-void Blitter4Bit::Reset()
+void OBJBlitter::Reset()
 {
     destination_ = NULL;
     regions_ = NULL;
     numRegions_ = false;
 }
 
-void Blitter4Bit::SetDestination(unsigned char* to)
+void OBJBlitter::SetDestination(unsigned char* to)
 {
     destination_ = to;
 }
 
-void Blitter4Bit::SetRegions(BlitRegion* regions, unsigned char count)
+void OBJBlitter::SetRegions(BlitRegion* regions, unsigned char count)
 {
     regions_ = regions;
     numRegions_ = count;
 }
 
-int Blitter4Bit::BlitText(short x, short y,
+int OBJBlitter::BlitText(short x, short y,
     const char* text, unsigned char colorIndex, unsigned char fontIndex)
 {
     if (destination_ == NULL)
@@ -68,7 +71,7 @@ int Blitter4Bit::BlitText(short x, short y,
     return drawX - x;
 }
 
-void Blitter4Bit::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
+void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     unsigned char colorIndex, unsigned char fontIndex)
 {
     FontDataFile* dataFile = GetFontDataFile(fontIndex);
@@ -127,7 +130,7 @@ void Blitter4Bit::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     }
 }
 
-void Blitter4Bit::BlitTile(const void *pixels, short left, short top)
+void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top)
 {
     if (pixels == NULL)
         return;
@@ -189,5 +192,190 @@ void Blitter4Bit::BlitTile(const void *pixels, short left, short top)
         }
 
         sourcePixels += 4;
+    }
+}
+
+void OBJBlitter::BlitNumber(short x, short y, int number, unsigned char colorIndex,
+    unsigned char widthTiles, unsigned char alignment, unsigned char fontIndex)
+{
+    if (destination_ == NULL || regions_ == NULL)
+        return;
+    
+    int useless = number;
+    while (useless /= 10) {}
+
+    int textWidth = MeasureNumberTextWidth(fontIndex, number);
+    if (alignment == 1)
+    {
+        short offset = widthTiles * 8 - textWidth;
+        x += offset;
+    }
+
+    char buffer[10] = {0};
+    sprintf(buffer, data_020f0518, number);
+    BlitText(x, y, buffer, colorIndex, fontIndex);
+}
+
+void OBJBlitter::FillRectangle(short left, short top, short right, short bottom, unsigned char colorIndex)
+{
+    if (destination_ == NULL || regions_ == NULL)
+        return;
+    
+    unsigned char* destination = destination_;
+    unsigned char numRegions = numRegions_;
+    BlitRegion* regions = regions_;
+
+    unsigned char highMask, lowMask;
+    lowMask = colorIndex & 0xf;
+    highMask = lowMask << 4;
+    short width = right - left;
+    short height = bottom - top;
+
+    short dstX, dstY;
+    dstY = top;
+    for (short srcY = 0; srcY < height; dstY++, srcY++)
+    {
+        dstX = left;
+        for (short srcX = 0; srcX < width; dstX++, srcX++)
+        {
+            BlitRegion* region = GetBlitRegion(regions, numRegions, dstX, dstY);
+            if (region == NULL)
+                continue;
+            unsigned char* writePtr = destination + region->offset;
+            short regionX = dstX - region->originX;
+            short regionY = dstY - region->originY;
+            int regionTileX = regionX >> 3;
+            short regionTileY = regionY >> 3;
+            short regionTileStride = region->width >> 3;
+            writePtr += (regionTileY * regionTileStride + regionTileX) * 32;
+            short tileInnerX = regionX & 7;
+            short tileInnerY = regionY & 7;
+            int tileWriteOffset = (tileInnerY << 2) + (tileInnerX >> 1);
+            if (regionX & 1)
+            {
+                writePtr[tileWriteOffset] &= 0x0f;
+                writePtr[tileWriteOffset] |= highMask;
+            }
+            else
+            {
+                writePtr[tileWriteOffset] &= 0xf0;
+                writePtr[tileWriteOffset] |= lowMask;
+            }
+        }
+    }
+}
+
+void OBJBlitter::PrepareRegionsFromSprite(BlitRegion* regions, int numRegions, OBJSpriteSet::Metatile* sprite)
+{
+    if (regions == NULL || sprite == NULL)
+        return;
+    if (numRegions < sprite->nitroData.numObjs)
+        return;
+    unsigned short numObjs = sprite->nitroData.numObjs;
+    
+    if (sprite->oamEntries == NULL)
+        return;
+
+    OAMEntry* oamEntry = sprite->oamEntries;
+    int firstObjIndex;
+    int firstObjX, firstObjY;
+    for (unsigned short i = 0; i < numObjs; oamEntry++, i++)
+    {
+        short originX = oamEntry->word1 & 0x1f; // why only go up to 32?
+        short originY = oamEntry->word0 & 0xf; // why only go up to 16?
+
+        short width, height;
+
+        unsigned short shape = (oamEntry->word0 & 0xc000) >> 14;
+        unsigned short size = (oamEntry->word1 & 0xc000) >> 14;
+        switch (shape)
+        {
+        case 0: // square
+            if (size == 0)
+            {
+                width = 8;
+                height = 8;
+            }
+            else if (size == 1)
+            {
+                width = 16;
+                height = 16;
+            }
+            else if (size == 2)
+            {
+                width = 32;
+                height = 32;
+            }
+            else if (size == 3)
+            {
+                width = 64;
+                height = 64;
+            }
+            break;
+        case 1: // horizontal
+            if (size == 0)
+            {
+                width = 16;
+                height = 8;
+            }
+            else if (size == 1)
+            {
+                width = 32;
+                height = 8;
+            }
+            else if (size == 2)
+            {
+                width = 32;
+                height = 16;
+            }
+            else if (size == 3)
+            {
+                width = 64;
+                height = 32;
+            }
+            break;
+        case 2: // vertical
+            if (size == 0)
+            {
+                width = 8;
+                height = 16;
+            }
+            else if (size == 1)
+            {
+                width = 8;
+                height = 32;
+            }
+            else if (size == 2)
+            {
+                width = 16;
+                height = 32;
+            }
+            else if (size == 3)
+            {
+                width = 32;
+                height = 64;
+            }
+        }
+
+        int objIndex = oamEntry->word2 & 0x3ff;
+        if (i == 0)
+        {
+            firstObjX = originX;
+            firstObjY = originY;
+            firstObjIndex = objIndex;
+        }
+#if defined(jpn)
+        regions[i].offset = objIndex - firstObjIndex;
+        regions[i].originX = originX - firstObjX;
+        regions[i].originY = originY - firstObjY;
+#else
+        regions[i].offset = (objIndex - firstObjIndex) * 32;
+        originX -= firstObjX;
+        originY -= firstObjY;
+        regions[i].originX = originX;
+        regions[i].originY = originY;
+#endif
+        regions[i].width = width;
+        regions[i].height = height;
     }
 }

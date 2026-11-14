@@ -118,6 +118,9 @@ src/Graphics/OBJSpriteSet.cpp:
     .text start:0x0205b510 end:0x0205c548
     .data start:0x020f0570 end:0x020f0584
 
+src/Graphics/OBJBlitter.cpp:
+    .text start:0x0205c548 end:0x0205cd8c
+
 src/UI/GridMenu.cpp:
     complete
     .text start:0x0205cd8c end:0x0205da9c

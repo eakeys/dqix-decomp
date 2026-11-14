@@ -4,6 +4,7 @@
 #include "NitroSDK/Graphics.h"
 #include "Graphics/Vector.h"
 #include "NitroSDK/BGBases.h"
+#include "NitroSDK/ColorEffects.h"
 #include "Filesystem/FileIO.h"
 #include "Filesystem/BackgroundLoader.h"
 #include "Graphics/VRAMStaging.h"
@@ -108,14 +109,21 @@ extern "C"
     // probably atoi
     int func_02005a94(const char*);
 
+    void* func_0203dce4(void*, int);
+    void* func_0203cf4c();
+    void func_02040af0(void*, fix32_t);
+
     void func_02043224(TextManager*);
     void func_02044c74(TextManager*, UIElement*);
-    void func_02044d0c();
-    void func_02044f3c(TextManager*, const char*, int);
 
     void func_0205e944(void*, int);
     void func_0205eaa0(void*, int, void*);
     void func_0205eabc(void*, void*, int);
+
+    void func_020656e4(TextManager*, int);
+
+    // close quest screen maybe?
+    void func_0208beb4(int);
 
     void func_020bc078(void*);
 
@@ -761,7 +769,7 @@ void TextManager::MaybeReleaseGlyphVRAM(unsigned char* bitfield, int idx)
 
 void TextManager::SetActiveTextBox(TextBox* to)
 {
-    substruct_19e0_.activeBox_ = to;
+    textBoxGraphics_19e0_.activeBox_ = to;
 }
 
 void TextManager::SetMainTextBoxActive()
@@ -779,8 +787,8 @@ void SetViewport(int* viewport, int left, int top, int right, int bottom);
 void TextManager::ConfigureMainTextBox(int x, int y, int width, int height)
 {
     centerX_990_ = x + (width >> 1);
-    substruct_19e0_.SetBoxPosition(x, y);
-    substruct_19e0_.SetBoxSize(width, height);
+    textBoxGraphics_19e0_.SetBoxPosition(x, y);
+    textBoxGraphics_19e0_.SetBoxSize(width, height);
     unknown_1858_ = x;
     unknown_185c_ = y + 8;
     SetViewport(unknown_1848_, x, y + 8, x + width, y + height);
@@ -817,7 +825,7 @@ void TextManager::Initialize()
     memset(valueLookup, 0, sizeof(valueLookup));
     voiceSoundEffectTimer_912_ = 0;
     unknown_19b0_ = 0;
-    unknown_9b0_ = 0;
+    fadeRescaledAlpha_9b0_ = 0;
     for (int i = 0; i < 0x80; i++)
     {
         glyphs_[i].Reset();
@@ -826,14 +834,14 @@ void TextManager::Initialize()
     chosenAnswer_954_ = 0;
     unknown_958_ = 0;
     unknown_1962_ = 0;
-    windows_[0].Initialize(0, 0);
-    windows_[1].Initialize(0, 1);
+    clipWindows_[0].Initialize(0, 0);
+    clipWindows_[1].Initialize(0, 1);
     mainTextBox_914_.Reset();
     speakerTextBox_930_.Reset();
-    substruct_19e0_.Reset();
-    substruct_19e0_.activeBox_ = &mainTextBox_914_;
-    substruct_19e0_.SetBoxPosition(0, 128);
-    substruct_19e0_.SetBoxSize(256, 64);
+    textBoxGraphics_19e0_.Reset();
+    textBoxGraphics_19e0_.activeBox_ = &mainTextBox_914_;
+    textBoxGraphics_19e0_.SetBoxPosition(0, 128);
+    textBoxGraphics_19e0_.SetBoxSize(256, 64);
     showWindow_19b1_ = true;
     textureArena_1e28_ = NULL;
     unknown_19cc_ = 0;
@@ -906,7 +914,7 @@ void TextBox::Reset()
 
 void TextManager::Destroy()
 {
-    substruct_19e0_.Destroy();
+    textBoxGraphics_19e0_.Destroy();
     func_02043224(this);
     DestroyRenderGlyphs();
     ResetTextBGLayers();
@@ -931,10 +939,10 @@ void TextManager::DestroyRenderGlyphs()
 
 void TextManager::ResetBoxes()
 {
-    substruct_19e0_.ResetBoxStatus();
-    substruct_19e0_.activeBox_ = &speakerTextBox_930_;
-    substruct_19e0_.ResetBoxStatus();
-    substruct_19e0_.activeBox_ = &mainTextBox_914_;
+    textBoxGraphics_19e0_.ResetBoxStatus();
+    textBoxGraphics_19e0_.activeBox_ = &speakerTextBox_930_;
+    textBoxGraphics_19e0_.ResetBoxStatus();
+    textBoxGraphics_19e0_.activeBox_ = &mainTextBox_914_;
     showWindow_19b1_ = false;
     cursorBlinkTimer_19ae_ = 0;
     cursorVisibleThisFrame_19af_ = 0;
@@ -1052,6 +1060,11 @@ void TextManager::LoadCursorGraphics()
             cursorObjectLoadStatus_2e7_ = 0;
         }
     }
+}
+
+void TextManager::UpdatePendingMessages(unsigned int minTicks)
+{
+    InternalUpdatePendingMessages(minTicks);
 }
 
 struct TextBoxBounds
@@ -1184,7 +1197,7 @@ void TextManager::RefreshGraphics(bool arg)
             unknown_19cc_ = 0;
             Draw(true);
             unknown_19cc_ = 1;
-            if (maybeBoxShaking_19c0_)
+            if (boxShakeActive_19c0_)
                 unknown_40_ = 0;
 
             TextBoxBounds mainBoxBounds, speakerBoxBounds, optionBoxBounds;
@@ -1204,7 +1217,7 @@ void TextManager::RefreshGraphics(bool arg)
 
                 if (unknown_19c4_ != 0 && unknown_19c3_ != 0)
                 {
-                    TextBoxGraphics* substruct = &substruct_19e0_;
+                    TextBoxGraphics* substruct = &textBoxGraphics_19e0_;
                     substruct->activeBox_ = &speakerTextBox_930_;
                     // fix this with, most likely, an inline call
                     bool speakerBoxReady = (substruct->activeBox_ != NULL) ? (substruct->activeBox_->status == 2) : false;
@@ -1315,7 +1328,7 @@ void TextManager::RefreshGraphics(bool arg)
         ClearGlyphTextureVRAM(textureArena_1e28_);
 
     for (int i = 0; i < 2; i++)
-        windows_[i].SetEnabled(false);
+        clipWindows_[i].SetEnabled(false);
 
     if (arg && unknown_998_ == 0)
         return;
@@ -1344,33 +1357,148 @@ void TextManager::RefreshGraphics(bool arg)
 
     if (mainTextBox_914_.status >= 2)
     {
-        windows_[0].SetBoundsXYWH(4, 118, 248, 70);
+        clipWindows_[0].SetBoundsXYWH(4, 118, 248, 70);
         if (unknown_1962_ != 0)
-            windows_[0].SetEnabled(true);
+            clipWindows_[0].SetEnabled(true);
     }
 
     if (dialogueOptions_90_.textBox_b4_.status >= 2)
     {
-        windows_[1].SetBoundsXYWH(dialogueOptions_90_.textBox_b4_.x + 2,
+        clipWindows_[1].SetBoundsXYWH(dialogueOptions_90_.textBox_b4_.x + 2,
             dialogueOptions_90_.textBox_b4_.y + 2,
             dialogueOptions_90_.textBox_b4_.width - 4,
             dialogueOptions_90_.textBox_b4_.height - 4);
         if (unknown_1962_ != 0)
-            windows_[1].SetEnabled(true);
+            clipWindows_[1].SetEnabled(true);
     }
 
     for (int i = 0; i < 2; i++)
-        windows_[i].Apply();
+        clipWindows_[i].Apply();
 }
 
 void TextManager::CreateTextBoxGraphics()
 {
-    substruct_19e0_.Create();
+    textBoxGraphics_19e0_.Create();
 }
 
 void TextManager::LoadTextBoxGraphics(SafeAllocator *alloc, const void *data)
 {
-    substruct_19e0_.LoadFromFile(alloc, data);
+    textBoxGraphics_19e0_.LoadFromFile(alloc, data);
+}
+
+bool TextManager::TryAdvanceMessage()
+{
+    if (unknown_998_ == 0)
+        return true;
+    if (boxShakePending_19c1_ == 0 && boxShakeActive_19c0_)
+        return false;
+
+    unsigned short allowedKeys = KEY_X | KEY_A | KEY_B;
+    if (unknown_19bf_ != 0)
+        allowedKeys |= KEY_L;
+    if (unknown_19cf_ != 0)
+        allowedKeys |= KEY_R;
+
+    bool anyInput = false;
+    if (g_keyManager.TestKeysPressed(allowedKeys))
+        anyInput = true;
+    if (g_keyManager.TestKeysPressed(KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
+        anyInput = true;
+    if (g_touchInput.released_ && g_touchInput.prevTimeHeld_ < 20)
+        anyInput = true;
+
+    if (GetNextWord() == ControlWord_PageT)
+    {
+        unsigned int dt = GameState::GetInstance()->GetTickCount();
+        if (pageTRemainingTime_1961_ != 0)
+        {
+            if (pageTRemainingTime_1961_ <= dt)
+            {
+                pageTRemainingTime_1961_ = 0;
+                anyInput = true;
+            }
+            else
+                pageTRemainingTime_1961_ -= dt;
+        }
+    }
+
+    if (!anyInput)
+        return false;
+
+    switch (pauseType_9a0_)
+    {
+    case 0: // waiting for A, with cursor
+        if (unknown_19be_)
+            return false;
+        if (GetNextWord() == ControlWord_EndRTurn)
+        {
+            void* npc = func_0203dce4(func_0203cf4c(), npcID_1838_);
+            if (npc != NULL)
+                func_02040af0(npc, npcPriorRotation_183c_);
+        }
+        return true;
+    case 1: // waiting for A, no cursor
+        cursorBlinkTimer_19ae_ = 0;
+        cursorVisibleThisFrame_19af_ = false;
+        unknown_19cd_ = 1;
+        unknown_40_ = 0;
+        unknown_44_ = 0;
+        voiceSoundEffectTimer_912_ = 0;
+        ReleaseMainMessageGlyphs();
+        pauseType_9a0_ = 5;
+        LoadNextPage();
+        if (unknown_19d3_ == 0)
+            func_0205eaa0(&data_02108760, 1, NULL);
+        break;
+    case 3:
+        unknown_19bd_ = 0;
+        break;
+    case 2: // pad-wait or pad-wait-no-cursor
+        if (GetNextWord() == ControlWord_PadWaitNoCursor)
+        {
+            while (unknown_78_ < glyphIndexListLength_6c_)
+            {
+                unsigned short nextWord = glyphIndexList_4c_[unknown_78_];
+                if (IsNextCharacterControlAlt(&nextWord))
+                {
+                    int numExtraWords = GetControlWordNumExtraWords(&nextWord);
+                    if (numExtraWords != 0)
+                    {
+                        unknown_78_ += numExtraWords;
+                        unknown_78_++;
+                        continue;
+                    }
+                    if (nextWord == ControlWord_End || nextWord == ControlWord_Close)
+                        break;
+                    if (nextWord == ControlWord_RTurn)
+                    {
+                        npcAngleToUse_1844_ = npcPriorRotation_183c_;
+                        npcTurnInProgress_19b6_ = true;
+                        UpdateNPCTurn(1);
+                    }
+                    else if (nextWord == ControlWord_SlashQuest)
+                    {
+                        if (unknown_8c_ != 0)
+                            func_0208beb4(unknown_8c_);
+                    }
+                }
+                unknown_78_++;
+            }
+            StopVoiceSoundEffect();
+            pauseType_9a0_ = 0;
+            Close();
+        }
+        else
+        {
+            if (!unknown_19d3_)
+                func_0205eaa0(&data_02108760, 1, 0);
+            pauseType_9a0_ = 5;
+            unknown_78_++;
+            voiceSoundEffectTimer_912_ = 0;
+        }
+        break;
+    }
+    return false;
 }
 
 int TextManager::GetControlWordNumExtraWords(const void* text) const
@@ -1623,6 +1751,97 @@ const char* TextManager::HandleImmediateBoxTags(const char* in)
     return in;
 }
 
+static void ReloadBGLayers()
+{
+    // enable obj and BG3, disable the rest
+    DISPCNT = (DISPCNT & ~0x1f00) | 0x1100;
+    BG2OFS = 0;
+    BG3OFS = 0;
+    // preserve priority and mosaic, set screen base block = 29, rest 0
+    BG1CNT = (BG1CNT & 0x43) | 0x1d00;
+    BG2CNT = (BG2CNT & 0x43) | 0x1e00; // screen base block = 30
+    BG3CNT = (BG3CNT & 0x43) | 0x1f08; // screen base block = 31, char base block 2
+
+    TileMapIndexData* stagingSpace = data_02107800.tileMapIndices;
+    const void* windowGraphics = GetGameResources()->paletteData_2c;
+
+    BGLayer layer;
+    layer.Reset();
+    layer.engine_ = 0;
+    layer.bgIndex_ = 3;
+    layer.ProcessGraphicsFile(windowGraphics, NULL, 0);
+
+    if (stagingSpace != NULL)
+    {
+        memset(stagingSpace, 0, 0x1000);
+        for (unsigned char i = 0; i < 6; i++)
+            StageMemoryToVRAM(VRAMSubregion_MainBG3Character, stagingSpace, 0x1000 * i, 0x1000, true, false);
+        
+        const void* windowBackgroundData = data_02107800.windowBorderTiles + 0x280;
+        if (windowBackgroundData != NULL)
+            StageMemoryToVRAM(VRAMSubregion_MainBG2Character, windowBackgroundData, 0x20, 0x900, true, false);
+    }
+
+    if (stagingSpace != NULL)
+    {
+        memset(stagingSpace, 0, 0x1000);
+        StageMemoryToVRAM(VRAMSubregion_MainBG2Screen, stagingSpace, 0, 0x800, true, false);
+        unsigned short* screenBuffer = stagingSpace->textBorderIndexBuffer;
+        for (unsigned short i = 0; i < 0x300; i++)
+        {
+            *screenBuffer = i;
+            screenBuffer++;
+        }
+        StageMemoryToVRAM(VRAMSubregion_MainBG3Screen, stagingSpace, 0, 0x800, true, false);
+        void* bg1Base = (void*)GetMainBG1ScreenBase();
+        if (bg1Base != NULL)
+            memset(bg1Base, 0, 0x800);
+    }
+
+    // blend between BG2 (box background) and BG0 (3D engine) in a 10:6 ratio
+    ColorEffect_ConfigureAlphaBlend(ADDR_BLDCNT, 1 << 2, 1 << 0, 10, 6);
+    // set priority, BG3 at the top (priority 0 is highest)
+    BG0CNT = (BG0CNT & ~3) | 3;
+    BG1CNT = (BG1CNT & ~3) | 2;
+    BG2CNT = (BG2CNT & ~3) | 1;
+    BG3CNT = (BG3CNT & ~3) | 0;
+}
+
+void TextManager::AddMessage(const char* msg, int graphicsMode)
+{
+    unknown_19bd_ = 1;
+    ProcessTextContinuation(msg);
+    if (!unknown_19cc_ && graphicsMode == 1) // 2d
+    {
+        cursorBlinkTimer_19ae_ = 0;
+        cursorVisibleThisFrame_19af_ = false;
+        unknown_19cd_ = true;
+        unknown_40_ = 0;
+        ReloadBGLayers();
+    }
+    unknown_19cc_ = false;
+    unknown_19ce_ = false;
+    if (graphicsMode == 1)
+        unknown_19cc_ = true;
+    else if (graphicsMode == 1) // ...
+        unknown_19ce_ = true;
+    if (unknown_19cc_ != 0)
+    {
+        unknown_19cc_ = true;
+        cursorBlinkTimer_19ae_ = 0;
+        cursorVisibleThisFrame_19af_ = false;
+        unknown_19cd_ = true;
+        unknown_40_ = 0;
+    }
+    if (unknown_19ce_)
+    {
+        unknown_44_ = 0;
+        ClearGlyphTextureVRAM(textureArena_1e28_);
+    }
+    unknown_30_ = -1;
+    unknown_31_ = -1;
+}
+
 extern const int data_020e7a94[];
 
 extern char data_02108760[];
@@ -1669,11 +1888,11 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
     unknown_19d1_ = 0;
     unknown_1958_ = 0;
     effects_195b_ = 0;
-    unknown_9b0_ = 0;
+    fadeRescaledAlpha_9b0_ = 0;
     unknown_195a_ = 8;
 
     if (pauseType_9a0_ == 3)
-        func_02044f3c(this, msg, graphicsMode);
+        AddMessage(msg, graphicsMode);
     else
     {
         unsigned short indexBufferLength = unknown_1942_;
@@ -1728,9 +1947,9 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         waitTimeQueueIndex_19ad_ = 0;
         pageTValue_1960_ = 0;
         RecordWaitTimeValue(0, -1);
-        maybeBoxShaking_19c0_ = false;
-        unknown_195d_ = 30;
-        unknown_19c1_ = 0;
+        boxShakeActive_19c0_ = false;
+        boxShakeTimer_195d_ = 30;
+        boxShakePending_19c1_ = 0;
         recoveryParam_19c6_ = 0;
         recoveryParam_19c7_ = 0;
         unknown_19c8_ = 0;
@@ -1748,7 +1967,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         {
             unknown_19cd_ = 1;
             unknown_40_ = 0;
-            func_02044d0c();
+            ReloadBGLayers();
         }
 
         if (unknown_19ce_)
@@ -1803,7 +2022,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         cursorPresent_19ca_ = true;
         unknown_19b4_ = 0;
         for (int i = 0; i < 2; i++)
-            windows_[i].SetEnabled(false);
+            clipWindows_[i].SetEnabled(false);
         if (textureArena_1e28_ != NULL)
             textureArena_1e28_->Reset(); 
     }
@@ -2252,4 +2471,18 @@ void TextManager::ReleaseText16Bit(unsigned short *wordList, int len)
 void TextManager::StorePartyMemberIndex(char idx)
 {
     partyMemberIndex_1880_ = idx;
+}
+
+void TextManager::ProcessMarkup(int unused, const char* input, char* output,
+    int boxWidth, int margin, int fontIndex)
+{
+    if (input == NULL || output == NULL)
+        return;
+    char scratch[0x960] = {0};
+    SubstituteValueTags(input, scratch);
+    SubstituteUnsupportedCharacters(scratch, output, fontIndex);
+    SubstituteConditionals(output, scratch, fontIndex);
+    SubstituteNamesAndArticles(scratch, output, fontIndex);
+    SubstituteCaps(output, scratch, fontIndex);
+    CalculateNewlines(false, scratch, output, boxWidth, margin, false, fontIndex);
 }

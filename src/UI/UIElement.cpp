@@ -14,8 +14,6 @@ extern "C"
     // get special character at given size
     const unsigned char* func_02042a50(int size, const char*);
 
-    void func_02046608(void*, unsigned char, const char*, char*, int, int, unsigned char);
-
     // alternate strlen
     int func_020d2ff0(const char*);
 }
@@ -235,7 +233,7 @@ void UIElement::Create(const char *markup, int vramOffset, int unused,
     if (!(flags_c5_ & RendererFlags_10)) width -= 4;
     if (expandToFit) width = 256;
     char processedMarkup[0x800] = {0};
-    func_02046608(TextManager::GetInstance(), fontHeight_c7_, markup, processedMarkup, width, textXOffset_b0_, fontIndex);
+    TextManager::GetInstance()->ProcessMarkup(fontHeight_c7_, markup, processedMarkup, width, textXOffset_b0_, fontIndex);
     // return value is parameter of <ENC=...> tag, why use it as border size?!
     short prepareTextReturnValue = PrepareText(processedMarkup, unused, vCentering, expandToFit, fontIndex);
     PrepareMenu(processedMarkup, prepareTextReturnValue, fontIndex);
@@ -288,7 +286,7 @@ void UIElement::LoadMenuPage(const char* markup, bool expandToFit, unsigned char
     short lineSpacing = lineSpacing_b6_;
     int bufferSize = bufferSize_a4_;
     char processedMarkup[0x800] = {0};
-    func_02046608(TextManager::GetInstance(), fontHeight_c7_, markup, processedMarkup, width, textX, fontIndex);
+    TextManager::GetInstance()->ProcessMarkup(fontHeight_c7_, markup, processedMarkup, width, textX, fontIndex);
     short prepareTextReturnValue = PrepareText(processedMarkup, 0, false, expandToFit, fontIndex);
 
     // Why are we rewriting these values?

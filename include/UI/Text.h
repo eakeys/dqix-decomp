@@ -306,8 +306,9 @@ public:
     // 6 = awaiting yes/no or uke/yame choice
     int pauseType_9a0_;
     int gyouParameter_9a4_;
-    char unk_9a8[8];
-    int unknown_9b0_;
+    int fadeFullVisibilityLength_9a8_;
+    int fadeFullVisibilityTimer_9ac_;
+    int fadeRescaledAlpha_9b0_;
     int numGlyphsInUse_9b4_;
     // holds data about glyphs that are used in the current message
     RenderGlyph glyphs_[0x80];
@@ -340,19 +341,26 @@ public:
     char tagSTArrayIndex_1956_;
     char unknown_1957_;
     char unknown_1958_;
-    char maybeSoundDuration_1959_;
+    unsigned char npcReactionSoundTimer_1959_;
     char unknown_195a_;
+    // 0x2: shadow (used e.g. by pickup text)
+    // 0x4: text will fade in & out
+    // --> 0x8: text currently fading in
+    // --> 0x10: text currently fully visible
+    // --> 0x20: text currently fading out
+    // 0x40: vertically centered text
+    // 0x80: outline
     unsigned char effects_195b_;
     unsigned char unknown_195c_;
     // low 2 bits determine which offset among (-2, 0), (0, 0), (0, -3), (0, 0) to apply to speaker name
-    unsigned char unknown_195d_;
+    unsigned char boxShakeTimer_195d_;
     unsigned char autoValue_195e_;
     unsigned char autoRemainingTime_195f_;
     unsigned char pageTValue_1960_; // seems to be time until dialogue advances automatically?
-    char unknown_1961_;
+    unsigned char pageTRemainingTime_1961_;
     unsigned char unknown_1962_;
     char unk_1963[1];
-    ClipWindow windows_[2];
+    ClipWindow clipWindows_[2];
     char unknown_19ac_;
     char waitTimeQueueIndex_19ad_;
     char cursorBlinkTimer_19ae_;
@@ -363,18 +371,18 @@ public:
     unsigned char voicePlaybackState_19b3_; // 1 while voice sound effect is playing
     unsigned char unknown_19b4_;
     char unknown_19b5_;
-    char maybeDoesNPCTurn_19b6_;
-    char maybeDoesSoundPlay_19b7_;
+    bool npcTurnInProgress_19b6_;
+    unsigned char npcReactionSoundPlaying_19b7_;
     unsigned char cenTag_19b8_;
     unsigned char unknown_19b9_;
     unsigned char unknown_19ba_;
     char skipTag_19bb_;
     unsigned char unknown_19bc_;
     char unknown_19bd_;
-    char unknown_19be_;
-    char unknown_19bf_;
-    bool maybeBoxShaking_19c0_;
-    char unknown_19c1_;
+    unsigned char unknown_19be_;
+    unsigned char unknown_19bf_;
+    bool boxShakeActive_19c0_;
+    bool boxShakePending_19c1_;
     unsigned char speakerDifference_19c2_;
     unsigned char unknown_19c3_;
     unsigned char unknown_19c4_;
@@ -388,11 +396,11 @@ public:
     unsigned char unknown_19cc_;
     unsigned char unknown_19cd_;
     bool unknown_19ce_;
-    char unknown_19cf_;
+    unsigned char unknown_19cf_;
     unsigned char unknown_19d0_;
     unsigned char unknown_19d1_;
     char unknown_19d2_;
-    char unknown_19d3_;
+    unsigned char unknown_19d3_;
     char unknown_19d4_;
     // Q: does this count for a group of enemies too?
     // I couldn't find any uses of the <IF_TARGET_PARTY> tag anywhere...
@@ -405,7 +413,7 @@ public:
     short unknown_19da_;
     unsigned char fontIndex_19dc_;
     char unk_19dd[3];
-    TextBoxGraphics substruct_19e0_;
+    TextBoxGraphics textBoxGraphics_19e0_;
     TextureArena* textureArena_1e28_;
 
     static TextManager* GetInstance();
@@ -456,7 +464,10 @@ public:
     // usa: func_02043368
     void LoadCursorGraphics();
 
-    // usa: func-020439b0
+    // usa: func_0204359c
+    void UpdatePendingMessages(unsigned int minTicks);
+
+    // usa: func_020439b0
     void RefreshGraphics(bool arg);
 
     // usa: func_020440a4
@@ -464,6 +475,11 @@ public:
     // usa: func_020440b8
     // the data isn't used, it's reached from GetFileFromNARCInMemory
     void LoadTextBoxGraphics(SafeAllocator* alloc, const void* data);
+
+    // usa: func_020440cc
+    // checks input etc to determine whether to advance, then does so accordingly.
+    // returns true on message advance
+    bool TryAdvanceMessage();
 
     // usa: func_02044420
     int GetControlWordNumExtraWords(const void* text) const;
@@ -484,6 +500,9 @@ public:
     // process modifiers like <CEN> at the start of some text and return
     // a pointer past these
     const char* HandleImmediateBoxTags(const char* in);
+
+    // usa: func_02044f3c
+    void AddMessage(const char* msg, int graphicsMode);
 
     // usa: func_0204500c
     // graphicsMode = 0 to use the 3D rendering engine, = 1 to use
@@ -530,14 +549,24 @@ public:
     // usa: func_020464dc
     void StorePartyMemberIndex(char idx);
 
-    // usa: func_020652d0
-    void ShowBinaryOptionDialogue(int defaultOption, const char* optionA, const char* optionB);
+    void ProcessMarkup(int unused, const char* input, char* output, int boxWidth, int margin, int fontIndex);
 
     // usa: func_020654b8
     void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
 
     // usa: func_020656d0
     unsigned short GetNextWord() const;
+
+    // usa: func_020656e4
+    // parameter is num ticks but is unused
+    bool UpdateNPCTurn(unsigned int);
+    // usa: func_02065758
+    // advances the timer for exclamation/question
+    bool UpdateNPCReaction(unsigned int numTicks);
+    // usa: func_020657c8
+    bool UpdateFadingText(unsigned int numTicks);
+    // usa: func_020658ac
+    void UpdateBoxShake(unsigned int numTicks);
 
     // usa: func_02065920
     void AdvanceAutoTimer(unsigned int ticks);
@@ -550,6 +579,9 @@ public:
 
     // usa: func_02066cf0
     void Draw(bool arg);
+
+    // usa: func_020675fc
+    void DrawNPCOverheadIcon();
 
     // usa: func_020676e0
     void CheckAndHandleDialogueOption();
@@ -565,6 +597,15 @@ public:
     bool IsNextCharacterInteractionControl(const void* input) const;
     // usa: func_02067ad8
     bool IsNextCharacterControlOrJump(const void* input) const;
+
+    // usa: func_02067b28
+    void InternalProcessPendingMessage();
+    // usa: func_02067e58
+    void InternalUpdatePendingMessages(unsigned int minTicks);
+
+    // usa: func_02067e98
+    // processes and loads the next message when the previous ended with <ADD>
+    void ProcessTextContinuation(const char* message);
 
     // usa: func_0206831c
     void SubstituteValueTags(const char* input, char* output);
@@ -724,6 +765,10 @@ public:
     // bit speculative as I haven't seen this called anywhere
     void AdvanceLine();
 
+    // usa: func_0206b6b8
+    // text in middle of screen e.g. Celestria in finale
+    void CenterTextVertical();
+
     // usa: func_0206b7b0
     void PositionOptionDialogue();
 
@@ -731,7 +776,8 @@ public:
     void GetBoxShakeOffset(int* outX, int* outY);
 
     // usa: func_0206b974
-    void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth, int margin, bool arg7, unsigned char fontType);
+    void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth,
+        int margin, bool useNewlineControl, int fontType);
 };
 
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);

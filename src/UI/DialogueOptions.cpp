@@ -71,7 +71,7 @@ void DialogueOptionManager::Update(int numTicks)
         return;
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    mgr->substruct_19e0_.Update(numTicks);
+    mgr->textBoxGraphics_19e0_.Update(numTicks);
     mgr->SetMainTextBoxActive();
     if (IsActive())
         gridMenu_1c_.Update(numTicks);
@@ -93,7 +93,7 @@ void DialogueOptionManager::Draw(bool use2D)
     {
         textBox_b4_.color = defaultColor;
         mgr->SetActiveTextBox(&textBox_b4_);
-        mgr->substruct_19e0_.Draw(true, 1);
+        mgr->textBoxGraphics_19e0_.Draw(true, 1);
         mgr->SetMainTextBoxActive();
     }
 
@@ -213,8 +213,8 @@ void DialogueOptionManager::Show()
 {
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    if (!mgr->substruct_19e0_.IsBoxActive())
-        mgr->substruct_19e0_.BeginDisplay();
+    if (!mgr->textBoxGraphics_19e0_.IsBoxActive())
+        mgr->textBoxGraphics_19e0_.BeginDisplay();
     mgr->SetMainTextBoxActive();
 }
 
@@ -222,10 +222,10 @@ void DialogueOptionManager::ShowInstant()
 {
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    if (!mgr->substruct_19e0_.IsBoxActive())
+    if (!mgr->textBoxGraphics_19e0_.IsBoxActive())
     {
-        mgr->substruct_19e0_.activeBox_->status = 2;
-        mgr->substruct_19e0_.activeBox_->scaleY = 1 << 12;
+        mgr->textBoxGraphics_19e0_.activeBox_->status = 2;
+        mgr->textBoxGraphics_19e0_.activeBox_->scaleY = 1 << 12;
     }
     mgr->SetMainTextBoxActive();
 }
@@ -234,7 +234,7 @@ bool DialogueOptionManager::IsActive()
 {
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    bool isActive = mgr->substruct_19e0_.IsBoxActive();
+    bool isActive = mgr->textBoxGraphics_19e0_.IsBoxActive();
     mgr->SetMainTextBoxActive();
     return isActive;
 }
@@ -243,7 +243,7 @@ bool DialogueOptionManager::Unused_IsHidden()
 {
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    bool hidden = mgr->substruct_19e0_.IsBoxHidden();
+    bool hidden = mgr->textBoxGraphics_19e0_.IsBoxHidden();
     mgr->SetMainTextBoxActive();
     return hidden;
 }
@@ -252,8 +252,8 @@ void DialogueOptionManager::Hide()
 {
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    if (!mgr->substruct_19e0_.IsBoxHidden())
-        mgr->substruct_19e0_.EndDisplay();
+    if (!mgr->textBoxGraphics_19e0_.IsBoxHidden())
+        mgr->textBoxGraphics_19e0_.EndDisplay();
     mgr->SetMainTextBoxActive();
 }
 
@@ -261,7 +261,7 @@ void DialogueOptionManager::HideInstant()
 {
     TextManager* mgr = TextManager::GetInstance();
     mgr->SetActiveTextBox(&textBox_b4_);
-    mgr->substruct_19e0_.ResetBoxStatus();
+    mgr->textBoxGraphics_19e0_.ResetBoxStatus();
     mgr->SetMainTextBoxActive();
 }
 

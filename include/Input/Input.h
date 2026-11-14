@@ -106,7 +106,7 @@ public:
     int prevX_;
     int prevY_;
     int timeHeld_; // accumulates while holding, resets on release
-    int prevTimeHeld_; // value of timeHeld at last release
+    unsigned int prevTimeHeld_; // value of timeHeld at last release
     int timeSinceLastTouch_; // accumulates while not holding, resets while holding
     int timeHeldStill_; 
     bool movedUp_;

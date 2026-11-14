@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Memory/SafeAllocator.h"
+#include "../Memory/SafeAllocator.h"
+#include "../Graphics/SPRSprite.h"
 
 // sizeof == 0x44c8, or 0x4218 in JPN version.
 // An instance is allocated in func_ov030_021d8a40 (USA), which is where
@@ -66,10 +67,10 @@ struct GameResources
     SafeAllocator allocator_2b0c; // jpn: 0x28fc
     char unknown_2b20[0x70]; // jpn: 0x2910
 
-    struct Substruct_2b90
-    {
-        char unk_0[0x88];
-    } substruct_array_2b90[0x12]; // jpn: 0x2980
+    // jpn: 0x2980
+    // icons that appear over an NPC/monster/etc's head, for example:
+    // [12] = monster alert, [13] = exclamation, [14] = question, [15] = quest marker
+    SPRSprite overheadIcons_2b90_[18];
 
     char unknown_3520[0x88]; // jpn: 0x3310
     char unknown_35a8[0x120]; // jpn: 0x3398

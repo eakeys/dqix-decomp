@@ -10,6 +10,7 @@
 #include "NitroSDK/HWRegisters.h"
 #include "NitroSDK/ColorEffects.h"
 #include "Graphics/VRAMStaging.h"
+#include "Resource/GameStrings.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
@@ -23,6 +24,7 @@ extern "C"
     // get language
     int func_0200fb08(GameState*);
     GameResources* func_0200fb8c(GameState*);
+    void* func_020100bc(GameState*);
     void* func_020100f8(GameState*);
     // get party data struct?
     unsigned char* func_02010828(GameState*);
@@ -30,12 +32,15 @@ extern "C"
     // and wifi players. (Q: Does this count Ivor?)
     unsigned char func_02011538(GameState*);
 
+    void func_0202ec84(void*, Vector3fix*, int*, int*);
+
     void* func_0203dce4(void*, int);
     void* func_0203cf4c();
     Vector3fix func_020406f8(void*);
+    void func_02040af0(void*, fix32_t);
+    fix32_t func_020409e0(void*);
+    fix32_t func_02040a20(void*);
 
-    int func_020440cc(TextManager*);
-    void func_02044530(TextManager*, bool);
     void func_0204459c(TextManager*, bool);
     void func_02044830(TextManager*, int*, int*);
     void func_02045740(TextManager*);
@@ -43,26 +48,18 @@ extern "C"
     int func_02046b60(void*, int);
 
     int func_020546a8(PartyMember*);
-    void func_0205c77c(void*, int);
     void func_0205c840(void*);
     void func_0205c904(DialogueOptionManager*);
     void func_0205cc50(DialogueOptionManager*, int, int);
     void func_0205cd94(DialogueOptionManager*);
     bool func_0205cde8(DialogueOptionManager*);
-    int func_0205ce28(void*);
 
     void func_0205e944(void*, int);
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
 
     void func_02065418(int);
-    void func_020656e4(TextManager*, int);
-    int func_02065758(TextManager*, int);
-    int func_020657c8(TextManager*, int);
-    void func_020675fc(TextManager*);
     void func_020676e0(TextManager*, int);
-    void func_020658ac(TextManager*, int);
-    void func_0206b6b8(TextManager*);
 
     void func_0208be94(void*);
     void func_0208beb4(void*);
@@ -86,8 +83,6 @@ extern "C"
 
     void func_020e2110(void*);
     void func_020e2310(void*, int, int, int, const char*, unsigned char, unsigned char);
-
-    const char* func_020e51cc(int);
 
     // heal the party?
     void func_ov017_0218d7b0(GameResources*, void*);
@@ -116,6 +111,7 @@ struct Struct_020e7e04
     short array_24[2];
 } extern const data_020e7e04;
 
+extern const unsigned char data_020e7e08[];
 extern const char data_020e7e10[12];
 extern const char data_020e7e1c[12];
 extern const char data_020e7e30[5];
@@ -222,10 +218,10 @@ void ShowBinaryOptionDialogue(DialogueOptionManager* dialogue, int defaultOption
     dialogue->gridMenu_1c_.touchInput_4_.SetCurrentElementAndRemoveHighlight(defaultOption);
     dialogue->gridMenu_1c_.keyInput_54_.SetCurrentElementIndex(defaultOption);
     dialogue->unknown_234_ = true;
-    func_0205c77c(&dialogue->unknown_4_, 1);
+    dialogue->unknown_4_.SetFields(true);
     dialogue->unknown_233_ = true;
     dialogue->unknown_234_ = true;
-    func_0205c77c(&dialogue->unknown_4_, 1);
+    dialogue->unknown_4_.SetFields(true);
     dialogue->Show();
     if (GetCurrentMainScreen() == 1)
         dialogue->gridMenu_1c_.touchInputEnabled_94_ = false;
@@ -273,6 +269,119 @@ void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x
 unsigned short TextManager::GetNextWord() const
 {
     return glyphIndexList_4c_[unknown_78_];
+}
+
+bool TextManager::UpdateNPCTurn(unsigned int)
+{
+    if (!npcTurnInProgress_19b6_)
+        return false;
+
+    void* npc = func_0203dce4(func_0203cf4c(), npcID_1838_);
+    if (npc == NULL)
+        return false;
+
+    bool stillInProgress = true;
+
+    func_02040af0(npc, npcAngleToUse_1844_);
+    fix32_t targetAngle = func_020409e0(npc);
+    fix32_t currentAngle = func_02040a20(npc);
+    if (targetAngle == currentAngle)
+    {
+        npcTurnInProgress_19b6_ = false;
+        stillInProgress = false;
+    }
+    return stillInProgress;
+}
+
+bool TextManager::UpdateNPCReaction(unsigned int numTicks)
+{
+    void* npc = func_0203dce4(func_0203cf4c(), npcID_1838_);
+    if (npc == NULL)
+        return false;
+
+    if (!npcReactionSoundPlaying_19b7_)
+        return false;
+    
+    bool stillPlaying = true;
+
+    unsigned char dt = numTicks;
+    if (npcReactionSoundTimer_1959_ < dt)
+        npcReactionSoundTimer_1959_ = 0;
+    else
+        npcReactionSoundTimer_1959_ -= dt;
+
+    if (npcReactionSoundTimer_1959_ == 0)
+    {
+        stillPlaying = false;
+        npcReactionSoundPlaying_19b7_ = false;
+    }
+    return stillPlaying;
+}
+
+bool TextManager::UpdateFadingText(unsigned int numTicks)
+{
+    bool success = false;
+    if ((effects_195b_ & 4) && pauseType_9a0_ == 0)
+    {
+        if (effects_195b_ & 8)
+        {
+            fadeRescaledAlpha_9b0_ += numTicks * ((31 << 16) / 60);
+            if (fadeRescaledAlpha_9b0_ >= (31 << 16))
+            {
+                fadeRescaledAlpha_9b0_ = 31 << 16;
+                fadeFullVisibilityTimer_9ac_ = 0;
+                effects_195b_ &= ~8;
+                effects_195b_ |= 0x10;
+            }
+        }
+        else if (effects_195b_ & 0x10)
+        {
+            fadeFullVisibilityTimer_9ac_ += numTicks;
+            if (fadeFullVisibilityLength_9a8_ <= fadeFullVisibilityTimer_9ac_)
+            {
+                fadeFullVisibilityTimer_9ac_ = fadeFullVisibilityLength_9a8_;
+                effects_195b_ &= ~0x10;
+                effects_195b_ |= 0x20;
+            }
+        }
+        else if (effects_195b_ & 0x20)
+        {
+            fadeRescaledAlpha_9b0_ -= numTicks * ((31 << 16) / 60);
+            if (fadeRescaledAlpha_9b0_ <= 0)
+            {
+                fadeRescaledAlpha_9b0_ = 0;
+                effects_195b_ &= ~0x20;
+            }
+        }
+        success = true;
+    }
+    return success;
+}
+
+void TextManager::UpdateBoxShake(unsigned int numTicks)
+{
+    if (boxShakePending_19c1_ && !boxShakeActive_19c0_)
+    {
+        boxShakeActive_19c0_ = true;
+        boxShakeTimer_195d_ = 30;
+    }
+    if (!boxShakeActive_19c0_)
+        return;
+
+    if (boxShakeTimer_195d_ <= numTicks)
+    {
+        if (boxShakePending_19c1_)
+            boxShakeTimer_195d_ += (30 - numTicks);
+        else
+        {
+            boxShakeTimer_195d_ = 0;
+            boxShakeActive_19c0_ = false;
+        }
+    }
+    else
+    {
+        boxShakeTimer_195d_ -= numTicks;
+    }
 }
 
 void TextManager::AdvanceAutoTimer(unsigned int ticks)
@@ -328,16 +437,16 @@ void TextManager::Update(unsigned int argNumTicks)
         return;
     }
 
-    func_020656e4(this, numTicks);
-    if (func_02065758(this, numTicks) != 0)
+    UpdateNPCTurn(numTicks);
+    if (UpdateNPCReaction(numTicks))
         return;
     
     if (showWindow_19b1_)
     {
-        substruct_19e0_.Update(numTicks);
-        if (func_0205ce28(&substruct_19e0_) != 0)
-            substruct_19e0_.BeginDisplay();
-        if (!substruct_19e0_.IsBoxActive())
+        textBoxGraphics_19e0_.Update(numTicks);
+        if (textBoxGraphics_19e0_.IsBoxHidden())
+            textBoxGraphics_19e0_.BeginDisplay();
+        if (!textBoxGraphics_19e0_.IsBoxActive())
             return;
     }
 
@@ -358,9 +467,9 @@ void TextManager::Update(unsigned int argNumTicks)
         return;
     }
 
-    if (func_020657c8(this, numTicks) != 0)
+    if (UpdateFadingText(numTicks))
         return;
-    func_020658ac(this, numTicks);
+    UpdateBoxShake(numTicks);
 
     if (effects_195b_ & 1)
     {
@@ -383,7 +492,7 @@ void TextManager::Update(unsigned int argNumTicks)
         }
 
         UpdateCursorBlink();
-        if (func_020440cc(this) != 0)
+        if (TryAdvanceMessage())
         {
             unknown_19d1_ = true;
             unknown_1958_ = 5;
@@ -482,7 +591,7 @@ void TextManager::Update(unsigned int argNumTicks)
             }
             else if (glyph == ControlWord_PageT)
             {
-                unknown_1961_ = pageTValue_1960_;
+                pageTRemainingTime_1961_ = pageTValue_1960_;
                 pauseType_9a0_ = 1;
                 StopVoiceSoundEffect();
                 return;
@@ -628,7 +737,7 @@ void TextManager::Update(unsigned int argNumTicks)
             else if (glyph == ControlWord_Turn)
             {
                 npcAngleToUse_1844_ = turnAngle_1840_;
-                maybeDoesNPCTurn_19b6_ = true;
+                npcTurnInProgress_19b6_ = true;
                 unknown_78_++;
                 StopVoiceSoundEffect();
                 return;
@@ -636,7 +745,7 @@ void TextManager::Update(unsigned int argNumTicks)
             else if (glyph == ControlWord_RTurn)
             {
                 npcAngleToUse_1844_ = npcPriorRotation_183c_;
-                maybeDoesNPCTurn_19b6_ = true;
+                npcTurnInProgress_19b6_ = true;
                 unknown_78_++;
                 StopVoiceSoundEffect();
                 return;
@@ -652,7 +761,7 @@ void TextManager::Update(unsigned int argNumTicks)
                     npcAngleToUse_1844_ = fix32ReduceAngle0To2Pi(fix32_Atan2(
                         leaderPos.x - npcPos.x, leaderPos.z - npcPos.z
                     ));
-                    maybeDoesNPCTurn_19b6_ = true;
+                    npcTurnInProgress_19b6_ = true;
                     StopVoiceSoundEffect();
                 }
                 unknown_78_++;
@@ -661,8 +770,8 @@ void TextManager::Update(unsigned int argNumTicks)
             else if (glyph == ControlWord_Exclamation)
             {
                 StopVoiceSoundEffect();
-                maybeSoundDuration_1959_ = 60;
-                maybeDoesSoundPlay_19b7_ = true;
+                npcReactionSoundTimer_1959_ = 60;
+                npcReactionSoundPlaying_19b7_ = true;
                 unknown_195c_ = 0;
                 unknown_78_++;
                 voiceSoundEffectTimer_912_ = 0;
@@ -672,9 +781,9 @@ void TextManager::Update(unsigned int argNumTicks)
             else if (glyph == ControlWord_Question)
             {
                 StopVoiceSoundEffect();
-                maybeSoundDuration_1959_ = 60;
-                maybeDoesSoundPlay_19b7_ = true;
-                unknown_195c_ = true;
+                npcReactionSoundTimer_1959_ = 60;
+                npcReactionSoundPlaying_19b7_ = true;
+                unknown_195c_ = 1;
                 unknown_78_++;
                 voiceSoundEffectTimer_912_ = 0;
                 func_0205eaa0(data_02108760, 28, 0);
@@ -688,8 +797,8 @@ void TextManager::Update(unsigned int argNumTicks)
                 if (unknown_2c8_ == 1 || glyph == ControlWord_NoYes)
                     var25 = 1;
                 unknown_2c8_ = 0;
-                const char* yesString = func_020e51cc(27);
-                const char* noString = func_020e51cc(28);
+                const char* yesString = GetGameString(GameString_Yes);
+                const char* noString = GetGameString(GameString_No);
                 // why does the compiler not allow overloading these?
                 ::ShowBinaryOptionDialogue(&dialogueOptions_90_, var25, yesString, noString);
                 chosenAnswer_954_ = var25;
@@ -714,8 +823,8 @@ void TextManager::Update(unsigned int argNumTicks)
                 unsigned int remainingMask = DISPCNT & ~0x1f00;
                 DISPCNT = remainingMask | ((enabledLayers | 0x10) << 8);
                 func_02065418(unknown_19cc_);
-                const char* acceptString = func_020e51cc(29);
-                const char* declineString = func_020e51cc(30);
+                const char* acceptString = GetGameString(GameString_Accept);
+                const char* declineString = GetGameString(GameString_Decline);
                 ::ShowBinaryOptionDialogue(&dialogueOptions_90_, 0, acceptString, declineString);
                 chosenAnswer_954_ = 0;
                 unknown_19ba_ = true;
@@ -816,8 +925,8 @@ void TextManager::Update(unsigned int argNumTicks)
             }
             else if (glyph == ControlWord_Shake)
             {
-                maybeBoxShaking_19c0_ = true;
-                unknown_195d_ = 30;
+                boxShakeActive_19c0_ = true;
+                boxShakeTimer_195d_ = 30;
             }
         }
         pauseType_9a0_ = 5;
@@ -830,7 +939,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
 {
     if (!unknown_19c4_)
         return;
-    TextBoxGraphics* boxHandler = &substruct_19e0_;
+    TextBoxGraphics* boxHandler = &textBoxGraphics_19e0_;
     int count;
     unsigned short* indices;
     RenderGlyph* glyph;
@@ -894,7 +1003,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
     boxHandler->activeBox_ = &mainTextBox_914_;
 }
 
-void TextManager::Draw(bool arg)
+void TextManager::Draw(bool use2D)
 {
     if (unknown_19cc_ != 0)
         return;
@@ -904,34 +1013,34 @@ void TextManager::Draw(bool arg)
 
     if ((unknown_998_ != 0 && showWindow_19b1_) || unknown_19cb_ != 0)
     {
-        if (unknown_19cb_ != 0 && func_0205ce28(&substruct_19e0_) != 0)
+        if (unknown_19cb_ != 0 && textBoxGraphics_19e0_.IsBoxHidden())
         {
-            substruct_19e0_.BeginDisplay();
-            substruct_19e0_.Update(1);
+            textBoxGraphics_19e0_.BeginDisplay();
+            textBoxGraphics_19e0_.Update(1);
         }
 
         if (unknown_998_ != 0 && showWindow_19b1_)
-            DrawSpeakerName(arg);
+            DrawSpeakerName(use2D);
 
         short boxX, boxY;
-        substruct_19e0_.GetBoxPosition(&boxX, &boxY);
-        substruct_19e0_.SetBoxPosition(boxX + shakeX, boxY + shakeY);
+        textBoxGraphics_19e0_.GetBoxPosition(&boxX, &boxY);
+        textBoxGraphics_19e0_.SetBoxPosition(boxX + shakeX, boxY + shakeY);
 
-        if (!arg)
+        if (!use2D)
         {
             if (unknown_38_ != NULL)
                 func_020e2110(unknown_38_);
             else
-                substruct_19e0_.Draw(true, 1);
+                textBoxGraphics_19e0_.Draw(true, 1);
         }
 
-        substruct_19e0_.SetBoxPosition(boxX, boxY);
+        textBoxGraphics_19e0_.SetBoxPosition(boxX, boxY);
     }
 
     if (unknown_998_ == 0)
         return;
 
-    func_020675fc(this);
+    DrawNPCOverheadIcon();
     int* pViewport = NULL;
     if (unknown_19b9_ == 1)
         pViewport = unknown_1848_;
@@ -941,7 +1050,7 @@ void TextManager::Draw(bool arg)
     if (glyphIndexListLength_6c_ == 0)
         return;
 
-    func_02044530(this, arg);
+    DrawDialogueOptions(use2D);
 
     int var48 = 0;
     int lineCenteringX[16] = {0};
@@ -950,8 +1059,8 @@ void TextManager::Draw(bool arg)
     int alphaSrc = 31, alphaDst = 31;
     if (effects_195b_ & 4)
     {
-        alphaDst = unknown_9b0_ >> 16;
-        if (arg)
+        alphaDst = fadeRescaledAlpha_9b0_ >> 16;
+        if (use2D)
         {
             alphaDst &= 31;
             if (alphaDst != 0)
@@ -969,7 +1078,7 @@ void TextManager::Draw(bool arg)
     }
 
     if (effects_195b_ & 0x40)
-        func_0206b6b8(this);
+        CenterTextVertical();
 
     if (cenTag_19b8_)
     {
@@ -1029,7 +1138,7 @@ void TextManager::Draw(bool arg)
         offsetX += GetFontGlyphKerning(lastGlyphIndex, thisGlyphIndex, fontIndex_19dc_);
         lastGlyphIndex = thisGlyphIndex;
 
-        if (arg)
+        if (use2D)
         {
             if (unknown_40_ <= wordIndex)
                 RenderGlyph2D(mainUIElement_34_, rglyph, offsetX, offsetY + 2, 15);
@@ -1096,7 +1205,7 @@ void TextManager::Draw(bool arg)
             offsetX += rglyph->indexGlyph->width + 1;
     }
 
-    func_0204459c(this, arg);
+    func_0204459c(this, use2D);
     unknown_40_ = numWords;
 
     if (!unknown_19ce_)
@@ -1154,6 +1263,30 @@ void TextManager::Draw(bool arg)
     GXFIFO_MATRIX_POP = 1;
     GXFIFO_MATRIX_POP = 1;
     GXFIFO_MATRIX_POP = 1;
+}
+
+void TextManager::DrawNPCOverheadIcon()
+{
+    if (unknown_998_ == 0)
+        return;
+    void* npc = func_0203dce4(func_0203cf4c(), npcID_1838_);
+    if (npc == NULL || !npcReactionSoundPlaying_19b7_)
+        return;
+    GameResources* res = GetGameResources();
+    void* maybeCamera = func_020100bc(GameState::GetInstance());
+    Vector3fix worldPos = func_020406f8(npc);
+    
+    int pixelX, pixelY;
+    func_0202ec84(maybeCamera, &worldPos, &pixelX, &pixelY);
+    pixelX -= 12;
+    pixelY -= 62;
+    SPRSprite* sprite = &res->overheadIcons_2b90_[data_020e7e08[unknown_195c_]];
+    fix32_t fixX = MAKEFIX32(pixelX);
+    fix32_t fixY = MAKEFIX32(pixelY);
+    sprite->position_.x = fixX;
+    sprite->position_.y = fixY;
+    sprite->position_.z = 0;
+    sprite->DrawAnimatedNoRotation(true);
 }
 
 void TextManager::ProcessYesNoInput(int input)
@@ -1236,6 +1369,132 @@ bool TextManager::IsNextCharacterControlOrJump(const void* input) const
     if (IsControlWordJump(word))
         return true;
     return false;
+}
+
+void TextManager::InternalProcessPendingMessage()
+{
+    if (unknown_54_ == NULL || unknown_58_ == NULL || unknown_70_ <= glyphIndexListLength_6c_)
+        return;
+
+    while (glyphIndexListLength_6c_ < unknown_70_)
+    {
+        char* srcCursor = currentPageMessage_50_ + unknown_7c_;
+        unsigned short* dstCursor = glyphIndexList_4c_ + glyphIndexListLength_6c_;
+
+        unsigned short control;
+        memcpy(&control, srcCursor, 2);
+        if (IsNextCharacterControlAlt(&control))
+        {
+            *dstCursor = control;
+            unknown_7c_ += 2;
+            glyphIndexListLength_6c_++;
+            int numExtraWords = GetControlWordNumExtraWords(&control);
+            memcpy(dstCursor + 1, srcCursor + 2, numExtraWords * 2);
+            unknown_7c_ += numExtraWords * 2;
+            glyphIndexListLength_6c_ += numExtraWords;
+            continue;
+        }
+
+        if (speakerDifference_19c2_ == 0)
+        {
+            unknown_19c4_ = true;
+            if (unknown_1946_ <= 0)
+                unknown_19c4_ = false;
+            if (memcmp(srcCursor, data_020f08dc, 2) == 0)
+            {
+                if (unknown_1942_ == 0)
+                    unknown_19c4_ = false;
+                else
+                {
+                    short widthAlignPadding = 8 - (speakerNameWidth_1944_ & 7);
+                    speakerTextBox_930_.width = speakerNameWidth_1944_ + 18 + widthAlignPadding;
+                    speakerTextBox_930_.height = 22;
+                    speakerDifference_19c2_ = true;
+                }
+                unknown_19c3_ = true;
+            }
+        }
+
+        FontIndexFile::Glyph* glyph = GetNextFontGlyph(srcCursor, fontIndex_19dc_);
+        int glyphIdx = GetNextFontGlyphIndex(srcCursor, fontIndex_19dc_);
+        if (glyph != NULL && glyphIdx >= 0)
+        {
+            int glyphAllocIdx = GetGlyphIndex(glyph);
+            unknown_7c_ += glyph->tagLength;
+            if (glyphAllocIdx < 0)
+            {
+                unsigned short newAllocIdx = LoadNewGlyph(glyphIdx, glyph, fontIndex_19dc_);
+                if (speakerDifference_19c2_ == 0)
+                    indexBuffer_1882_[unknown_1942_] = newAllocIdx;
+                *dstCursor = newAllocIdx;
+                glyphIndexListLength_6c_++;
+                numGlyphsInUse_9b4_++;
+                numGlyphsInUse_9b4_ &= 0x7f;
+                break;
+            }
+            unsigned short allocIdx16 = (unsigned short)glyphAllocIdx;
+            if (speakerDifference_19c2_ == 0)
+            {
+                indexBuffer_1882_[unknown_1942_] = allocIdx16;
+                unknown_1942_++;
+                unknown_1942_ &= 0x3f;
+            }
+            *dstCursor = allocIdx16;
+            if (glyphRefcounts_17b8_[allocIdx16] < 255)
+                glyphRefcounts_17b8_[allocIdx16]++;
+        }
+        else
+        {
+            char nextCh = *srcCursor;
+            if (speakerDifference_19c2_ == 0 && nextCh == ' ')
+            {
+                indexBuffer_1882_[unknown_1942_] = ControlWord_Unknown_ff19;
+                unknown_1942_++;
+                unknown_1942_ &= 0x3f;
+            }
+            *dstCursor = ControlWord_Unknown_ff19;
+            unknown_7c_++;
+        }
+        glyphIndexListLength_6c_++;
+    }
+
+    if (speakerDifference_19c2_ == 0)
+    {
+        unknown_1942_++;
+        unknown_1942_ &= 0x3f;
+    }
+}
+
+void TextManager::InternalUpdatePendingMessages(unsigned int minTicks)
+{
+    if (minTicks == 0)
+        return;
+    unsigned int dt = GameState::GetInstance()->GetTickCount();
+    int loopCounter = minTicks;
+    if (loopCounter < dt)
+        loopCounter = dt;
+    while (loopCounter > 0)
+    {
+        InternalProcessPendingMessage();
+        if (loopCounter != 0)
+            loopCounter--;
+    }
+}
+
+void TextManager::ProcessTextContinuation(const char* message)
+{
+    ReleaseMainMessageGlyphs();
+    memset(fullMessage_48_, 0, 0x960);
+    char* bufferA = pageScratchBuffer_60_;
+    char* bufferB = scratchBuffer_64_;
+    SubstituteValueTags(message, bufferA);
+    SubstituteUnsupportedCharacters(bufferA, bufferB, fontIndex_19dc_);
+    SubstituteConditionals(bufferB, bufferA, fontIndex_19dc_);
+    SubstituteNamesAndArticles(bufferA, bufferB, fontIndex_19dc_);
+    SubstituteCaps(bufferB, bufferA, fontIndex_19dc_);
+    SubstituteControlTags(bufferA, bufferB);
+    LoadFirstPage(bufferB, 227);
+    pauseType_9a0_ = 5;
 }
 
 void CapitalizeSection(char* str, int numChars)
@@ -1580,6 +1839,31 @@ int TextConditional_SoloHost(GameState* state, TextManager*, int)
     }
     hostPartySize++;
     if (hostPartySize != 1)
+        return 1;
+    return 0;
+}
+
+int TextConditional_Alone(GameState* state, TextManager* mgr, int)
+{
+    unsigned char* partyData = func_02010828(state);
+    char numAlive = mgr->unknown_31_;
+    if (numAlive < 0)
+    {
+        numAlive = 0;
+        for (int i = 0; i < partyData[0xf7c]; i++)
+        {
+            PartyMember* pm = state->GetPartyMemberByIndex(*(partyData + 0xf78 + i));
+            if (pm == NULL)
+                continue;
+            const char* status = (const char*)pm->unknown_ptr_130;
+            if (*(unsigned int*)status & 1)
+                continue;
+            if (*(unsigned short*)(status + 4) == 0)
+                continue;
+            numAlive++;
+        }
+    }
+    if (numAlive != 1)
         return 1;
     return 0;
 }
@@ -2989,7 +3273,7 @@ void TextManager::SubstituteControlTags(char *argInput, char *argOutput)
 char* TextManager::HandleImmediateTags(char* input)
 {
     bool moreTagsToGo = true;
-    maybeDoesNPCTurn_19b6_ = true;
+    npcTurnInProgress_19b6_ = true;
     PartyMember* leader = GameState::GetInstance()->GetPartyLeader();
     void* maybeNPC = func_0203dce4(func_0203cf4c(), npcID_1838_);
     if (leader != NULL && maybeNPC != NULL)
@@ -3000,24 +3284,24 @@ char* TextManager::HandleImmediateTags(char* input)
         npcAngleToUse_1844_ = fix32ReduceAngle0To2Pi(
             fix32_Atan2(playerPos.x - npcPos.x, playerPos.z - npcPos.z)
         );
-        maybeDoesNPCTurn_19b6_ = true;
+        npcTurnInProgress_19b6_ = true;
     }
-    maybeSoundDuration_1959_ = 0;
-    maybeDoesSoundPlay_19b7_ = false;
+    npcReactionSoundTimer_1959_ = 0;
+    npcReactionSoundPlaying_19b7_ = false;
     while (moreTagsToGo)
     {
         if (DoesStringBeginWith(input, data_020f0934)) // <N_TURN>
         {
             npcAngleToUse_1844_ = npcPriorRotation_183c_;
-            maybeDoesNPCTurn_19b6_ = false;
+            npcTurnInProgress_19b6_ = false;
             input += 8;
             continue;
         }
 
         if (DoesStringBeginWith(input, data_020f093d)) // <EXC>
         {
-            maybeSoundDuration_1959_ = 60;
-            maybeDoesSoundPlay_19b7_ = true;
+            npcReactionSoundTimer_1959_ = 60;
+            npcReactionSoundPlaying_19b7_ = true;
             unknown_195c_ = 0;
             input += 5;
             func_0205eaa0(data_02108760, 6, 0);
@@ -3026,8 +3310,8 @@ char* TextManager::HandleImmediateTags(char* input)
 
         if (DoesStringBeginWith(input, data_020f0943)) // <QES>
         {
-            maybeSoundDuration_1959_ = 60;
-            maybeDoesSoundPlay_19b7_ = true;
+            npcReactionSoundTimer_1959_ = 60;
+            npcReactionSoundPlaying_19b7_ = true;
             unknown_195c_ = 1;
             input += 5;
             func_0205eaa0(data_02108760, 28, 0);
@@ -3750,6 +4034,44 @@ void TextManager::AdvanceLine()
     unknown_78_++;
 }
 
+void TextManager::CenterTextVertical()
+{
+    char* textCursor = currentPageMessage_50_;
+    int numLineBreaks = 0;
+
+    while (true)
+    {
+        unsigned char nextCh = *textCursor;
+        if (nextCh == 0)
+            break;
+
+        unsigned short controlInner, controlOuter;
+        memcpy(&controlOuter, textCursor, 2);
+        if ((controlOuter & 0xff00) == 0xff00)
+        {
+            memcpy(&controlInner, textCursor, 2);
+            if (controlInner == ControlWord_End || 
+                controlInner == ControlWord_PageT ||
+                controlInner == ControlWord_Page)
+                break;
+            if (controlInner == ControlWord_LineBreak)
+                numLineBreaks++;
+            textCursor += 2;
+        }
+        else
+        {
+            int cursorAdvance = 1;
+            FontIndexFile::Glyph* glyph = GetNextFontGlyph(textCursor, fontIndex_19dc_);
+            if (glyph != NULL)
+                cursorAdvance = glyph->tagLength;
+            textCursor += cursorAdvance;
+        }
+    }
+    int approxHeight = (numLineBreaks - 1) * mojiArg2_1864_ + 8;
+    int top = ((192 - approxHeight) >> 1) - 16;
+    ConfigureMainTextBox(2, top, 252, 192 - top);
+}
+
 void TextManager::PositionOptionDialogue()
 {
     short mainX = mainTextBox_914_.x;
@@ -3772,11 +4094,11 @@ void TextManager::PositionOptionDialogue()
 void TextManager::GetBoxShakeOffset(int *outX, int *outY)
 {
     *outX = *outY = 0;
-    if (!maybeBoxShaking_19c0_)
+    if (!boxShakeActive_19c0_)
         return;
     unknown_19cd_ = 1;
     unknown_40_ = 0;
-    int index = unknown_195d_ & 3;
+    int index = boxShakeTimer_195d_ & 3;
     *outX = data_020e7e04.shakeXValues[index];
     *outY = data_020e7e04.shakeYValues[index];
 }
@@ -3840,10 +4162,10 @@ int NewlineCalculation_CloseXR(char* input, int* pX, int fontIndex, int leftMarg
     return 2;
 }
 
+// call type mismatch with ProcessMarkup
 void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
-    int boxWidth, int leftMargin, bool useNewlineControl, unsigned char fontType)
+    int boxWidth, int leftMargin, bool useNewlineControl, int fontType)
 {
-    int currentX;
     char* inputLastWordStart = NULL;
     char* outputLastWordStart = NULL;
     int lastWordStartX = 0;
@@ -3855,11 +4177,11 @@ void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
     if (noSpeakerStart != NULL || altNoSpeakerStart != NULL)
         extraWidthFromSpeaker = 2;
     
-    currentX = leftMargin;
+    int currentX = leftMargin;
     unsigned char lastGlyphIndex = 0xff;
     bool leftAligned = true;
     bool shouldWriteHyphen = false;
-    
+
     unsigned char defaultSpacing = GetFontSpaceSize(fontType);
 
     while (true)

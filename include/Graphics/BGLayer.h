@@ -90,7 +90,8 @@ public:
     void ConfigureTextMode(int sizeIndex);
     void AllocateIndexBuffer(SafeAllocator* alloc);
 
-    int ProcessGraphicsFile(const void* fileData, SafeAllocator* alloc);
+    // extra arg is file size but never used
+    int ProcessGraphicsFile(const void* fileData, SafeAllocator* alloc, unsigned int);
     void ProcessGraphicsFileMetadata(const void* fileData);
     void StageGraphicsFileBuffer(const void* fileData);
     // written slightly differently to the normal version but functions

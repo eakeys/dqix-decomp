@@ -549,7 +549,7 @@ public:
     // usa: func_020464dc
     void StorePartyMemberIndex(char idx);
 
-    void ProcessMarkup(int unused, const char* input, char* output, int boxWidth, int margin, int fontIndex);
+    void ProcessMarkup(int unused, const char* input, char* output, int boxWidth, int margin, unsigned char fontIndex);
 
     // usa: func_020654b8
     void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
@@ -612,7 +612,7 @@ public:
     // substitute any character that is not: 1) within a <tag>; 2) a special character
     // such as ' ', '/' or '\n', or the literal R"\n"; or 3) a recognized tag
     // of the font; with the tag "< >"
-    void SubstituteUnsupportedCharacters(char* input, char* output, int fontType);
+    void SubstituteUnsupportedCharacters(char* input, char* output, unsigned char fontType);
     // usa: func_02068f40
     // handle things like <IF_HOST_MALE>he<ELSE_HOST_NOT_MALE>she<ENDIF_HOST_MALE>
     // by evaluating the relevant condition.
@@ -673,14 +673,14 @@ public:
     // func_02068d8c	<IF_LAST_LETTER_S_M><ELSE_NOT_LAST_LETTER_S_M><ENDIF_LAST_LETTER_S_M>
     // func_02068dbc	<IF_LAST_LETTER_S_DE_ACTOR><ELSE_NOT_LAST_LETTER_S_DE_ACTOR><ENDIF_LAST_LETTER_S_DE_ACTOR>
     // func_02068dec	<IF_LAST_LETTER_S_DE_TARGET><ELSE_NOT_LAST_LETTER_S_DE_TARGET><ENDIF_LAST_LETTER_S_DE_TARGET>
-    void SubstituteConditionals(char* input, char* output, int fontType);
+    void SubstituteConditionals(char* input, char* output, unsigned char fontType);
 
     // missing processing step 02069234 that handles tags like <LEADER>
     // or <TMAP_SEC_1>, as well as some unknown stuff involving articles?
-    void SubstituteNamesAndArticles(char* input, char* output, int fontType);
+    void SubstituteNamesAndArticles(char* input, char* output, unsigned char fontType);
 
     // Replaces e.g. "<CAP>hello" with "Hello"
-    void SubstituteCaps(char* input, char* output, int fontType);
+    void SubstituteCaps(char* input, char* output, unsigned char fontType);
 
     // func_0206973c: "PAGE_T=" // declare page end, auto-advance after given time
     // func_02069790: "PAGE>" // declare page end
@@ -777,7 +777,7 @@ public:
 
     // usa: func_0206b974
     void CalculateNewlines(bool arg2, char* input, char* output, int boxWidth,
-        int margin, bool useNewlineControl, int fontType);
+        int margin, bool useNewlineControl, unsigned char fontType);
 };
 
 void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);

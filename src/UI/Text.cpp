@@ -2474,7 +2474,7 @@ void TextManager::StorePartyMemberIndex(char idx)
 }
 
 void TextManager::ProcessMarkup(int unused, const char* input, char* output,
-    int boxWidth, int margin, int fontIndex)
+    int boxWidth, int margin, unsigned char fontIndex)
 {
     if (input == NULL || output == NULL)
         return;

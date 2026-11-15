@@ -1695,7 +1695,7 @@ void TextManager::SubstituteValueTags(const char *input, char *argOutput)
     *output = *input;
 }
 
-void TextManager::SubstituteUnsupportedCharacters(char* input, char* output, int fontType)
+void TextManager::SubstituteUnsupportedCharacters(char* input, char* output, unsigned char fontType)
 {
     if (input == NULL || output == NULL)
         return;
@@ -2362,7 +2362,7 @@ void BuildConditionTag(const ConditionProcessor::TagWordSet& words, char* out)
     sprintf(out, data_020f08fa, stringBuilder);
 }
 
-void TextManager::SubstituteConditionals(char *input, char *output, int fontType)
+void TextManager::SubstituteConditionals(char *input, char *output, unsigned char fontType)
 {
     GameState* gameState = GameState::GetInstance();
     while (true)
@@ -2504,7 +2504,7 @@ struct GrammarTagProcessingData
 
 extern const GrammarTagProcessingData data_020e7f04[16];
 
-void TextManager::SubstituteNamesAndArticles(char *input, char *argOutput, int fontType) 
+void TextManager::SubstituteNamesAndArticles(char *input, char *argOutput, unsigned char /*fontType*/) 
 {
     if (input == NULL || argOutput == NULL)
         return;
@@ -2672,7 +2672,7 @@ void TextManager::SubstituteNamesAndArticles(char *input, char *argOutput, int f
     *output = 0;
 }
 
-void TextManager::SubstituteCaps(char *input, char *output, int fontType)
+void TextManager::SubstituteCaps(char *input, char *output, unsigned char fontType)
 {
     while (true)
     {
@@ -4162,9 +4162,8 @@ int NewlineCalculation_CloseXR(char* input, int* pX, int fontIndex, int leftMarg
     return 2;
 }
 
-// call type mismatch with ProcessMarkup
 void TextManager::CalculateNewlines(bool arg2, char *input, char *output,
-    int boxWidth, int leftMargin, bool useNewlineControl, int fontType)
+    int boxWidth, int leftMargin, bool useNewlineControl, unsigned char fontType)
 {
     char* inputLastWordStart = NULL;
     char* outputLastWordStart = NULL;

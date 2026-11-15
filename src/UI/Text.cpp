@@ -11,6 +11,7 @@
 #include "GameState/GameState.h"
 #include "Util/StringTests.h"
 #include "Resource/PAC.h"
+#include "Filesystem/GPC.h"
 #include <globaldefs.h>
 #include <asmhacks.h>
 
@@ -35,15 +36,22 @@ struct Struct_02107800
 {
     TileMapIndexData* tileMapIndices;
     unsigned char* windowBorderTiles;
-    char unk_8[4];
+    unsigned short* buffer_8;
     char* secondaryScratchBuffer;
-    char unk_10[8];
+    void* buffer_10;
+    char* buffer_14;
     char* primaryScratchBuffer;
     TextManager* manager;
-    char unk_20[0xc]; // something related to sound
+    char unk_20[4]; // something related to sound
+    void* buffer_24;
+    char* buffer_28;
     FontIndexFile* pFontIndexFiles[2];
     FontDataFile* pFontDataFiles[2];
 } extern data_02107800;
+extern SafeAllocator data_0210783c;
+
+extern char data_01ff9740[];
+extern unsigned char data_ALIGNED_0211e33c[0x30000] __attribute__((aligned(4)));
 
 extern const unsigned char data_020e7a50[]; // probably multiple separate things. We only use stuff at offset 8
 extern const unsigned char data_020e7a8c[];
@@ -113,6 +121,7 @@ extern "C"
     void* func_0203cf4c();
     void func_02040af0(void*, fix32_t);
 
+    void func_02042998(void*);
     void func_02043224(TextManager*);
     void func_02044c74(TextManager*, UIElement*);
 
@@ -124,6 +133,10 @@ extern "C"
 
     // close quest screen maybe?
     void func_0208beb4(int);
+
+    void func_02094a10(void*);
+    void func_02094a20(void*, SafeAllocator*);
+    void func_02094a24(void*);
 
     void func_020bc078(void*);
 

@@ -436,6 +436,8 @@ void DetailedTreasureMapData::LegacyBossMapData::WriteMapLevelString()
     const char* lvlPrefix = GetGameString(GameString_Lv);
     sprintf(mapLevelString_, data_020f1ac4, lvlPrefix, level_);
 #elif defined(jpn)
+    if (ALWAYS_FALSE())
+        return;
     sprintf(mapLevelString_, data_020f1c27, level_);
 #endif
 }
@@ -1213,7 +1215,7 @@ void DetailedTreasureMapData::LoadLegacyBossStats(bool compute, const unsigned c
     
     BackgroundLoader::AddLockGlobal();
     unsigned int archiveSize = 0;
-    const unsigned char* usedArchive = data_0211e33c;
+    const unsigned char* usedArchive = g_fileScratchSpace;
     
     if (providedArchive)
         usedArchive = providedArchive;

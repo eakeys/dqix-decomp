@@ -923,13 +923,13 @@ void Object3D::LoadType0AnimationFromFile(int slot, const char* filename, SafeAl
     {
         BackgroundLoader::AddLockGlobal();
         unsigned int length;
-        if (LoadFileIntoMemory(filename, data_0211e33c, &length))
+        if (LoadFileIntoMemory(filename, g_fileScratchSpace, &length))
         {
             unsigned int lengthAgain = length;
             void* allocation = alloc->Allocate(lengthAgain);
             if (allocation != NULL)
             {
-                memcpy(allocation, data_0211e33c, lengthAgain);
+                memcpy(allocation, g_fileScratchSpace, lengthAgain);
                 LoadType0AnimationFromPersistentMemory(slot, alloc, allocation, lengthAgain);
             }
         }
@@ -971,7 +971,7 @@ void Object3D::LoadType0AnimationPackageFromBCFGScript(const char *filename, Saf
 {
     BackgroundLoader::AddLockGlobal();
     unsigned int length;
-    const void* data = LoadFileIntoMemory(filename, data_0211e33c, &length);
+    const void* data = LoadFileIntoMemory(filename, g_fileScratchSpace, &length);
     if (data != NULL)
         LoadType0AnimationPackageFromBCFGScript(alloc, data, length);
     BackgroundLoader::RemoveLockGlobal();
@@ -1966,7 +1966,9 @@ bool Object3D::IsChild() const
 
 bool Object3D::IsParent() const
 {
-    return pNextChild_ != NULL && pPrevChild_ == NULL;
+    if (pNextChild_ != NULL && pPrevChild_ == NULL)
+        return true;
+    return false;
 }
 
 int Object3D::GetFlag(int mask) const { return flags_ & mask; }

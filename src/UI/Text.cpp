@@ -36,15 +36,15 @@ struct Struct_02107800
 {
     TileMapIndexData* tileMapIndices;
     unsigned char* windowBorderTiles;
-    unsigned short* buffer_8;
+    unsigned short* glyphIndexBuffer;
     char* secondaryScratchBuffer;
-    void* buffer_10;
-    char* buffer_14;
+    JPNFont* f8MesFile;
+    char* fullMessageBuffer;
     char* primaryScratchBuffer;
     TextManager* manager;
     char unk_20[4]; // something related to sound
     void* buffer_24;
-    char* buffer_28;
+    char* currentPageMessageBuffer;
     FontIndexFile* pFontIndexFiles[2];
     FontDataFile* pFontDataFiles[2];
 } extern data_02107800;
@@ -112,6 +112,9 @@ extern char data_020f00c3[]; // "<SKIP="
 
 extern char data_02108760[];
 
+static void SetF8MesFile(void* to);
+void FixJPNFontPointers(void* fileData);
+
 extern "C"
 {
     // probably atoi
@@ -133,9 +136,11 @@ extern "C"
     // close quest screen maybe?
     void func_0208beb4(int);
 
+    void* func_02094a00();
     void func_02094a10(void*);
     void func_02094a20(void*, SafeAllocator*);
     void func_02094a24(void*);
+    JPNFont* func_02094b44(void*, int);
 
     void func_020bc078(void*);
 
@@ -535,6 +540,75 @@ const unsigned char* GetWindowBorderTile(int id)
     return data_02107800.windowBorderTiles + (id * 32);
 }
 
+void InitializeTextSystem(SafeAllocator* alloc)
+{
+    void* allocatorBuffer = alloc->Allocate(0x400);
+    data_0210783c.CreateTypeA(allocatorBuffer, 0x400);
+    data_02107800.manager = (TextManager*)alloc->Allocate(sizeof(TextManager));
+    data_02107800.tileMapIndices = (TileMapIndexData*)alloc->Allocate(0xf99);
+    data_02107800.manager->mainUIElement_34_ = (UIElement*)alloc->Allocate(sizeof(UIElement));
+    data_02107800.fullMessageBuffer = (char*)alloc->Allocate(0x960);
+    data_02107800.glyphIndexBuffer = (unsigned short*)alloc->Allocate(0x280);
+    data_02107800.currentPageMessageBuffer = (char*)alloc->Allocate(0x280);
+    data_02107800.buffer_24 = alloc->Allocate(0x960);
+    data_02107800.primaryScratchBuffer = (char*)alloc->Allocate(0x960);
+    data_02107800.secondaryScratchBuffer = (char*)alloc->Allocate(0x960);
+    LoadCustomFonts(alloc);
+    BackgroundLoader::AddLockGlobal();
+
+    unsigned int winDataSize = 0;
+    void* winData = LoadFileIntoMemory(data_020f000b, g_fileScratchSpace, &winDataSize);
+    BGLayer::CharacterData charData;
+    charData.Reset();
+    if (winData != NULL)
+        memcpy(&charData, winData, 12);
+    
+    unsigned int winDataVRAMSize = charData.GetVRAMSize();
+    data_02107800.windowBorderTiles = (unsigned char*)alloc->Allocate(winDataVRAMSize);
+    unsigned char* borderTileSource = g_fileScratchSpace;
+    memcpy(data_02107800.windowBorderTiles, borderTileSource + 0x10, winDataVRAMSize);
+
+    unsigned int fontInnerFileOffset;
+    unsigned int zero = 0;
+    unsigned int fontInnerFileSize = 0;
+    unsigned char* fontLv5Storage = g_fileScratchSpace;
+    unsigned int bufferCapacity = 0x30000;
+    ScopedGPCReader reader;
+
+    if (LoadAndDecompressGPCHeaderAndInnerFileInfo(&reader.pGPCFile, &reader.machine, data_020f0023,
+            fontLv5Storage, &fontInnerFileSize, bufferCapacity, false, NULL))
+    {
+        fontInnerFileOffset = fontInnerFileSize;
+        DecompressFileFromGPCByName(&reader.pGPCFile, &reader.machine, 
+            fontLv5Storage + fontInnerFileOffset, &fontInnerFileSize,
+            bufferCapacity - fontInnerFileOffset, data_020f003f);
+        unsigned int alignedLength = (fontInnerFileSize + 3) & ~3;
+        reader.Reset();
+        fontInnerFileSize = zero + (zero + (zero + alignedLength));
+        memcpy(data_01ff9740, fontLv5Storage + fontInnerFileOffset, fontInnerFileSize);
+    }
+
+    BackgroundLoader::RemoveLockGlobal();
+    data_0210783c.Reset();
+    TextManager* mgr = data_02107800.manager;
+    mgr->cursorObjectsAllocator_2d4_ = &data_0210783c;
+
+    void* unknownObject = alloc->Allocate(0x68);
+    func_02094a24(unknownObject);
+    func_02094a20(unknownObject, alloc);
+    func_02094a10(unknownObject);
+    FixJPNFontPointers(data_01ff9740 + zero);
+
+    SetF8MesFile(data_01ff9740 + zero);
+    
+    data_02107800.manager->fullMessage_48_ = data_02107800.fullMessageBuffer;
+    data_02107800.manager->glyphIndexList_4c_ = data_02107800.glyphIndexBuffer;
+    data_02107800.manager->currentPageMessage_50_ = data_02107800.currentPageMessageBuffer;
+    data_02107800.manager->ptr_5c = data_02107800.buffer_24;
+    data_02107800.manager->pageScratchBuffer_60_ = data_02107800.primaryScratchBuffer;
+    data_02107800.manager->scratchBuffer_64_ = data_02107800.secondaryScratchBuffer;
+}
+
 char* GetTextTagEnd(char* input)
 {
     if (input != NULL)
@@ -752,6 +826,79 @@ void LoadCustomFonts(SafeAllocator* alloc)
     LoadCustomFont(alloc, data_020f0079, &data_02107800.pFontIndexFiles[0], &data_02107800.pFontDataFiles[0]);
     LoadCustomFont(alloc, data_020f007c, &data_02107800.pFontIndexFiles[1], &data_02107800.pFontDataFiles[1]);
     BackgroundLoader::RemoveLockGlobal();
+}
+
+static void SetF8MesFile(void* to)
+{
+    if (to != NULL)
+        data_02107800.f8MesFile = (JPNFont*)to;
+}
+
+void FixJPNFontPointers(void* fileData)
+{
+    if (fileData == NULL)
+        return;
+    JPNFont* font = (JPNFont*)fileData;
+    font->sjisKeys = (unsigned char*)((intptr_t)font + (intptr_t)font->sjisKeys);
+    font->pixelData = (unsigned char*)((intptr_t)font + (intptr_t)font->pixelData);
+}
+
+JPNFont* GetJPNFont(int size)
+{
+    JPNFont* font = NULL;
+    if (size == 8)
+        font = data_02107800.f8MesFile;
+    return font;
+}
+
+TileMapIndexData* GetFontStagingData()
+{
+    return data_02107800.tileMapIndices;
+}
+
+const void* GetJPNCharacterBitmap(JPNFont* font, const char* sjis)
+{
+    if (font == NULL)
+        return NULL;
+    int numEntries;
+    const unsigned char* keyLookup;
+    int i;
+    unsigned char byte0, byte1;
+    if (sjis == NULL)
+    {
+        byte0 = 0;
+        byte1 = 0;
+    }
+    else
+    {
+        byte0 = sjis[0];
+        byte1 = sjis[1];
+    }
+
+    numEntries = font->numEntries;
+    keyLookup = font->sjisKeys;
+    for (i = 0; i < numEntries; keyLookup += 2, i++)
+    {
+        if (byte0 == keyLookup[0] && byte1 == keyLookup[1])
+            return font->pixelData + i * font->stride;
+    }
+
+    return NULL;
+}
+
+const void* GetJPNCharacterBitmap(int size, const char* sjis)
+{
+    if (sjis == NULL)
+        return NULL;
+
+    JPNFont* font = GetJPNFont(size);
+    const void* bitmap = GetJPNCharacterBitmap(font, sjis);
+    if (bitmap != NULL)
+        return bitmap;
+
+    font = func_02094b44(func_02094a00(), size);
+    bitmap = GetJPNCharacterBitmap(font, sjis);
+    return bitmap;
 }
 
 int TextManager::MaybeAcquireGlyphVRAM(unsigned char *bitfield, unsigned int numBytes)

@@ -118,6 +118,17 @@ enum ControlWord
     ControlWord_JPBase = 0xffe0,
 };
 
+// Used in font_lv5.gp2, in international version only contains f8.mes and
+// this is the format of that file
+struct JPNFont
+{
+    uint16_t stride;
+    char unk_2[4];
+    int16_t numEntries;
+    unsigned char* sjisKeys;
+    unsigned char* pixelData;
+};
+
 namespace StringBuilders
 {
     int AddXTag(char* buffer, int x);
@@ -157,7 +168,8 @@ int MeasureTextWidth(const char* text, int fontType);
 unsigned char GetFontIDBySize(int size);
 // usa: func_020421b0
 const unsigned char* GetWindowBorderTile(int id);
-
+// usa: func_020421c4
+void InitializeText(SafeAllocator* alloc);
 // usa: func_020424ac
 // returns a pointer to the '>' closing all open tags. (i.e. add 1 to go past
 // the tag entirely)

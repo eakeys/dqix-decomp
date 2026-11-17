@@ -409,7 +409,7 @@ void TextManager::AdvanceAutoTimer(unsigned int ticks)
     LoadNextPage();
 }
 
-void TextManager::Update(unsigned int argNumTicks)
+void TextManager::InternalUpdate(unsigned int argNumTicks)
 {
     int numTicks = argNumTicks;
     if (numTicks == 0)
@@ -1617,20 +1617,20 @@ void ProcessVALTag(const char* input, char** ppOutput, TextManager* manager, int
 {
     int lookupIndex = GetNextNumberInString(input);
     
-    int value = manager->valueLookup[lookupIndex - 1];
-    int unknownThing = manager->valueUnknownArray[lookupIndex - 1];
-    int paddingMode = manager->maybeValuePaddingModes[lookupIndex - 1];
+    int value = manager->valueLookup_8b0_[lookupIndex - 1];
+    int totalWidth = manager->valueWidths_902_[lookupIndex - 1];
+    int alignment = manager->valueAlignments_8f1_[lookupIndex - 1];
 
-    if (unknownThing != 0)
+    if (totalWidth != 0)
     {
-        int W = unknownThing * 8 - MeasureNumberTextWidth(0, value);
-        switch (paddingMode)
+        int padding = totalWidth * 8 - MeasureNumberTextWidth(0, value);
+        switch (alignment)
         {
         case 0: // pad on the right?
-            *ppOutput += sprintf(*ppOutput, data_020f08df, value, W);
+            *ppOutput += sprintf(*ppOutput, data_020f08df, value, padding);
             break;
         case 1: // pad on the left?
-            *ppOutput += sprintf(*ppOutput, data_020f08e8, W, value);
+            *ppOutput += sprintf(*ppOutput, data_020f08e8, padding, value);
             break;
         default:
             *ppOutput += sprintf(*ppOutput, data_020f08f1, value);
@@ -1820,7 +1820,7 @@ int TextConditional_FemaleParty(GameState* state, TextManager*, int)
 
 int TextConditional_Solo(GameState* state, TextManager* mgr, int)
 {
-    char partySize = mgr->unknown_30_;
+    char partySize = mgr->maybePartySize_30_;
     if (partySize < 0)
         partySize = func_02010828(state)[0xf7c];
     if (partySize != 1)
@@ -1846,7 +1846,7 @@ int TextConditional_SoloHost(GameState* state, TextManager*, int)
 int TextConditional_Alone(GameState* state, TextManager* mgr, int)
 {
     unsigned char* partyData = func_02010828(state);
-    char numAlive = mgr->unknown_31_;
+    char numAlive = mgr->maybeNumAlive_31_;
     if (numAlive < 0)
     {
         numAlive = 0;
@@ -1868,11 +1868,11 @@ int TextConditional_Alone(GameState* state, TextManager* mgr, int)
     return 0;
 }
 
-int TextConditional_Value1Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[0] == 1) ? 0 : 1; }
-int TextConditional_Value2Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[1] == 1) ? 0 : 1; }
-int TextConditional_Value3Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[2] == 1) ? 0 : 1; }
-int TextConditional_Value4Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[3] == 1) ? 0 : 1; }
-int TextConditional_Value5Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup[4] == 1) ? 0 : 1; }
+int TextConditional_Value1Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup_8b0_[0] == 1) ? 0 : 1; }
+int TextConditional_Value2Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup_8b0_[1] == 1) ? 0 : 1; }
+int TextConditional_Value3Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup_8b0_[2] == 1) ? 0 : 1; }
+int TextConditional_Value4Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup_8b0_[3] == 1) ? 0 : 1; }
+int TextConditional_Value5Single(GameState*, TextManager* mgr, int) { return (mgr->valueLookup_8b0_[4] == 1) ? 0 : 1; }
 
 int TextConditional_Item1PluraleTantum(GameState*, TextManager* mgr, int)
 {
@@ -2123,35 +2123,35 @@ int TextConditional_TargetStartsWithFrenchVowel(GameState*, TextManager* mgr, in
 
 int TextConditional_Value1SingleFrench(GameState*, TextManager* mgr, int)
 {
-    if (mgr->valueLookup[0] != 0 && mgr->valueLookup[0] != 1)
+    if (mgr->valueLookup_8b0_[0] != 0 && mgr->valueLookup_8b0_[0] != 1)
         return 1;
     return 0;
 }
 
 int TextConditional_Value2SingleFrench(GameState*, TextManager* mgr, int)
 {
-    if (mgr->valueLookup[1] != 0 && mgr->valueLookup[1] != 1)
+    if (mgr->valueLookup_8b0_[1] != 0 && mgr->valueLookup_8b0_[1] != 1)
         return 1;
     return 0;
 }
 
 int TextConditional_Value3SingleFrench(GameState*, TextManager* mgr, int)
 {
-    if (mgr->valueLookup[2] != 0 && mgr->valueLookup[2] != 1)
+    if (mgr->valueLookup_8b0_[2] != 0 && mgr->valueLookup_8b0_[2] != 1)
         return 1;
     return 0;
 }
 
 int TextConditional_Value4SingleFrench(GameState*, TextManager* mgr, int)
 {
-    if (mgr->valueLookup[3] != 0 && mgr->valueLookup[3] != 1)
+    if (mgr->valueLookup_8b0_[3] != 0 && mgr->valueLookup_8b0_[3] != 1)
         return 1;
     return 0;
 }
 
 int TextConditional_Value5SingleFrench(GameState*, TextManager* mgr, int)
 {
-    if (mgr->valueLookup[4] != 0 && mgr->valueLookup[4] != 1)
+    if (mgr->valueLookup_8b0_[4] != 0 && mgr->valueLookup_8b0_[4] != 1)
         return 1;
     return 0;
 }
@@ -2615,7 +2615,7 @@ void TextManager::SubstituteNamesAndArticles(char *input, char *argOutput, unsig
         }
         else if (ch == '[')
         {
-            if (memcmp(input, data_020f0904, 4) == 0)
+            if (memcmp(input, data_020f0904, 4) == 0) // [WPN
             {
                 input += 4;
                 PartyMember* member = (PartyMember*)GameState::GetInstance()->GetObject100(partyMemberIndex_1880_);
@@ -2639,7 +2639,7 @@ void TextManager::SubstituteNamesAndArticles(char *input, char *argOutput, unsig
             else if (memcmp(input, data_020f0909, 6) == 0) // [ACTER= [sic]
             {
                 input += 6;
-                output += sprintf(output, tmapSecStrings_2ec_[3]);
+                output += sprintf(output, actorBuffer_3ac_);
             }
             else
             {

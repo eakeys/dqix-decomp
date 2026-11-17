@@ -59,7 +59,7 @@ void TextBoxGraphics::Create()
     BackgroundLoader::AddLockGlobal();
     NarcHandle narc;
     unsigned int fileLength;
-    void* iconArchive = LoadFileIntoMemory("data/bin/icon.nsarc", data_0211e33c, &fileLength);
+    void* iconArchive = LoadFileIntoMemory("data/bin/icon.nsarc", g_fileScratchSpace, &fileLength);
     if (iconArchive != NULL)
     {
         if (narc.Initialize("ARC", (const unsigned char*)iconArchive))

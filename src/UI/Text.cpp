@@ -123,7 +123,6 @@ extern "C"
 
     void func_02042998(void*);
     void func_02043224(TextManager*);
-    void func_02044c74(TextManager*, UIElement*);
 
     void func_0205e944(void*, int);
     void func_0205eaa0(void*, int, void*);
@@ -712,12 +711,12 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
     char fileName[64] = {0};
     sprintf(fileName, data_020f0049, name);
     unsigned int fileSize = 0;
-    LoadFileIntoMemory(fileName, data_0211e33c, &fileSize);
+    LoadFileIntoMemory(fileName, g_fileScratchSpace, &fileSize);
 
     if (fileSize != 0)
     {
         *ppIndex = (FontIndexFile*)alloc->Allocate(fileSize);
-        memcpy(*ppIndex, data_0211e33c, fileSize);
+        memcpy(*ppIndex, g_fileScratchSpace, fileSize);
         FontIndexFile* basePtr = *ppIndex;
         intptr_t baseAddr = (intptr_t)basePtr;
         // convert stored offsets into legitimate pointers
@@ -736,12 +735,12 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
     memset(fileName, 0, sizeof(fileName));
     sprintf(fileName, data_020f0061, name);
     fileSize = 0;
-    LoadFileIntoMemory(fileName, data_0211e33c, &fileSize);
+    LoadFileIntoMemory(fileName, g_fileScratchSpace, &fileSize);
 
     if (fileSize != 0)
     {
         *ppData = (FontDataFile*)alloc->Allocate(fileSize);
-        memcpy(*ppData, data_0211e33c, fileSize);
+        memcpy(*ppData, g_fileScratchSpace, fileSize);
         FontDataFile* basePtr = *ppData;
         basePtr->ptr_c = (unsigned char*)((intptr_t)basePtr + (intptr_t)basePtr->ptr_c);
     }
@@ -795,6 +794,16 @@ void TextManager::SetTextureArena(TextureArena* to)
     textureArena_1e28_ = to;
 }
 
+void TextManager::SetModeOverworldMessage()
+{
+    mojiArg1_1860_ = 12;
+    mojiArg2_1864_ = 16;
+    ConfigureMainTextBox(2, 146, 252, 74);
+    unknown_19b2_ = false;
+    showWindow_19b1_ = false;
+    effects_195b_ |= 2;
+}
+
 void SetViewport(int* viewport, int left, int top, int right, int bottom);
 
 void TextManager::ConfigureMainTextBox(int x, int y, int width, int height)
@@ -817,8 +826,8 @@ void SetViewport(int* viewport, int left, int top, int right, int bottom)
 
 void TextManager::Initialize()
 {
-    unknown_30_ = 0xff;
-    unknown_31_ = 0xff;
+    maybePartySize_30_ = 0xff;
+    maybeNumAlive_31_ = 0xff;
     unknown_38_ = NULL;
     unknown_3c_ = 9;
     unknown_8c_ = 0;
@@ -835,7 +844,7 @@ void TextManager::Initialize()
     unknown_2e8_ = 0;
     memset(customStrings_4ac_, 0, sizeof(customStrings_4ac_));
     unknown_8ac_ = 0;
-    memset(valueLookup, 0, sizeof(valueLookup));
+    memset(valueLookup_8b0_, 0, sizeof(valueLookup_8b0_));
     voiceSoundEffectTimer_912_ = 0;
     unknown_19b0_ = 0;
     fadeRescaledAlpha_9b0_ = 0;
@@ -1200,7 +1209,7 @@ void TextManager::RefreshGraphics(bool arg)
     {
         int shakeX, shakeY;
         GetBoxShakeOffset(&shakeX, &shakeY);
-        func_02044c74(this, mainUIElement_34_);
+        ClearUIElement(mainUIElement_34_);
 
         UIElement* ui = mainUIElement_34_;
         unsigned char* pixelBuffer = ui->pixelBuffer_8_;
@@ -1505,8 +1514,7 @@ bool TextManager::TryAdvanceMessage()
         {
             if (!unknown_19d3_)
                 func_0205eaa0(&data_02108760, 1, 0);
-            pauseType_9a0_ = 5;
-            unknown_78_++;
+            ResumeTextScroll();
             voiceSoundEffectTimer_912_ = 0;
         }
         break;
@@ -1545,6 +1553,17 @@ bool TextManager::IsNextCharacterControlAlt(const void* text) const
     if ((word & 0xff00) == 0xff00)
         return true;
     return false;
+}
+
+void TextManager::ResumeTextScroll()
+{
+    pauseType_9a0_ = 5;
+    unknown_78_++;
+}
+
+void TextManager::Update(unsigned int numTicks)
+{
+    InternalUpdate(numTicks);
 }
 
 void TextManager::DrawDialogueOptions(bool use2D)
@@ -1764,6 +1783,33 @@ const char* TextManager::HandleImmediateBoxTags(const char* in)
     return in;
 }
 
+void TextManager::ClearUIElement(UIElement* element)
+{
+    element->Reset();
+    unsigned char* allocation = (unsigned char*)AllocateVRAMStagingMemory(0x4800);
+    if (allocation == NULL)
+        return;
+    if (unknown_19cd_)
+    {
+        unknown_19cd_ = false;
+        memset(allocation, 0, 0x4800);
+    }
+    element->leftTile_ac_ = 0;
+    element->topTile_ae_ = 6;
+    element->numTilesX_a8_ = 32;
+    element->numTilesY_aa_ = 18;
+    element->pixelBuffer_8_ = allocation;
+    element->bufferSize_a4_ = 0x4800;
+    element->vramOffset_a0_ = 0;
+    element->borderPalette_c2_ = 0;
+    element->textXOffset_b0_ = 0;
+    element->textYOffset_b2_ = 0;
+    element->unknown_b4_ = 8;
+    element->lineSpacing_b6_ = 8;
+    element->unknown_b8_ = 8;
+    element->overrideLineSpacing_ba_ = 8;
+}
+
 static void ReloadBGLayers()
 {
     // enable obj and BG3, disable the rest
@@ -1851,8 +1897,8 @@ void TextManager::AddMessage(const char* msg, int graphicsMode)
         unknown_44_ = 0;
         ClearGlyphTextureVRAM(textureArena_1e28_);
     }
-    unknown_30_ = -1;
-    unknown_31_ = -1;
+    maybePartySize_30_ = -1;
+    maybeNumAlive_31_ = -1;
 }
 
 extern const int data_020e7a94[];
@@ -2039,8 +2085,8 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         if (textureArena_1e28_ != NULL)
             textureArena_1e28_->Reset(); 
     }
-    unknown_30_ = -1;
-    unknown_31_ = -1;
+    maybePartySize_30_ = -1;
+    maybeNumAlive_31_ = -1;
     if (probablyItemID > 0)
         gs->unknown_7f58_ = 0;
 }
@@ -2481,10 +2527,104 @@ void TextManager::ReleaseText16Bit(unsigned short *wordList, int len)
     }
 }
 
+void TextManager::ClearCachedData()
+{
+    maybePartySize_30_ = -1;
+    maybeNumAlive_31_ = -1;
+    partyMemberIndex_1880_ = -1;
+    memset(tmapSecStrings_2ec_, 0, sizeof(tmapSecStrings_2ec_));
+    memset(actorBuffer_3ac_, 0, sizeof(actorBuffer_3ac_));
+    memset(buffer_3ec_, 0, sizeof(buffer_3ec_));
+    memset(buffer_42c_, 0, sizeof(buffer_42c_));
+    memset(buffer_46c_, 0, sizeof(buffer_46c_));
+    memset(customStrings_4ac_, 0, sizeof(customStrings_4ac_));
+    memset(valueLookup_8b0_, 0, sizeof(valueLookup_8b0_));
+    memset(valueAlignments_8f1_, 0, sizeof(valueAlignments_8f1_));
+    memset(valueWidths_902_, 0, sizeof(valueWidths_902_));
+    unknown_8ac_ = 0;
+    unknown_901_ = 0;
+    unknown_8f0_ = 0;
+    unknown_2e8_ = 0;
+    for (int i = 0; i < 2; i++)
+    {
+        actors_0_[i] = NULL;
+        actions_8_[i] = NULL;
+        targets_10_[i] = NULL;
+        items_18_[i] = NULL;
+        monsters_20_[i] = NULL;
+    }
+    vocation_28_ = NULL;
+    reflex_2c_ = NULL;
+    targetIsParty_19d5_ = false;
+    actorIsParty_19d6_ = false;
+    multipleTargets_19d7_ = false;
+    maybeTargetingMultipleGroups_19d8_ = false;
+}
+
+static void CopyStringSafe(const char* src, char* dst, int bufferSize)
+{
+    if (src == NULL || dst == NULL)
+        return;
+    strncpy(dst, src, bufferSize - 1);
+    dst[bufferSize - 1] = '\0';
+}
+
 void TextManager::StorePartyMemberIndex(char idx)
 {
     partyMemberIndex_1880_ = idx;
 }
+
+void TextManager::StoreMapSectionString(int section, const char *str)
+{
+    CopyStringSafe(str, tmapSecStrings_2ec_[section], sizeof(tmapSecStrings_2ec_[section]));
+}
+
+void TextManager::StoreActorString(const char *str)
+{
+    CopyStringSafe(str, actorBuffer_3ac_, sizeof(actorBuffer_3ac_));
+}
+
+void TextManager::StoreUnknownString_3ec(const char *str)
+{
+    CopyStringSafe(str, buffer_3ec_, sizeof(buffer_3ec_));
+}
+
+void TextManager::StoreUnknownString_42c(const char *str)
+{
+    CopyStringSafe(str, buffer_42c_, sizeof(buffer_42c_));
+}
+
+void TextManager::StoreUnknownString_46c(const char *str)
+{
+    CopyStringSafe(str, buffer_46c_, sizeof(buffer_46c_));
+}
+
+void TextManager::StoreCustomString(int index, const char *str)
+{
+    if (str == NULL || index < 0 || index >= 16)
+        return;
+    strncpy(customStrings_4ac_[index], str, sizeof(customStrings_4ac_[index]) - 1);
+    customStrings_4ac_[index][sizeof(customStrings_4ac_[index]) - 1] = '\0';
+}
+
+void TextManager::StoreValue(int index, int value)
+{
+    if (index >= 0 && index < 16)
+        valueLookup_8b0_[index] = value;
+}
+
+void TextManager::SetValueAlignment(int index, int alignment)
+{
+    if(index >= 0 && index < 16)
+        valueAlignments_8f1_[index] = alignment;
+}
+
+void TextManager::SetValueWidth(int index, int width)
+{
+    if (index >= 0 && index < 16)
+        valueWidths_902_[index] = width;
+}
+
 
 void TextManager::ProcessMarkup(int unused, const char* input, char* output,
     int boxWidth, int margin, unsigned char fontIndex)

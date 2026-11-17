@@ -106,12 +106,12 @@ static int (*s_getEnabledWindows[2])() = {
     &GetMainEnabledWindows, &GetSubEnabledWindows
 };
 
-static void (*s_setWindowOut[2])(int, int) = {
-    &SetMainWindowOut, &SetSubWindowOut
-};
-
 static void (*s_setEnabledWindows[2])(int) = {
     &SetMainEnabledWindows, &SetSubEnabledWindows
+};
+
+static void (*s_setWindowOut[2])(int, int) = {
+    &SetMainWindowOut, &SetSubWindowOut
 };
 
 static void (*s_setWindowBounds[2][2])(int, int, int, int) = {

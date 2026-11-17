@@ -223,8 +223,8 @@ public:
     Noun* monsters_20_[2];
     Noun* vocation_28_;
     Noun* reflex_2c_;
-    char unknown_30_;
-    char unknown_31_;
+    char maybePartySize_30_;
+    char maybeNumAlive_31_;
     char pad_32[2];
     UIElement* mainUIElement_34_;
     void* unknown_38_;
@@ -269,17 +269,21 @@ public:
     unsigned char unknown_2e6_;
     unsigned char cursorObjectLoadStatus_2e7_;
     int unknown_2e8_;
-    char tmapSecStrings_2ec_[7][0x40];
+    char tmapSecStrings_2ec_[3][0x40];
+    char actorBuffer_3ac_[0x40];
+    char buffer_3ec_[0x40];
+    char buffer_42c_[0x40];
+    char buffer_46c_[0x40];
     char customStrings_4ac_[16][0x40];
     int unknown_8ac_;
     // not sure about size. Text can have markers <val_1>, <val_2> or similar
     // which get replaced by game quantities e.g. amount of gold, this array
     // stores the replacement values
-    int valueLookup[16]; // @ 0x8b0
-    char unk_8f0[1];
-    unsigned char maybeValuePaddingModes[16];
-    char unk_901[1];
-    unsigned char valueUnknownArray[16];
+    int valueLookup_8b0_[16]; // @ 0x8b0
+    char unknown_8f0_;
+    unsigned char valueAlignments_8f1_[16];
+    char unknown_901_;
+    unsigned char valueWidths_902_[16];
     char voiceSoundEffectTimer_912_; // counts up, when >= 4 subtract 4 and play the sound effect
     char unk_913[1];
     TextBox mainTextBox_914_; // func_02042fcc 
@@ -432,6 +436,11 @@ public:
     // usa: func_02042b30
     void SetTextureArena(TextureArena*);
 
+    // usa: func_02042b3c
+    // configure text to display like when acquiring an item in overworld /
+    // using whistle/vanish etc
+    void SetModeOverworldMessage();
+
     // usa: func_02042b98
     void ConfigureMainTextBox(int x, int y, int width, int height);
 
@@ -488,6 +497,12 @@ public:
     // identical to func_0206ac6c, might take unsigned short* instead?
     bool IsNextCharacterControlAlt(const void* text) const;
 
+    // usa: func_020444bc
+    void ResumeTextScroll();
+
+    // usa: func_020444d4
+    void Update(unsigned int numTicks);
+
     // usa: func_02044530
     void DrawDialogueOptions(bool use2D);
 
@@ -500,6 +515,9 @@ public:
     // process modifiers like <CEN> at the start of some text and return
     // a pointer past these
     const char* HandleImmediateBoxTags(const char* in);
+
+    // usa: func_02044c74
+    void ClearUIElement(UIElement* element);
 
     // usa: func_02044f3c
     void AddMessage(const char* msg, int graphicsMode);
@@ -546,9 +564,30 @@ public:
     
     // usa: func_020462d0
     void ReleaseText16Bit(unsigned short* words, int len);
+    // usa: func_02046380
+    void ClearCachedData();
+
     // usa: func_020464dc
     void StorePartyMemberIndex(char idx);
-
+    // usa: func_020464e8
+    void StoreMapSectionString(int section, const char* str);
+    // usa: func_02046404
+    void StoreActorString(const char* str);
+    // usa: func_02046520
+    void StoreUnknownString_3ec(const char* str);
+    // usa: func_0204653c
+    void StoreUnknownString_42c(const char* str);
+    // usa: func_02046558
+    void StoreUnknownString_46c(const char* str);
+    // usa: func_02046574
+    void StoreCustomString(int index, const char* str);
+    // usa: func_020465c0
+    void StoreValue(int index, int value);
+    // usa: func_020465d8
+    void SetValueAlignment(int index, int alignment);
+    // usa: func_020465f0
+    void SetValueWidth(int index, int width);
+    // usa: func_02046608
     void ProcessMarkup(int unused, const char* input, char* output, int boxWidth, int margin, unsigned char fontIndex);
 
     // usa: func_020654b8
@@ -571,7 +610,7 @@ public:
     // usa: func_02065920
     void AdvanceAutoTimer(unsigned int ticks);
     // usa: func_02065990
-    void Update(unsigned int numTicks);
+    void InternalUpdate(unsigned int numTicks);
 
     // usa: func_02066a6c
     // The bool probably has some deeper meaning

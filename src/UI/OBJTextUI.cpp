@@ -1,4 +1,4 @@
-#include "Graphics/AnotherRenderer.h"
+#include "UI/OBJTextUI.h"
 #include "NitroSDK/Cache.h"
 #include "NitroSDK/LoadToVRAM.h"
 #include "Resource/GameResources.h"
@@ -16,15 +16,15 @@ extern VRAMLoadProc data_020f2bb0[];
 
 extern "C"
 {
-    void func_020e2018(void*);
-
     GameResources* func_0200fb8c(GameState*);
 
     void* func_0203bd08();
     OAMEntryEXT* func_0203be40(void*); // main oam staging buffer
     OAMEntryEXT* func_0203be4c(void*); // sub oam staging buffer
 
+    // log_2(obj mapping boundary) by engine
     int func_0209378c(int);
+    // obj vram size by engine
     int func_020937f0(int);
 
 }

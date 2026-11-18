@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ClipWindow.h"
-#include "OBJBlitter.h"
+#include "../Graphics/ClipWindow.h"
+#include "../Graphics/OBJBlitter.h"
 #include <globaldefs.h>
 
 // sizeof == 0x4c.

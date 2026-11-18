@@ -205,6 +205,11 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
 // usa: func_02042944
 // loads both the s7 and me font from data/pack_lv5
 void LoadCustomFonts(SafeAllocator* alloc);
+// usa: func_020429d4
+void* GetFontStagingSpace();
+
+// usa: func_02042a50
+const void* GetJPNCharacterBitmap(int size, const char* sjis);
 
 // sizeof == 0x1e2c == 7724.
 // Dynamically allocated by func_020421c4. 

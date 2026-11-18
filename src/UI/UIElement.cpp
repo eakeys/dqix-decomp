@@ -11,9 +11,6 @@ extern "C"
     // probably atoi
     int func_02005a94(const char*);
 
-    // get special character at given size
-    const unsigned char* func_02042a50(int size, const char*);
-
     // alternate strlen
     int func_020d2ff0(const char*);
 }
@@ -1700,13 +1697,13 @@ void UIElement::DrawPageArrows()
     }
     x += 4;
     x -= offset;
-    const unsigned char* graphic = func_02042a50(8, data_020f0303);
+    const void* graphic = GetJPNCharacterBitmap(8, data_020f0303);
     if (graphic != NULL)
         BlitBitmap1Bit(graphic, x, y, 8, 8, 0xf0, 0xf);
     short width = numTilesX_a8_ * 8;
     x = width - 10;
     x += offset;
-    graphic = func_02042a50(8, data_020f0306);
+    graphic = GetJPNCharacterBitmap(8, data_020f0306);
     if (graphic != NULL)
         BlitBitmap1Bit(graphic, (short)(x - 1), y, 8, 8, 0xf0, 0xf);
 }

@@ -37,7 +37,9 @@ public:
     void BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y,
         unsigned char colorIndex, unsigned char fontIndex);
 
-    void BlitTile8x8(const void* pixels, short x, short y);
+    // last two args unused but were probably intended to be tile dimensions
+    // (always 8) and color (15)
+    void BlitTile8x8(const void* pixels, short x, short y, int, int);
 
     // alignment: 0 = left, 1 = right
     void BlitNumber(short x, short y, int number, unsigned char colorIndex,

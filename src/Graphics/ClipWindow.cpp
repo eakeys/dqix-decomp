@@ -180,3 +180,8 @@ void ClipWindow::SetBoundsXYWH(int x, int y, int width, int height)
     bounds_.right = x + width;
     bounds_.bottom = y + height;
 }
+
+void ClipWindow::SetScreen(unsigned char screen)
+{
+    screen_ = screen;
+}

@@ -20,7 +20,7 @@ struct GlyphPixelBuffer
     unsigned char pixels[0x80];
 };
 
-union TileMapIndexData
+union StagingSpace
 {
     struct
     {
@@ -34,7 +34,7 @@ union TileMapIndexData
 extern unsigned int data_021077fc; // palette VRAM offset for glyphs
 struct Struct_02107800
 {
-    TileMapIndexData* tileMapIndices;
+    StagingSpace* stagingSpace;
     unsigned char* windowBorderTiles;
     unsigned short* glyphIndexBuffer;
     char* secondaryScratchBuffer;
@@ -545,7 +545,7 @@ void InitializeTextSystem(SafeAllocator* alloc)
     void* allocatorBuffer = alloc->Allocate(0x400);
     data_0210783c.CreateTypeA(allocatorBuffer, 0x400);
     data_02107800.manager = (TextManager*)alloc->Allocate(sizeof(TextManager));
-    data_02107800.tileMapIndices = (TileMapIndexData*)alloc->Allocate(0xf99);
+    data_02107800.stagingSpace = (StagingSpace*)alloc->Allocate(0xf99);
     data_02107800.manager->mainUIElement_34_ = (UIElement*)alloc->Allocate(sizeof(UIElement));
     data_02107800.fullMessageBuffer = (char*)alloc->Allocate(0x960);
     data_02107800.glyphIndexBuffer = (unsigned short*)alloc->Allocate(0x280);
@@ -851,9 +851,9 @@ JPNFont* GetJPNFont(int size)
     return font;
 }
 
-TileMapIndexData* GetFontStagingData()
+void* GetFontStagingSpace()
 {
-    return data_02107800.tileMapIndices;
+    return data_02107800.stagingSpace;
 }
 
 const void* GetJPNCharacterBitmap(JPNFont* font, const char* sjis)
@@ -1127,8 +1127,8 @@ void TextManager::ResetTextBGLayers()
     if (unknown_19cc_ != 0)
     {
         unknown_19cc_ = 0;
-        TileMapIndexData* indices = data_02107800.tileMapIndices;
-        memset(indices, 0, sizeof(TileMapIndexData));
+        StagingSpace* indices = data_02107800.stagingSpace;
+        memset(indices, 0, sizeof(StagingSpace));
         StageMemoryToVRAM(VRAMSubregion_MainBG2Screen, indices->backgroundIndexBuffer, 0, 0x800, true, false);
         StageMemoryToVRAM(VRAMSubregion_MainBG3Screen, indices->backgroundIndexBuffer, 0, 0x800, true, false);
         void* bg1screen = (void*)GetMainBG1ScreenBase();
@@ -1448,12 +1448,12 @@ void TextManager::RefreshGraphics(bool arg)
 
             if (pauseType_9a0_ != 1 && pauseType_9a0_ != 0)
             {
-                memset(data_02107800.tileMapIndices->backgroundIndexBuffer, 0, 0x800);
+                memset(data_02107800.stagingSpace->backgroundIndexBuffer, 0, 0x800);
                 if (((unknown_998_ != 0 && showWindow_19b1_) || unknown_19cb_))
                 {
                     if (showWindow_19b1_)
                     {
-                        unsigned short* windowTiles = data_02107800.tileMapIndices->backgroundIndexBuffer;
+                        unsigned short* windowTiles = data_02107800.stagingSpace->backgroundIndexBuffer;
                         DrawTextBoxBackground(windowTiles, &mainBoxBounds, 0);
                         DrawTextBoxBackground(windowTiles, &speakerBoxBounds, 1);
                         DrawTextBoxBackground(windowTiles, &optionBoxBounds, 2);
@@ -1463,13 +1463,13 @@ void TextManager::RefreshGraphics(bool arg)
 
                 if (!showWindow_19b1_)
                     StageMemoryToVRAM(VRAMSubregion_MainBG2Screen,
-                        data_02107800.tileMapIndices->backgroundIndexBuffer, 0,
-                        sizeof(data_02107800.tileMapIndices->backgroundIndexBuffer),
+                        data_02107800.stagingSpace->backgroundIndexBuffer, 0,
+                        sizeof(data_02107800.stagingSpace->backgroundIndexBuffer),
                         true, false);
                 
                 if (unknown_74_ == unknown_78_ || unknown_998_ == 0)
                 {
-                    TileMapIndexData* indexData = data_02107800.tileMapIndices;
+                    StagingSpace* indexData = data_02107800.stagingSpace;
                     for (unsigned short i = 0; i < 0x100; i++)
                         indexData->textBorderIndexBuffer[i] = 0;
                     for (unsigned short i = 0x100; i < 0x300; i++)
@@ -1968,7 +1968,7 @@ static void ReloadBGLayers()
     BG2CNT = (BG2CNT & 0x43) | 0x1e00; // screen base block = 30
     BG3CNT = (BG3CNT & 0x43) | 0x1f08; // screen base block = 31, char base block 2
 
-    TileMapIndexData* stagingSpace = data_02107800.tileMapIndices;
+    StagingSpace* stagingSpace = data_02107800.stagingSpace;
     const void* windowGraphics = GetGameResources()->paletteData_2c;
 
     BGLayer layer;
@@ -2360,7 +2360,7 @@ int TextManager::LoadNewGlyph(unsigned char glyphIndex, const FontIndexFile::Gly
     if (glyph == NULL)
         return 0;
     
-    GlyphPixelBuffer* pixelBufferArray = data_02107800.tileMapIndices->glyphPixelData;
+    GlyphPixelBuffer* pixelBufferArray = data_02107800.stagingSpace->glyphPixelData;
     unsigned char* refcountArray = glyphRefcounts_17b8_;
     RenderGlyph* renderGlyphs = glyphs_;
     int vramSlot = MaybeAcquireGlyphVRAM(substruct_2cc_, sizeof(substruct_2cc_));

@@ -32,4 +32,5 @@ public:
     void SetEnabled(bool);
     void ConfigureInterior(int layers, int enableColorEffects);
     void SetBoundsXYWH(int x, int y, int width, int height);
+    void SetScreen(unsigned char screen);
 };

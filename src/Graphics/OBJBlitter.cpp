@@ -130,7 +130,7 @@ void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     }
 }
 
-void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top)
+void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top, int, int)
 {
     if (pixels == NULL)
         return;

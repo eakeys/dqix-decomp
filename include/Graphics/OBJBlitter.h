@@ -30,9 +30,14 @@ public:
     void SetDestination(unsigned char* to);
     void SetRegions(BlitRegion* desc, unsigned char count);
 
+#if defined(usa)
     // returns text width. Doesn't support line breaks
     int BlitText(short x, short y, const char* text,
         unsigned char colorIndex, unsigned char fontIndex);
+#elif defined(jpn)
+    int BlitText(short x, short y, const char* text,
+        unsigned char fontSize, unsigned char colorIndex);
+#endif
 
     void BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y,
         unsigned char colorIndex, unsigned char fontIndex);

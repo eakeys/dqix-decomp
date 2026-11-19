@@ -33,6 +33,7 @@ void OBJBlitter::SetRegions(BlitRegion* regions, unsigned char count)
     numRegions_ = count;
 }
 
+#if defined(usa)
 int OBJBlitter::BlitText(short x, short y,
     const char* text, unsigned char colorIndex, unsigned char fontIndex)
 {
@@ -70,6 +71,7 @@ int OBJBlitter::BlitText(short x, short y,
 
     return drawX - x;
 }
+#endif
 
 void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     unsigned char colorIndex, unsigned char fontIndex)

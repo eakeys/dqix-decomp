@@ -467,7 +467,11 @@ src/Resource/StringList.cpp:
     .text start:0x020e17a8 end:0x020e2284
     .data start:0x020f2cc4 end:0x020f2cd0
     
+src/UI/OBJTextUI.cpp:
+    complete
+    .text start:0x020e2e80 end:0x020e4030
+
 src/Graphics/ClipWindow.cpp:
     complete
-    .text start:0x020e4558 end:0x020e48ec
+    .text start:0x020e4558 end:0x020e48f4
     .data start:0x020f2d38 end:0x020f2d70

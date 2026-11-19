@@ -7,18 +7,19 @@
 // sizeof == 0x4c.
 // Used for rendering text/UI elements with the OBJ system, predominantly dialogue
 // while in the items/spells & abilities menu and the yes/no option box in shops.
-// owns bytes 1c0-1ff for the relevant engine's obj standard palette
+// owns bytes 1c0-1ff for the relevant engine's obj standard palette (i.e. palettes 14, 15)
 class OBJTextUI
 {
 public:
-    struct RegionStructC
+    struct Region
     {
-        unsigned int unknown_0;
-        unsigned int offset_4;
-        unsigned char originX_8;
-        unsigned char originY_9;
-        unsigned char width_a;
-        unsigned char height_b;
+        unsigned int shapeSize;
+        // relative to the owning OBJGraphics' vram offset
+        unsigned int relVramOffset;
+        unsigned char x;
+        unsigned char y;
+        unsigned char width;
+        unsigned char height;
 
         void Reset();
     };
@@ -47,22 +48,23 @@ public:
 
     struct OBJGraphics
     {
-        OBJBlitter::BlitRegion* blitRegions_0;
-        OBJBlitter* blitter_4;
-        RegionStructC* unknown_8;
-        CharacterBuffers character_c;
-        RegionStructC substruct_24;
-        int objVramBase_30;
-        int unknown_34;
-        unsigned char x_38;
-        unsigned char y_39;
-        unsigned char width_3a;
-        unsigned char height_3b;
-        unsigned char numRegions_3c;
-        unsigned char firstOAMEntry_3d;
-        unsigned char engine_3e;
-        unsigned char unknown_3f_0 : 1;
-        unsigned char unknown_3f_1 : 1;
+        OBJBlitter::BlitRegion* blitRegions;
+        OBJBlitter* blitter;
+        Region* regions;
+        CharacterBuffers charBuffers;
+        Region backgroundRegion;
+        // pixel data copied from stagingBuffer + vramOffset into (obj vram base) + vramOffset
+        unsigned int vramOffset;
+        unsigned int charDataSize;
+        unsigned char baseX;
+        unsigned char baseY;
+        unsigned char width;
+        unsigned char height;
+        unsigned char numRegions;
+        unsigned char oamIndexBase;
+        unsigned char engine;
+        unsigned char readyToSubmit : 1;
+        unsigned char pendingClose : 1;
 
         unsigned int GetPixelDataSize() const;
         void Reset();
@@ -78,17 +80,18 @@ public:
         void Set(short l, short t, short r, short b);
     };
 
-    unsigned char* buffer_0_;
-    OBJGraphics* unknown_4_;
-    char unknown_8_;
-    BoundingRect textRects_a_[3];
-    unsigned short colors_22_[2];
+    unsigned char* stagingBuffer_;
+    OBJGraphics* graphics_;
+    char numOptions_;
+    BoundingRect optionBounds_[3];
+    // 0: default (white), 1: highlight (green)
+    unsigned short textColors_[2];
     char pad_26[2];
-    ClipWindow clipWindow_28_;
+    ClipWindow clipWindow_;
 
 public:
     void Initialize(int screen, int windowID);
-    // loads to offset 0x1c0 + 2 * palettePosition
+    // loads to palette #14
     void LoadColorToPalette(int palettePosition, int index);
     void SetColor(int index, unsigned short value);
     void ReloadDefaultColors();
@@ -97,7 +100,7 @@ public:
     void ConfigureClipWindow();
     OBJGraphics* GetGraphics();
     unsigned int CreateInVRAM(unsigned int objVramSize);
-    void ResetStateFlags();
+    void RequestClose();
 
     bool CreateYesNoBox(unsigned int objVramSize);
     void GetOptionPosition(short* outX, short* outY, int option);
@@ -109,8 +112,12 @@ public:
     void Clear();
 
     void DrawTextBoxBorder();
+#if defined(usa)
     void DrawText(int textID, int x, int y, const char* text,
         unsigned char colorIndex, unsigned char fontIndex);
+#elif defined(jpn)
+    void DrawText(int textID, int x, int y, const char* text, unsigned char size, unsigned char colorIndex);
+#endif
     void FillRectangle(unsigned char colorIndex, short left, short top, short right, short bottom);
 
     void EndRender();

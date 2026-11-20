@@ -70,3 +70,13 @@ static inline void GXFifoWriteScaleFloat(float x, float y, float z)
 {
     GXFifoWriteScale(4096.0f * x, 4096.0f * y, 4096.0f * z);
 }
+
+static inline int GetMainEnabledLayers()
+{
+    return (DISPCNT & 0x1f00) >> 8;
+}
+
+static inline int SetMainEnabledLayers(int to)
+{
+    DISPCNT = (DISPCNT & ~0x1f00) | (to << 8);
+}

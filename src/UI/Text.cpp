@@ -124,9 +124,6 @@ extern "C"
     void* func_0203cf4c();
     void func_02040af0(void*, fix32_t);
 
-    void func_02042998(void*);
-    void func_02043224(TextManager*);
-
     void func_0205e944(void*, int);
     void func_0205eaa0(void*, int, void*);
     void func_0205eabc(void*, void*, int);
@@ -134,7 +131,7 @@ extern "C"
     void func_020656e4(TextManager*, int);
 
     // close quest screen maybe?
-    void func_0208beb4(int);
+    void func_0208beb4(void*);
 
     void* func_02094a00();
     void func_02094a10(void*);
@@ -149,14 +146,6 @@ extern "C"
     
     // populate noun from item ID?
     void func_020dcf7c(short, Noun*);
-
-    unsigned char* func_020e1b24(void*);
-    void func_020e1b2c(void*, int);
-    void func_020e1cb8(void*);
-    bool func_020e1f1c(void*);
-    void func_020e2110(void*);
-    void func_020e23f4(void*);
-    void func_020e2478(void*);
 }
 
 void WriteTexCoords(fix32_t x, fix32_t y); // can be made static
@@ -975,9 +964,9 @@ void TextManager::Initialize()
 {
     maybePartySize_30_ = 0xff;
     maybeNumAlive_31_ = 0xff;
-    unknown_38_ = NULL;
+    objUI_38_ = NULL;
     unknown_3c_ = 9;
-    unknown_8c_ = 0;
+    unknown_8c_ = NULL;
     dialogueOptions_90_.Reset();
     unknown_2c8_ = 0;
     memset(substruct_2cc_, 0, sizeof(substruct_2cc_));
@@ -1084,11 +1073,9 @@ void TextBox::Reset()
 void TextManager::Destroy()
 {
     textBoxGraphics_19e0_.Destroy();
-    func_02043224(this);
-    DestroyRenderGlyphs();
-    ResetTextBGLayers();
-    ResetBoxes();
-    unknown_38_ = NULL;
+    Close();
+    Cleanup();
+    objUI_38_ = NULL;
 }
 
 void TextManager::DestroyRenderGlyphs()
@@ -1138,16 +1125,35 @@ void TextManager::ResetTextBGLayers()
         // set enabled layers: enable bg0, bg1, obj, disable bg2, bg3
         DISPCNT = (DISPCNT & ~0x1f00) | 0x1300;
     }
-    if (unknown_38_ != NULL)
-        func_020e1cb8(unknown_38_);
-    unknown_38_ = NULL;
+    if (objUI_38_ != NULL)
+        objUI_38_->RequestClose();
+    objUI_38_ = NULL;
 }
 
-void TextManager::Close()
+void TextManager::Cleanup()
 {
     DestroyRenderGlyphs();
     ResetTextBGLayers();
     ResetBoxes();
+}
+
+void TextManager::Close()
+{
+    unknown_19cc_ = false;
+    numGlyphsInUse_9b4_ = 0;
+    for (int i = 0; i < 0x80; i++)
+    {
+        glyphs_[i].Reset2();
+        glyphRefcounts_17b8_[i] = 0;
+    }
+    ResetTextBGLayers();
+    textBoxGraphics_19e0_.ResetBoxStatus();
+    textBoxGraphics_19e0_.activeBox_ = &speakerTextBox_930_;
+    textBoxGraphics_19e0_.ResetBoxStatus();
+    textBoxGraphics_19e0_.activeBox_ = &mainTextBox_914_;
+    showWindow_19b1_ = false;
+    npcID_1838_ = -1;
+    npcPriorRotation_183c_ = 0;
 }
 
 void TextManager::InitializeRenderGlyphs()
@@ -1364,7 +1370,7 @@ void TextManager::RefreshGraphics(bool arg)
         {
             ui->pixelBuffer_8_ = pixelBuffer; // wtf?
             unknown_19cc_ = 0;
-            Draw(true);
+            InternalDraw(true);
             unknown_19cc_ = 1;
             if (boxShakeActive_19c0_)
                 unknown_40_ = 0;
@@ -1647,7 +1653,7 @@ bool TextManager::TryAdvanceMessage()
                     }
                     else if (nextWord == ControlWord_SlashQuest)
                     {
-                        if (unknown_8c_ != 0)
+                        if (unknown_8c_ != NULL)
                             func_0208beb4(unknown_8c_);
                     }
                 }
@@ -1655,7 +1661,7 @@ bool TextManager::TryAdvanceMessage()
             }
             StopVoiceSoundEffect();
             pauseType_9a0_ = 0;
-            Close();
+            Cleanup();
         }
         else
         {
@@ -1713,6 +1719,21 @@ void TextManager::Update(unsigned int numTicks)
     InternalUpdate(numTicks);
 }
 
+void TextManager::Draw()
+{
+    if (objUI_38_ != NULL)
+    {
+        if (objUI_38_->BeginRender() != NULL)
+        {
+            InternalDraw(false);
+            objUI_38_->EndRender();
+            objUI_38_->FreeStagingMemory();
+        }
+    }
+    else
+        InternalDraw(false);
+}
+
 void TextManager::DrawDialogueOptions(bool use2D)
 {
     if (pauseType_9a0_ == 6 && unknown_19ba_ != 0)
@@ -1731,6 +1752,88 @@ void GetUIElementTopRight(const UIElement* elt, short* outX, short* outY)
     height *= 8;
     *outX = left + (width >> 1);
     *outY = height - 10;
+}
+
+void TextManager::DrawBlinkingCursor(bool use2D)
+{
+    if (pauseType_9a0_ == 1 || pauseType_9a0_ == 3 || pauseType_9a0_ == 2)
+    {
+        if (!cursorPresent_19ca_)
+            return;
+        if (use2D)
+        {
+            short x, y;
+            GetUIElementTopRight(mainUIElement_34_, &x, &y);
+            int left = x - 3;
+            int top = y;
+            int right = x + 4;
+            int bottom = y + 4;
+            mainUIElement_34_->FillRectangle2(0, left, top, right, bottom);
+        }
+    }
+    if (cursorVisibleThisFrame_19af_ != true)
+        return;
+    
+    if (use2D)
+    {
+        short baseX, baseY;
+        GetUIElementTopRight(mainUIElement_34_, &baseX, &baseY);
+        if (cursorBlinkTimer_19ae_ > 15)
+        {
+            for (short scanline = 0; scanline < 4; scanline++)
+                mainUIElement_34_->FillRectangle2(15, 
+                    baseX - (3 - scanline), baseY + scanline,
+                    baseX + (4 - scanline), baseY + scanline + 1);
+        }
+        return;
+    }
+
+    short boxWidth = mainTextBox_914_.width;
+    short boxHeight = mainTextBox_914_.height;
+    int cursorXMiddle = mainTextBox_914_.x + (boxWidth >> 1);
+    int cursorYBottom = mainTextBox_914_.y + boxHeight - 3;
+    if (objUI_38_ != NULL)
+    {
+        if (cursorBlinkTimer_19ae_ > 15)
+        {
+            int cursorTop = boxHeight - 8;
+            for (short scanline = 0; scanline < 4; scanline++)
+                objUI_38_->FillRectangle(15,
+                (boxWidth >> 1) - (3 - scanline), cursorTop + scanline, 
+                (4 - scanline) + (boxWidth >> 1), cursorTop + scanline + 1);
+        }
+    }
+    else
+    {
+        GXFIFO_MATRIX_PUSH = 0;
+        GXFIFO_VERTEX_COLOR = 0x7fff;
+        // texture size 16x16
+        GXFIFO_TEXIMAGE_PARAMS = (1 << 20) | (1 << 23);
+        // show front & back, alpha = 31, polygon ID 0x3e = 62
+        GXFIFO_POLYGON_ATTRIBUTES = 0x3e1f00c0;
+        GXFIFO_MATRIX_PUSH = 0;
+        GXFIFO_MATRIX_TRANSLATE = cursorXMiddle << 12;
+        GXFIFO_MATRIX_TRANSLATE = cursorYBottom << 12;
+        GXFIFO_MATRIX_TRANSLATE = MAKEFIX32(1024);
+        GXFIFO_MATRIX_SCALE = MAKEFIX32(6);
+        GXFIFO_MATRIX_SCALE = MAKEFIX32(6);
+        GXFIFO_MATRIX_SCALE = MAKEFIX32(1);
+        GXFIFO_POLYGON_BEGIN = 0;
+        GXFIFO_VERTEX_16 = 0 | 0;
+        GXFIFO_VERTEX_16 = 0;
+        GXFIFO_VERTEX_16 = (0xf000 << 16) | 0xf000;
+        GXFIFO_VERTEX_16 = 0;
+        GXFIFO_VERTEX_16 = (0xf000 << 16) | 0x1000;
+        GXFIFO_VERTEX_16 = 0;
+        GXFIFO_POLYGON_END = 0;
+        GXFIFO_MATRIX_POP = 1;
+        GXFIFO_MATRIX_POP = 1;
+    }
+}
+
+void TextManager::GetLineCenteringOffsets(int *outXs, int *outYs) const
+{
+    InternalGetLineCenteringOffsets(outXs, outYs);
 }
 
 void WriteControlWord(char**, int control);
@@ -2196,21 +2299,21 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         unknown_185c_ = 126;
         mojiArg1_1860_ = 12;
         mojiArg2_1864_ = 20;
-        if (unknown_38_ != NULL)
+        if (objUI_38_ != NULL)
         {
-            unsigned char* ptr = func_020e1b24(unknown_38_);
-            if (ptr != NULL)
+            OBJTextUI::OBJGraphics* gfx = objUI_38_->GetGraphics();
+            if (gfx != NULL)
             {
-                ptr[0x38] = 2;
-                ptr[0x39] = 116;
-                ptr[0x3a] = 252;
-                ptr[0x3b] = 74;
-                func_020e1b2c(unknown_38_, -1);
-                if (func_020e1f1c(unknown_38_))
+                gfx->baseX = 2;
+                gfx->baseY = 116;
+                gfx->width = 252;
+                gfx->height = 74;
+                objUI_38_->CreateInVRAM(-1);
+                if (objUI_38_->BeginRender() != NULL)
                 {
-                    func_020e2110(unknown_38_);
-                    func_020e23f4(unknown_38_);
-                    func_020e2478(unknown_38_);
+                    objUI_38_->DrawTextBoxBorder();
+                    objUI_38_->EndRender();
+                    objUI_38_->FreeStagingMemory();
                 }
             }
         }
@@ -2280,6 +2383,28 @@ void TextManager::UpdateCursorBlink()
     {
         cursorBlinkTimer_19ae_ = 0;
         cursorVisibleThisFrame_19af_ = false;
+    }
+}
+
+void TextManager::HandleUnknownInput_02045740()
+{
+    unknown_958_++;
+    unknown_958_ &= 0x1f;
+    if (g_keyManager.TestKeysPressed(KEY_UP))
+    {
+        chosenAnswer_954_--;
+        if (chosenAnswer_954_ < 0)
+            chosenAnswer_954_ = gyouParameter_9a4_ - 1;
+        unknown_994_ = chosenAnswer_954_;
+        unknown_958_ = 0;
+    }
+    else if (g_keyManager.TestKeysPressed(KEY_DOWN))
+    {
+        chosenAnswer_954_++;
+        if (chosenAnswer_954_ >= gyouParameter_9a4_)
+            chosenAnswer_954_ = 0;
+        unknown_994_ = chosenAnswer_954_;
+        unknown_958_ = 0;
     }
 }
 
@@ -2785,4 +2910,9 @@ void TextManager::ProcessMarkup(int unused, const char* input, char* output,
     SubstituteNamesAndArticles(scratch, output, fontIndex);
     SubstituteCaps(output, scratch, fontIndex);
     CalculateNewlines(false, scratch, output, boxWidth, margin, false, fontIndex);
+}
+
+void TextManager::SetObjUI(OBJTextUI* ui)
+{
+    objUI_38_ = ui;
 }

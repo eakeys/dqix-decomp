@@ -1,5 +1,5 @@
-#pragma ipa file
 #include "Graphics/OBJBlitter.h"
+#include "UI/Text.h"
 
 extern char data_020f0518[];
 

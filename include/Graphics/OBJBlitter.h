@@ -1,8 +1,8 @@
 #pragma once
 
 #include <globaldefs.h>
-#include "../UI/Text.h"
 #include "OBJSpriteSet.h"
+#include "Font.h"
 
 // sizeof == 0xc
 // used as a sort of render texture in OBJ memory

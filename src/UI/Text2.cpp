@@ -1,5 +1,3 @@
-#pragma ipa file
-
 #ifndef jpn
 
 #include "UI/Text.h"
@@ -9,6 +7,7 @@
 #include "NitroSDK/Graphics.h"
 #include "NitroSDK/HWRegisters.h"
 #include "NitroSDK/ColorEffects.h"
+#include "NitroSDK/Overlays.h"
 #include "Graphics/VRAMStaging.h"
 #include "Resource/GameStrings.h"
 #include <globaldefs.h>
@@ -41,10 +40,7 @@ extern "C"
     fix32_t func_020409e0(void*);
     fix32_t func_02040a20(void*);
 
-    void func_0204459c(TextManager*, bool);
-    void func_02044830(TextManager*, int*, int*);
-    void func_02045740(TextManager*);
-
+    int func_02046b24(void*);
     int func_02046b60(void*, int);
 
     int func_020546a8(PartyMember*);
@@ -58,12 +54,9 @@ extern "C"
     // play sound effect?
     void func_0205eaa0(void*, int effect, int);
 
-    void func_02065418(int);
-    void func_020676e0(TextManager*, int);
-
     void func_0208be94(void*);
     void func_0208beb4(void*);
-    void func_0208bf28(int, int, int);
+    void func_0208bf28(void*, int, int);
 
 
     // probably get quest manager instance or something?
@@ -73,6 +66,11 @@ extern "C"
     unsigned char func_020965c0(void*, unsigned char);
     void func_0209c830(void*, int);
     int func_0209ca2c(void*);
+
+    // is overlay loaded
+    CBool func_020a18f4(unsigned int);
+
+    int func_020a27c4(void*);
 
     // based on usage with quests, probably get day/time data
     void func_020cf0fc(int*);
@@ -88,6 +86,7 @@ extern "C"
     void func_ov017_0218d7b0(GameResources*, void*);
     void func_ov017_0218b5c0(int, char);
     void func_ov017_0218b5f8(char);
+    int func_ov017_021a4e70(GameResources*);
     void func_ov017_021a5ab0(void*);
 }
 
@@ -167,6 +166,7 @@ extern char data_020f0880[]; // "ALL_RECOVER="
 extern char data_020f088d[]; // "YESNO_NOTSE>"
 extern char data_020f089a[]; // "QUEST_FAILED>"
 extern char data_020f08a8[]; // "PAD_WAIT_NOCUR>"
+extern void (TextManager::*data_020f08b8[2])(int);
 extern char data_020f08dc[]; // "//"
 extern char data_020f08df[]; // "%d<W=%d>"
 extern char data_020f08e8[]; // "<W=%d>%d"
@@ -232,6 +232,21 @@ static void WriteTextureCoords(fix32_t x, fix32_t y)
     short xFixed4 = x >> 8;
     short yFixed4 = y >> 8;
     GXFIFO_VERTEX_TEXCOORD = (unsigned short)xFixed4 | ((unsigned short)yFixed4 << 16);
+}
+
+void Unknown_02065418(int arg)
+{
+    if (!func_020a18f4(OVERLAY_ID(17)))
+        return;
+    void* ptr = func_0200fb8c(GameState::GetInstance())->unknown_ptr_array_36fc[0];
+    if (ptr == NULL)
+        return;
+    if (func_02046b24(ptr) == 45 || func_02046b24(ptr) == 42)
+        return;
+    if (arg != 0)
+        return;
+    SetMainEnabledLayers(GetMainEnabledLayers() | 0x10);
+    ColorEffect_ConfigureAlphaBlend(ADDR_BLDCNT, 1 << 1, 1 << 0, 10, 6);
 }
 
 void TextManager::RenderGlyph2D(UIElement *renderer, RenderGlyph *glyph, short x, short preShiftY, unsigned char colorIndex)
@@ -432,7 +447,7 @@ void TextManager::InternalUpdate(unsigned int argNumTicks)
         if (unknown_1958_ < 0)
         {
             ReleaseMainMessageGlyphs();
-            Close();
+            Cleanup();
         }
         return;
     }
@@ -503,8 +518,8 @@ void TextManager::InternalUpdate(unsigned int argNumTicks)
         {
             AdvanceAutoTimer(numTicks);
             if (unknown_19bc_ != 0)
-                func_02045740(this);
-            func_020676e0(this, numTicks);
+                HandleUnknownInput_02045740();
+            CheckAndHandleDialogueOption(numTicks);
             StopVoiceSoundEffect();
             return;
         }
@@ -572,7 +587,7 @@ void TextManager::InternalUpdate(unsigned int argNumTicks)
             {
                 pauseType_9a0_ = 0;
                 StopVoiceSoundEffect();
-                Close();
+                Cleanup();
                 ResetTextBGLayers();
                 return;
             }
@@ -792,7 +807,7 @@ void TextManager::InternalUpdate(unsigned int argNumTicks)
             else if (glyph == ControlWord_YesNo || glyph == ControlWord_NoYes ||
                 glyph == ControlWord_YesNo_NotSe || glyph == ControlWord_YesNo_NotSe_IIE)
             {
-                func_02065418(unknown_19cc_);
+                Unknown_02065418(unknown_19cc_);
                 int var25 = 0;
                 if (unknown_2c8_ == 1 || glyph == ControlWord_NoYes)
                     var25 = 1;
@@ -803,7 +818,7 @@ void TextManager::InternalUpdate(unsigned int argNumTicks)
                 ::ShowBinaryOptionDialogue(&dialogueOptions_90_, var25, yesString, noString);
                 chosenAnswer_954_ = var25;
                 unknown_19ba_ = true;
-                unknown_98c_ = 0;
+                questionType_98c_ = 0;
                 pauseType_9a0_ = 6;
                 StopVoiceSoundEffect();
                 func_0205eaa0(data_02108760, 5, 0);
@@ -819,16 +834,14 @@ void TextManager::InternalUpdate(unsigned int argNumTicks)
             else if (glyph == ControlWord_UkeYame)
             {
                 // enable OBJ layer
-                unsigned int enabledLayers = (DISPCNT & 0x1f00) >> 8;
-                unsigned int remainingMask = DISPCNT & ~0x1f00;
-                DISPCNT = remainingMask | ((enabledLayers | 0x10) << 8);
-                func_02065418(unknown_19cc_);
+                DISPCNT = (DISPCNT & ~0x1f00) | ((GetMainEnabledLayers() | 0x10) << 8);
+                Unknown_02065418(unknown_19cc_);
                 const char* acceptString = GetGameString(GameString_Accept);
                 const char* declineString = GetGameString(GameString_Decline);
                 ::ShowBinaryOptionDialogue(&dialogueOptions_90_, 0, acceptString, declineString);
                 chosenAnswer_954_ = 0;
                 unknown_19ba_ = true;
-                unknown_98c_ = 1;
+                questionType_98c_ = 1;
                 pauseType_9a0_ = 6;
                 StopVoiceSoundEffect();
                 func_0205eaa0(data_02108760, 5, 0);
@@ -1003,7 +1016,7 @@ void TextManager::DrawSpeakerName(bool noOffsets)
     boxHandler->activeBox_ = &mainTextBox_914_;
 }
 
-void TextManager::Draw(bool use2D)
+void TextManager::InternalDraw(bool use2D)
 {
     if (unknown_19cc_ != 0)
         return;
@@ -1028,8 +1041,8 @@ void TextManager::Draw(bool use2D)
 
         if (!use2D)
         {
-            if (unknown_38_ != NULL)
-                func_020e2110(unknown_38_);
+            if (objUI_38_ != NULL)
+                objUI_38_->DrawTextBoxBorder();
             else
                 textBoxGraphics_19e0_.Draw(true, 1);
         }
@@ -1082,7 +1095,7 @@ void TextManager::Draw(bool use2D)
 
     if (cenTag_19b8_)
     {
-        func_02044830(this, lineCenteringX, lineCenteringY);
+        GetLineCenteringOffsets(lineCenteringX, lineCenteringY);
         for (int i = 0; i < 16; i++)
             lineCenteringY[i] = unknown_185c_;
     }
@@ -1190,10 +1203,10 @@ void TextManager::Draw(bool use2D)
                 }
             }
         }
-        else if (unknown_38_ != NULL)
+        else if (objUI_38_ != NULL)
         {
             const char* tag = rglyph->GetGlyphTag();
-            func_020e2310(unknown_38_, 0, offsetX, offsetY - 116, tag, 15, fontIndex_19dc_);
+            objUI_38_->DrawText(0, offsetX, offsetY - 116, tag, 15, fontIndex_19dc_);
         }
         else
         {
@@ -1205,7 +1218,7 @@ void TextManager::Draw(bool use2D)
             offsetX += rglyph->indexGlyph->width + 1;
     }
 
-    func_0204459c(this, use2D);
+    DrawBlinkingCursor(use2D);
     unknown_40_ = numWords;
 
     if (!unknown_19ce_)
@@ -1287,6 +1300,67 @@ void TextManager::DrawNPCOverheadIcon()
     sprite->position_.y = fixY;
     sprite->position_.z = 0;
     sprite->DrawAnimatedNoRotation(true);
+}
+
+void TextManager::CheckAndHandleDialogueOption(unsigned int numTicks)
+{
+    if (pauseType_9a0_ != 6)
+        return;
+    if (unknown_19ba_ == 0)
+        return;
+    dialogueOptions_90_.Update(numTicks);
+    if (!dialogueOptions_90_.IsActive())
+    {
+        dialogueOptions_90_.ShowInstant();
+        return;
+    }
+    bool acceptTouchInput = true;
+    bool confirmPressed = (CBool)g_keyManager.TestKeysPressed(KEY_A | KEY_X);
+    bool cancelPressed = (CBool)g_keyManager.TestKeysPressed(KEY_B);
+
+    GameState* gs;
+    unsigned char* unknownPtr;
+    GameResources* res;
+    int questionType = questionType_98c_;
+    gs = GameState::GetInstance();
+    unknownPtr = (unsigned char*)func_020100f8(gs);
+    res = func_0200fb8c(gs);
+    if (questionType != 1 && unknown_19d2_)
+    {
+        if (unknownPtr != NULL)
+        {
+            if ((unknownPtr[0x244] & 2) || !func_020a27c4(unknownPtr))
+                confirmPressed |= g_keyManager.TestKeysPressed(KEY_L);
+        }
+        else
+            confirmPressed |= g_keyManager.TestKeysPressed(KEY_L);
+    }
+
+    bool unknownCondition = false;
+    if (gs->unknown_5cc8_ == 2)
+        unknownCondition = true;
+    if (!unknownCondition && res != NULL && !func_ov017_021a4e70(res))
+    {
+        confirmPressed = false;
+        cancelPressed = false;
+        acceptTouchInput = false;
+    }
+    if (!unknownCondition && unknown_8c_ != NULL && (((unsigned short*)unknown_8c_)[0x6d] & 0x20))
+    {
+        confirmPressed = false;
+        cancelPressed = false;
+        acceptTouchInput = false;
+    }
+
+    int selection = -1;
+    if (acceptTouchInput)
+        selection = dialogueOptions_90_.GetTouchInputSelection();
+    if (confirmPressed)
+        selection = dialogueOptions_90_.GetSelection();
+    else if (cancelPressed)
+        selection = -2;
+    chosenAnswer_954_ = selection;
+    (this->*data_020f08b8[questionType])(selection);
 }
 
 void TextManager::ProcessYesNoInput(int input)
@@ -3595,7 +3669,7 @@ void TextManager::CopyPage()
                     break;
                 }
                 unsigned char old = unknown_19cc_;
-                Close();
+                Cleanup();
                 ResetTextBGLayers();
                 unknown_19cc_ = old;
                 break;
@@ -3610,7 +3684,7 @@ void TextManager::CopyPage()
                 if (source == NULL)
                 {
                     unsigned char old = unknown_19cc_;
-                    Close();
+                    Cleanup();
                     ResetTextBGLayers();
                     unknown_19cc_ = old;
                     break;
@@ -3892,7 +3966,7 @@ void TextManager::SubmitQuestionResponse(unsigned short response, char* searchSt
     char* newPos = FindControlCharacter(response, searchStart);
     if (newPos == NULL)
     {
-        Close();
+        Cleanup();
         ResetTextBGLayers();
         return;
     }
@@ -3968,7 +4042,7 @@ int TextManager::MeasureLine(const char* text) const
     return totalWidth;
 }
 
-void TextManager::GetLineCenteringOffsets(int* outXs, int* outYs) const
+void TextManager::InternalGetLineCenteringOffsets(int* outXs, int* outYs) const
 {
     int middle = centerX_990_;
     int outIndex;

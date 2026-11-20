@@ -11,6 +11,7 @@
 #include "../Graphics/TextureArena.h"
 #include "../Graphics/TextBoxGraphics.h"
 #include "../Graphics/OBJSpriteSet.h"
+#include "OBJTextUI.h"
 #include <asmhacks.h>
 
 // sizeof == 0x1c.
@@ -244,7 +245,7 @@ public:
     char maybeNumAlive_31_;
     char pad_32[2];
     UIElement* mainUIElement_34_;
-    void* unknown_38_;
+    OBJTextUI* objUI_38_;
     int unknown_3c_;
     int unknown_40_;
     int unknown_44_;
@@ -272,7 +273,7 @@ public:
     int unknown_80_;
     int mainMessageStartOffset_84_;
     unsigned int glyphIndexListMainMessageStart_88_;
-    int unknown_8c_;
+    void* unknown_8c_;
     DialogueOptionManager dialogueOptions_90_; // func_0205c790
     int unknown_2c8_;
     unsigned char substruct_2cc_[4];
@@ -311,7 +312,7 @@ public:
     int unknown_958_;
     char substructOrArray_95c_[0x20];
     char substructOrArray_97c_[0x10];
-    int unknown_98c_;
+    int questionType_98c_;
     int centerX_990_;
     int unknown_994_;
     int unknown_998_;
@@ -420,7 +421,7 @@ public:
     unsigned char unknown_19cf_;
     unsigned char unknown_19d0_;
     unsigned char unknown_19d1_;
-    char unknown_19d2_;
+    unsigned char unknown_19d2_;
     unsigned char unknown_19d3_;
     char unknown_19d4_;
     // Q: does this count for a group of enemies too?
@@ -482,6 +483,9 @@ public:
     void ResetTextBGLayers();
 
     // usa: func_02043204
+    void Cleanup();
+
+    // usa: func_02043224
     void Close();
 
     // usa: func_020432c4
@@ -520,8 +524,15 @@ public:
     // usa: func_020444d4
     void Update(unsigned int numTicks);
 
+    // usa: func_020444e0
+    void Draw();
+
     // usa: func_02044530
     void DrawDialogueOptions(bool use2D);
+    // usa: func_0204459c
+    void DrawBlinkingCursor(bool use2D);
+    // usa: func_02044830
+    void GetLineCenteringOffsets(int* outXs, int* outYs) const;
 
     // usa: func_0204483c
     // replaces TIME, RECT, WIN, CEN, MOJI and SKIP tags as well as newlines
@@ -550,6 +561,9 @@ public:
     void StopVoiceSoundEffect();
     // usa: func_020456d0
     void UpdateCursorBlink();
+
+    // usa: func_02045740
+    void HandleUnknownInput_02045740();
 
     // usa: func_020457e0
     int GetChosenAnswer() const;
@@ -606,6 +620,8 @@ public:
     void SetValueWidth(int index, int width);
     // usa: func_02046608
     void ProcessMarkup(int unused, const char* input, char* output, int boxWidth, int margin, unsigned char fontIndex);
+    // usa: func_020466c8
+    void SetObjUI(OBJTextUI* ui);
 
     // usa: func_020654b8
     void RenderGlyph2D(UIElement* renderer, RenderGlyph* glyph, short x, short y, unsigned char colorIndex);
@@ -634,13 +650,13 @@ public:
     void DrawSpeakerName(bool noOffsets);
 
     // usa: func_02066cf0
-    void Draw(bool arg);
+    void InternalDraw(bool use2D);
 
     // usa: func_020675fc
     void DrawNPCOverheadIcon();
 
     // usa: func_020676e0
-    void CheckAndHandleDialogueOption();
+    void CheckAndHandleDialogueOption(unsigned int numTicks);
 
     // usa: func_020678bc
     // 0 = yes, 1 = no, -1 = undecided, -2 = cancelled (no)
@@ -816,7 +832,7 @@ public:
     // usa: func_0206b37c
     int MeasureLine(const char* text) const;
     // usa: func_0206b528
-    void GetLineCenteringOffsets(int* outXs, int* outYs) const;
+    void InternalGetLineCenteringOffsets(int* outXs, int* outYs) const;
     // usa: func_0206b61c
     // bit speculative as I haven't seen this called anywhere
     void AdvanceLine();

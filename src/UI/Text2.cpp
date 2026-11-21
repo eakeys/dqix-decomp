@@ -45,10 +45,6 @@ extern "C"
 
     int func_020546a8(PartyMember*);
     void func_0205c840(void*);
-    void func_0205c904(DialogueOptionManager*);
-    void func_0205cc50(DialogueOptionManager*, int, int);
-    void func_0205cd94(DialogueOptionManager*);
-    bool func_0205cde8(DialogueOptionManager*);
 
     void func_0205e944(void*, int);
     // play sound effect?
@@ -79,13 +75,10 @@ extern "C"
     // alternative strlen implementation
     int func_020d2ff0(const char*);
 
-    void func_020e2110(void*);
-    void func_020e2310(void*, int, int, int, const char*, unsigned char, unsigned char);
-
-    // heal the party?
-    void func_ov017_0218d7b0(GameResources*, void*);
     void func_ov017_0218b5c0(int, char);
     void func_ov017_0218b5f8(char);
+    // heal the party?
+    void func_ov017_0218d7b0(GameResources*, void*);
     int func_ov017_021a4e70(GameResources*);
     void func_ov017_021a5ab0(void*);
 }

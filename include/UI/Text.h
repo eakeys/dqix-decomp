@@ -857,4 +857,9 @@ void CapitalizeFirstGlyph(const char* input, char* output, int fontIndex);
 // these need to go somewhere else I think
 void BlitGlyphTo4BitPixelBuffer(int x, int y, const FontIndexFile::Glyph* glyph, unsigned char* dstBuffer,
     int bufferW, int bufferH, unsigned char color, unsigned char fontIndex);
+
+#if defined(usa)
 extern unsigned int data_021077fc;
+#elif defined(jpn)
+extern unsigned int data_0210773c;
+#endif

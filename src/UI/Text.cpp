@@ -1,4 +1,4 @@
-#pragma ipa file
+#ifndef jpn
 
 #include "UI/Text.h"
 #include "NitroSDK/Graphics.h"
@@ -2916,3 +2916,5 @@ void TextManager::SetObjUI(OBJTextUI* ui)
 {
     objUI_38_ = ui;
 }
+
+#endif

@@ -162,7 +162,11 @@ void DialogueOptionManager::AddOption(const char* text)
     TextManager* mgr = TextManager::GetInstance();
     optionOffsets_220_[numOptions_232_] = totalWords_230_;
     totalWords_230_ += mgr->AcquireText16Bit(text, &textWords_120_[totalWords_230_], 1);
+#if defined(usa)
     int width = mgr->MeasureText16Bit(&textWords_120_[optionOffsets_220_[numOptions_232_]], 256, 1);
+#elif defined(jpn)
+    int width = mgr->MeasureText16Bit(12, &textWords_120_[optionOffsets_220_[numOptions_232_]], 256);
+#endif
 
     if (textWidth_d0_ < width)
         textWidth_d0_ = width;

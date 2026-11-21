@@ -439,6 +439,10 @@ src/NitroSDK/Filesystem/CardReadManager.cpp:
     complete
     .text start:0x020d2318 end:0x020d2a90
 
+src/Util/StringTests.cpp:
+    complete
+    .text start:0x020d9eb4 end:0x020d9fb8
+
 src/Filesystem/ExtendedNitroVM.cpp:
     complete
     .text start:0x020da078 end:0x020da930

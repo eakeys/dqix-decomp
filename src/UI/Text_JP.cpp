@@ -57,7 +57,6 @@ struct Struct_02107740
 extern SafeAllocator data_0210783c;
 
 extern char data_01ff9740[];
-extern unsigned char data_ALIGNED_0211e33c[0x30000] __attribute__((aligned(4)));
 
 extern const unsigned char data_020e7a50[]; // probably multiple separate things. We only use stuff at offset 8
 extern const unsigned char data_020e7a8c[];
@@ -68,36 +67,36 @@ extern const short data_020e7ab0[]; // { 2, 1, 3, 2, 2 }
 extern const unsigned char data_020e7ade[3][8];
 extern const unsigned short data_020e7af8[];
 
-extern char data_EN_020efe78[]; // "<X=%d>"
-extern char data_EN_020efe7f[]; // "<Y=%d>"
-extern char data_EN_020efe86[]; // "<XY=%d,%d>"
-extern char data_EN_020efe91[]; // "<W=%d>"
-extern char data_EN_020efe98[]; // "<H=%d>"
-extern char data_EN_020efe9f[]; // "<WH=%d,%d>"
-extern char data_EN_020efeaa[]; // "<ENC=%d>"
-extern char data_EN_020efeb3[]; // "<N=%d>%s</N>"
-extern char data_EN_020efec0[]; // "<SDRC=%d,%d,%d,%d,%d>"
-extern char data_EN_020efed6[]; // "<SOLID=%d,%d>"
-extern char data_EN_020efee4[]; // "<FRAME=%d,%d,%d,%d,%d>"
-extern char data_EN_020efefb[]; // "<WIRE=%d,%d,%d,%d,%d>"
-extern char data_EN_020eff11[]; // "<LINE=%d>"
-extern char data_EN_020eff1b[]; // "<LINEX=%d,%d,%d,%d>"
-extern char data_EN_020eff2f[]; // "<LINEY=%d,%d,%d,%d>"
-extern char data_EN_020eff43[]; // "<SIZE=%d>"
-extern char data_EN_020eff4d[]; // "<PLTT=15>"
-extern char data_EN_020eff57[]; // "<PLTT=11>"
-extern char data_EN_020eff61[]; // "<PLTT=13>"
-extern char data_EN_020eff6b[]; // "<PLTT=9>"
-extern char data_EN_020eff74[]; // "<PLTT=%d>"
-extern char data_EN_020eff7e[]; // "<SLT=%d>"
-extern char data_EN_020eff87[]; // "<CURSOR=%d>"
-extern char data_EN_020eff93[]; // "<UA=%d,%d,%d>"
-extern char data_EN_020effa1[]; // "<UB=%d,%d,%d>"
-extern char data_EN_020effaf[]; // "<DA=%d,%d,%d>"
-extern char data_EN_020effbd[]; // "<DB=%d,%d,%d>"
-extern char data_EN_020effcb[]; // "<TEN=%d,%d>"
-extern char data_EN_020effd7[]; // "<TITLE=%d>%s</TITLE>"
-extern char data_EN_020effec[]; // "<TALK>%s</TALK>"
+extern char data_020efe80[]; // "<X=%d>"
+extern char data_020efe87[]; // "<Y=%d>"
+extern char data_020efe8e[]; // "<XY=%d,%d>"
+extern char data_020efe99[]; // "<W=%d>"
+extern char data_020efea0[]; // "<H=%d>"
+extern char data_020efea7[]; // "<WH=%d,%d>"
+extern char data_020efeb2[]; // "<ENC=%d>", not used in jpn
+extern char data_020efebb[]; // "<N=%d>%s</N>"
+extern char data_020efec8[]; // "<SDRC=%d,%d,%d,%d,%d>"
+extern char data_020efede[]; // "<SOLID=%d,%d>"
+extern char data_020efeec[]; // "<FRAME=%d,%d,%d,%d,%d>"
+extern char data_020eff03[]; // "<WIRE=%d,%d,%d,%d,%d>"
+extern char data_020eff19[]; // "<LINE=%d>"
+extern char data_020eff23[]; // "<LINEX=%d,%d,%d,%d>"
+extern char data_020eff37[]; // "<LINEY=%d,%d,%d,%d>"
+extern char data_020eff4b[]; // "<SIZE=%d>"
+extern char data_020eff55[]; // "<WHITE>"
+extern char data_020eff5d[]; // "<PINK>"
+extern char data_020eff64[]; // "<YELLOW>"
+extern char data_020eff6d[]; // "<RED>"
+extern char data_020eff73[]; // "<PLTT=%d>"
+extern char data_020eff7d[]; // "<SLT=%d>"
+extern char data_020eff86[]; // "<CURSOR=%d>"
+extern char data_020eff92[]; // "<UA=%d,%d,%d>"
+extern char data_020effa0[]; // "<UB=%d,%d,%d>"
+extern char data_020effae[]; // "<DA=%d,%d,%d>"
+extern char data_020effbc[]; // "<DB=%d,%d,%d>"
+extern char data_020effca[]; // "<TEN=%d,%d>"
+extern char data_020effd6[]; // "<TITLE=%d>%s</TITLE>"
+extern char data_020effeb[]; // "<TALK>%s</TALK>"
 extern char data_EN_020efffc[]; // "<XR=%d>%s</XR>"
 extern char data_EN_020f000b[]; // "/data/ani/windata3.bncg"
 extern char data_EN_020f0023[]; // "/data/pack_lv5/font_lv5.gp2"
@@ -148,7 +147,7 @@ extern "C"
     void func_020bc078(void*);
 
     // alternative strlen
-    int func_020d2ff0(const char*);
+    int func_020d4a54(const char*);
     
     // populate noun from item ID?
     void func_020dcf7c(short, Noun*);
@@ -294,52 +293,52 @@ namespace StringBuilders
 {
 int AddXTag(char* buffer, int x)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efe78, x) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efe80, x) - buffer;
 }
 
 int AddYTag(char* buffer, int y)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efe7f, y) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efe87, y) - buffer;
 }
 
 int AddXYTag(char* buffer, int x, int y)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efe86, x, y) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efe8e, x, y) - buffer;
 }
 
 int AddWidthTag(char* buffer, int w)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efe91, w) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efe99, w) - buffer;
 }
 
 int AddHeightTag(char* buffer, int h)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efe98, h) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efea0, h) - buffer;
 }
 
 int AddWidthHeightTag(char* buffer, int w, int h)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efe9f, w, h) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efea7, w, h) - buffer;
 }
 
 // missing function? that uses <ENC=%d>
 
 int AddIndexedTag(char* buffer, int index, const char* value)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efeb3, index, value) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efebb, index, value) - buffer;
 }
 
 int AddSolidRectTag(char* buffer, int col, int x, int y, int width, int height)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efec0, col, x, y, width, height) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efec8, col, x, y, width, height) - buffer;
 }
 
 // missing function? using <SOLID=%d,%d>
@@ -347,59 +346,59 @@ int AddSolidRectTag(char* buffer, int col, int x, int y, int width, int height)
 // Couldn't find a call site in game, but there's a bunch in overlay 2
 int AddFrameTag(char* buffer, int col, int x, int y, int width, int height)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efee4, col, x, y, width, height) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020efeec, col, x, y, width, height) - buffer;
 }
 
 // called twice in overlay 2
 int AddWireTag(char* buffer, int col, int x, int y, int width, int height)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efefb, col, x, y, width, height) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff03, col, x, y, width, height) - buffer;
 }
 
 // used to draw a horizontal line in skill point menu, parameter is y coordinate relative to container?
 int AddLineTag(char* buffer, int y)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff11, y) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff19, y) - buffer;
 }
 
 // horizontal line segment, not sure about first argument
 int AddLineXTag(char* buffer, int col, int left, int right, int y)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff1b, col, left, right, y) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff23, col, left, right, y) - buffer;
 }
 
 int AddLineYTag(char* buffer, int col, int x, int top, int bottom)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff2f, col, x, top, bottom) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff37, col, x, top, bottom) - buffer;
 }
 
 int AddSizeTag(char* buffer, int size)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff43, size) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff4b, size) - buffer;
 }
 
 int AddReducedPaletteTag(char* buffer, int reducedEnum)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
+    char* writePos = buffer + func_020d4a54(buffer);
     switch (reducedEnum)
     {
     case 0:
-        writePos += sprintf(writePos, data_EN_020eff4d); // PLTT=15
+        writePos += sprintf(writePos, data_020eff55); // white
         break;
     case 5:
-        writePos += sprintf(writePos, data_EN_020eff57); // PLTT=11, orange?
+        writePos += sprintf(writePos, data_020eff5d); // pink (orange?)
         break;
     case 4:
-        writePos += sprintf(writePos, data_EN_020eff61); // PLTT=13, yellow?
+        writePos += sprintf(writePos, data_020eff64); // yellow
         break;
     case 6:
-        writePos += sprintf(writePos, data_EN_020eff6b); // PLTT=9, red?
+        writePos += sprintf(writePos, data_020eff6d); // red
         break;
     }
     return writePos - buffer;
@@ -407,24 +406,24 @@ int AddReducedPaletteTag(char* buffer, int reducedEnum)
 
 int AddPaletteTag(char* buffer, int palette)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff74, palette) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff73, palette) - buffer;
 }
 
 // missing <SLT=%d> function?
 
 int AddCursorTag(char* buffer, int cursorPos)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff87, cursorPos) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff86, cursorPos) - buffer;
 }
 
 // not sure of purpose, but used in bank when depositing/withdrawing.
 // removing it doesn't get rid of the arrows though
 int AddUATag(char* buffer, int arg1, int arg2, int arg3)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020eff93, arg1, arg2, arg3) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020eff92, arg1, arg2, arg3) - buffer;
 }
 
 // unused functions? <UB=%d,%d,%d>, <DA=%d,%d,%d>
@@ -432,89 +431,47 @@ int AddUATag(char* buffer, int arg1, int arg2, int arg3)
 // same call site as UA (bank)
 int AddDBTag(char* buffer, int arg1, int arg2, int arg3)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020effbd, arg1, arg2, arg3) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020effbc, arg1, arg2, arg3) - buffer;
 }
 
 // used once in overlay 17 with args 3,2, not sure of purpose
 int AddTenTag(char* buffer, int x, int y)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020effcb, x, y) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020effca, x, y) - buffer;
 }
 
 // used for e.g. "Whose?" when assigning skill points out of battle
 int AddTitleTag(char* buffer, const char* text, int index)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020effd7, index, text) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020effd6, index, text) - buffer;
 }
 
 // used somewhere in overlay 3 (shops, inn, bank?) but I couldn't find it
 int AddTalkTag(char* buffer, const char* text)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020effec, text) - buffer;
-}
-
-// used for percentages in battle records to right-align them, number
-// is offset from its (invisible) container
-int AddXRightTag(char* buffer, const char* text, int xright)
-{
-    char* writePos = buffer + func_020d2ff0(buffer);
-    return writePos + sprintf(writePos, data_EN_020efffc, xright, text) - buffer;
+    char* writePos = buffer + func_020d4a54(buffer);
+    return writePos + sprintf(writePos, data_020effeb, text) - buffer;
 }
 
 int AddText(char* buffer, const char* text)
 {
-    char* writePos = buffer + func_020d2ff0(buffer);
+    char* writePos = buffer + func_020d4a54(buffer);
     return writePos + sprintf(writePos, text) - buffer;
 }
 
-int AddCenteredText(char* buffer, const char* text, int containerWidth, int fontIndex)
+int AddCenteredText(char* buffer, const char* text, int containerWidth, int fontSize)
 {
-    int requiredWidth = MeasureTextWidth(text, fontIndex);
-    sprintf(buffer + func_020d2ff0(buffer), data_EN_020efe91, ((containerWidth - requiredWidth) >> 1) + 1);
-    sprintf(buffer + func_020d2ff0(buffer), text);
-    return func_020d2ff0(buffer);
+    int requiredWidth = func_020d4a54(text);
+    requiredWidth *= fontSize;
+    requiredWidth >>= 1;
+    sprintf(buffer + func_020d4a54(buffer), data_020efe99, ((containerWidth - requiredWidth) >> 1) + 1);
+    sprintf(buffer + func_020d4a54(buffer), text);
+    return func_020d4a54(buffer);
 }   
 
-}
-
-int MeasureTextWidth(const char* text, int fontType)
-{
-    if (text == NULL)
-        return 0;
-
-    unsigned char spaceSize = data_020e7a94[fontType];
-    unsigned char lastGlyphIndex = 0xff;
-    unsigned char thisGlyphIndex;
-    int totalWidth = 0;
-
-    while (true)
-    {
-        if (*text == 0)
-            break;
-
-        int thisCharWidth = spaceSize + 1;
-        int glyphIndex = GetNextFontGlyphIndex(text, fontType);
-        if (glyphIndex < 0)
-        {
-            lastGlyphIndex = 0xff;
-            text++;
-        }
-        else
-        {
-            thisGlyphIndex = glyphIndex;
-            const FontIndexFile::Glyph* entry = GetFontGlyphByIndex(glyphIndex, fontType);
-            int kerning = GetFontGlyphKerning(lastGlyphIndex, thisGlyphIndex, fontType);
-            thisCharWidth = entry->width + 1 + kerning;
-            text += entry->tagLength;
-            lastGlyphIndex = thisGlyphIndex;
-        }
-        totalWidth += thisCharWidth;
-    }
-    return totalWidth - 1;
 }
 
 unsigned char GetFontIDBySize(int size)
@@ -2179,7 +2136,7 @@ void TextManager::ShowMessage(const char *msg, int graphicsMode, int width)
         return;
 
     // what's the point of this?!
-    int length = func_020d2ff0(msg);
+    int length = func_020d4a54(msg);
     for (int i = 0; i < length; )
     {
         int copyLength = 0x40;
@@ -2417,16 +2374,20 @@ int TextManager::GetChosenAnswer() const
     return chosenAnswer_954_;
 }
 
-void TextManager::RecordWaitTimeValue(int value)
-{
-    waitTimeLengths_186c_[waitTimeQueueIndex_19ad_] = value;
-    waitTimeQueueIndex_19ad_++;
-    waitTimeQueueIndex_19ad_ %= 4;
-}
-
 void TextManager::RecordWaitTimeValue(int value, int slot)
 {
     if (slot == -1)
+    {
+        // bug: writes to index -1 each time?!
+        for (int i = 0; i < 4; i++)
+            waitTimeLengths_186c_[slot] = value;
+    }
+    else if (slot < 0)
+    {
+        for (int i = 0; i < 4; i++)
+            waitTimeLengths_186c_[i] = value;
+    }
+    else if (slot >= 4)
     {
         for (int i = 0; i < 4; i++)
             waitTimeLengths_186c_[i] = value;
@@ -2724,55 +2685,85 @@ void TextManager::DrawPreprocessedText(const unsigned short* words, int x, int y
     GXFIFO_MATRIX_POP = 1;
 }
 
-int TextManager::MeasureText16Bit(const unsigned short *wordList, int numWords, unsigned char fontIndex)
+int TextManager::MeasureText16Bit(int argFontSize, const unsigned short *wordList, int numWords)
 {
     if (wordList == NULL)
         return 0;
     if (numWords < 0)
         return 0;
+    int fontSize;
+    switch (argFontSize)
+    {
+    case 10: fontSize = 10; break;
+    case 12: fontSize = 12; break;
+    default: return 0;
+    }
 
-    unsigned char defaultSpacing = data_020e7a94[fontIndex];
-    int currentLength = 0;
-    int maxLength = 0;
-    unsigned char lastGlyphIndex = 0xff;
-
+    int currentX = 0;
+    int otherX = 0;
     for (int i = 0; i < numWords; i++)
     {
         unsigned short word = wordList[i];
         if (word == ControlWord_End)
             break;
-        else if (word == ControlWord_LineBreak)
+        else if (word == ControlWord_LineBreak || word == ControlWord_Add ||
+            word == ControlWord_Time || word == ControlWord_PadWait || 
+            word == ControlWord_PadT || word == ControlWord_PadWaitNoCursor ||
+            word == ControlWord_YesNo || word == ControlWord_NoYes ||
+            word == ControlWord_YesNo_NotSe || word == ControlWord_YesNo_NotSe_IIE)
         {
-            if (maxLength < currentLength)
-                maxLength = currentLength;
-            currentLength = 0;
-            lastGlyphIndex = 0xff;
         }
-        else if (word == ControlWord_Unknown_ff19)
+        else if (word == ControlWord_HalfSpace)
         {
-            lastGlyphIndex = 0xff;
-            currentLength += defaultSpacing + 1;
+            currentX += fontSize >> 1;
         }
-        else if (IsNextCharacterControlAlt(&word))
+        else if (word == ControlWord_X)
         {
-            lastGlyphIndex = 0xff;
+            i++;
+            if (otherX < wordList[i])
+                otherX = wordList[i];
+
+            int tmp = currentX;
+            currentX = otherX;
+            otherX = tmp;
+        }
+        else if (word == ControlWord_Y)
+        {
+            i++;
+        }
+        else if (word == ControlWord_XY)
+        {
+            unsigned short nextWord = wordList[i + 1];
+            i += 2;
+            if (otherX < nextWord)
+                otherX = nextWord;
+            
+            int tmp = currentX;
+            currentX = otherX;
+            otherX = tmp;
+        }
+        else if (word == ControlWord_W)
+        {
+            unsigned short nextWord = wordList[i + 1];
+            i += 2;
+            currentX += nextWord;
+        }
+        else if (word == ControlWord_H)
+        {
+            i++;
+        }
+        else if (word == ControlWord_WH)
+        {
+            unsigned short nextWord = wordList[i + 1];
+            i += 2;
+            currentX += nextWord;
         }
         else
-        {
-            RenderGlyph* rglyph = &glyphs_[word];
-            unsigned char thisGlyphIndex = rglyph->indexInFontFile;
-            currentLength += GetFontGlyphKerning(lastGlyphIndex, thisGlyphIndex, fontIndex);
-            lastGlyphIndex = thisGlyphIndex;
-            int width = defaultSpacing;
-            if (rglyph->indexGlyph != NULL)
-                width = rglyph->indexGlyph->width;
-            currentLength += width + 1;
-        }
+            currentX += fontSize;
     }
-
-    if (currentLength < maxLength)
-        currentLength = maxLength;
-    return currentLength;
+    if (currentX < otherX)
+        currentX = otherX;
+    return currentX;
 }
 
 void TextManager::ReleaseText16Bit(unsigned short *wordList, int len)

@@ -80,7 +80,7 @@ enum ControlWord
     ControlWord_Uke = 0xff16,
     ControlWord_Yame = 0xff17,
     ControlWord_LineBreak = 0xff18,
-
+#if defined(usa)
     ControlWord_Unknown_ff19 = 0xff19,
     ControlWord_Time = 0xff1a,
     ControlWord_AllRecover = 0xff1b,
@@ -110,6 +110,52 @@ enum ControlWord
     ControlWord_SEBase = 0xff4b,
 
     ControlWord_VoiceVolumeBase = 0xff4d, 
+#elif defined(jpn)
+    ControlWord_FullSpace = 0xff1a,
+    ControlWord_HalfSpace = 0xff1b,
+    ControlWord_Time = 0xff1c,
+    ControlWord_AllRecover = 0xff1d,
+    ControlWord_ST = 0xff1e,
+    ControlWord_PadWait = 0xff1f,
+    ControlWord_PadT = 0xff20,
+    ControlWord_PadWaitNoCursor = 0xff21,
+    ControlWord_X = 0xff22,
+    ControlWord_Y = 0xff23,
+    ControlWord_XY = 0xff24,
+    ControlWord_W = 0xff25,
+    ControlWord_H = 0xff26,
+    ControlWord_WH = 0xff27,
+    ControlWord_WinOn = 0xff28,
+    ControlWord_WinOff = 0xff29,
+    ControlWord_CenOn = 0xff2a,
+    ControlWord_CenOff = 0xff2b,
+    ControlWord_Turn = 0xff2c,
+    ControlWord_NTurn = 0xff2d,
+    ControlWord_RTurn = 0xff2e,
+    ControlWord_TurnP = 0xff2f,
+    ControlWord_Exclamation = 0xff30,
+    ControlWord_Question = 0xff31,
+    
+    ControlWord_OpenFurigana = 0xff36,
+    ControlWord_ActivateFurigana = 0xff37,
+    ControlWord_CloseFurigana = 0xff38,
+    ControlWord_MEBase = 0xff39,
+
+    ControlWord_SEBase = 0xff50,
+
+    ControlWord_VoiceVolumeBase = 0xff52, 
+
+    ControlWord_SelBase = 0xff56,
+
+    // not mapped yet (changed ffxx to fxx to allow new ones)
+    ControlWord_Unknown_ff19 = 0xf19,
+    ControlWord_Unknown_ff20 = 0xf20,
+    ControlWord_Unknown_ff21 = 0xf21,
+    ControlWord_Unknown_ff22 = 0xf22,
+    ControlWord_Unknown_ff23 = 0xf23,
+    ControlWord_Unknown_ff24 = 0xf24,
+    ControlWord_Unknown_ff25 = 0xf25,
+#endif
 
     // These are used for control flow: write e.g. <LB_A> to create a label,
     // and use <JP_A> to jump to that label. It appears that A to O are supported.
@@ -213,8 +259,9 @@ void* GetFontStagingSpace();
 const void* GetJPNCharacterBitmap(int size, const char* sjis);
 
 // sizeof == 0x1e2c == 7724.
-// Dynamically allocated by func_020421c4. 
-// Initialized by func_02042c68, get member types from here
+// jpn: sizeof == 0x1c50 == 7248.
+// Dynamically allocated by func_020421c4 (usa) / func_02042964 (jpn). 
+// Initialized by func_02042c68 / 02043340, get member types from here
 class TextManager
 {
 public:
@@ -234,6 +281,7 @@ public:
     }
 
 public:
+#if defined(usa)
     Noun* actors_0_[2];
     Noun* actions_8_[2];
     Noun* targets_10_[2];
@@ -437,6 +485,226 @@ public:
     char unk_19dd[3];
     TextBoxGraphics textBoxGraphics_19e0_;
     TextureArena* textureArena_1e28_;
+#elif defined(jpn)
+    char unk_jp_0[0x50];
+    DialogueOptionManager dialogueOptions_90_; // jpn: 0x50
+    char unk_jp_50[0x7e4 - 0x218];
+    TextBox mainTextBox_914_; // jpn: 0x7e4
+    char unk_jp_800[0x1710 - 0x800];
+    fix32_t turnAngle_1840_; // jpn: 0x1710
+    char unk_jp_1714[0x3c - 0x14];
+    int waitTimeLengths_186c_[4]; // jpn: 0x173c
+    char unk_jp_174c[2];
+    unsigned short recoveryAmount_187e_; // jpn: 0x174e
+    char unk_jp_1750[0x76 - 0x50];
+    short questIndex_1948_; // jpn: 0x1776
+    char voiceVolumeLookup_194a_[4]; // jpn: 0x1778
+    char tagSTArray1_194e_[4]; // jpn: 0x177c
+    char tagSTArray2_1952_[4]; // jpn: 0x1780
+    char tagSTArrayIndex_1956_; // jpn: 0x1784
+    char unk_jp_1785[0xc - 0x5];
+    unsigned char autoValue_195e_; // jpn: 0x178c
+    unsigned char autoRemainingTime_195f_; // ???, jpn: 0x178d ?
+    unsigned char pageTValue_1960_; // jpn: 0x178e
+    unsigned char pageTRemainingTime_1961_; // ???, jpn: 0x178f ?
+    char unk_jp_178f[0xdd - 0x90];
+    char waitTimeQueueIndex_19ad_;
+    char unk_jp_17dd[2];
+    unsigned char unknown_19b0_; // jpn: 0x17e0
+    char unk_jp_17e1[0xf7 - 0xe1];
+    bool recoveryParam_19c6_; // jpn: 0x17f7
+    bool recoveryParam_19c7_; // jpn: 0x17f8
+    char unk_jp_17f9[0x804 - 0x7f9];
+    TextBoxGraphics textBoxGraphics_19e0_; // jpn: 0x1804
+    TextureArena* textureArena_1e28_; // jpn: 0x1c4c
+    
+    // objects after this aren't placed yet / known to be present, delete and
+    // place above as we go
+    Noun* actors_0_[2];
+    Noun* actions_8_[2];
+    Noun* targets_10_[2];
+    Noun* items_18_[2];
+    Noun* monsters_20_[2];
+    Noun* vocation_28_;
+    Noun* reflex_2c_;
+    char maybePartySize_30_;
+    char maybeNumAlive_31_;
+    char pad_32[2];
+    UIElement* mainUIElement_34_;
+    OBJTextUI* objUI_38_;
+    int unknown_3c_;
+    int unknown_40_;
+    int unknown_44_;
+    char* fullMessage_48_;
+    // up to 0x80 different glyphs can be displayed at once (see the
+    // RenderGlyph array below), this stores indices into that array
+    // for each character of the message. Shared between speaker and
+    // main message
+    unsigned short* glyphIndexList_4c_;
+    char* currentPageMessage_50_;
+    char* unknown_54_;
+    char* unknown_58_; // accessed as unsigned in 0206b224
+    // unknown pointer (copied from 02107824) of size 0x960
+    void* ptr_5c;
+    // holds pointer at 02107818, size 0x960
+    char* pageScratchBuffer_60_;
+    // holds pointer at 0210780c, size 0x960
+    char* scratchBuffer_64_;
+    unsigned int length_68_;
+    unsigned int glyphIndexListLength_6c_;
+    unsigned int unknown_70_;
+    unsigned int unknown_74_;
+    unsigned int unknown_78_;
+    int unknown_7c_;
+    int unknown_80_;
+    int mainMessageStartOffset_84_;
+    unsigned int glyphIndexListMainMessageStart_88_;
+    void* unknown_8c_;
+    int unknown_2c8_;
+    unsigned char substruct_2cc_[4];
+    int cursorObjectsLoadHandle_2d0_;
+    // has 0x400 bytes allocated to it
+    SafeAllocator* cursorObjectsAllocator_2d4_;
+    OBJSpriteSet* cursorObjects_2d8_; // pointer to object of size 0x54, func_0205a444
+    OBJSpriteSet::Metatile* cursorMetatiles_2dc_; // array of size 6
+    OBJSpriteSet::List* cursorSpriteList_2e0_; // pointer to object of size 8, func_0205a234
+    short unknown_2e4_;
+    unsigned char unknown_2e6_;
+    unsigned char cursorObjectLoadStatus_2e7_;
+    int unknown_2e8_;
+    char tmapSecStrings_2ec_[3][0x40];
+    char actorBuffer_3ac_[0x40];
+    char buffer_3ec_[0x40];
+    char buffer_42c_[0x40];
+    char buffer_46c_[0x40];
+    char customStrings_4ac_[16][0x40];
+    int unknown_8ac_;
+    // not sure about size. Text can have markers <val_1>, <val_2> or similar
+    // which get replaced by game quantities e.g. amount of gold, this array
+    // stores the replacement values
+    int valueLookup_8b0_[16]; // @ 0x8b0
+    char unknown_8f0_;
+    unsigned char valueAlignments_8f1_[16];
+    char unknown_901_;
+    unsigned char valueWidths_902_[16];
+    char voiceSoundEffectTimer_912_; // counts up, when >= 4 subtract 4 and play the sound effect
+    char unk_913[1];
+    
+    TextBox speakerTextBox_930_;
+    int unknown_94c_;
+    int unknown_950_;
+    int chosenAnswer_954_;
+    int unknown_958_;
+    char substructOrArray_95c_[0x20];
+    char substructOrArray_97c_[0x10];
+    int questionType_98c_;
+    int centerX_990_;
+    int unknown_994_;
+    int unknown_998_;
+    int speakerVoiceType_99c_; // 0 = neutral, 1 = male, 2 = female
+    // should be an enum.
+    // 0 = waiting for A (no cursor),
+    // 1 = waiting for A (with cursor),
+    // 2 = pad wait (this seems identical in practice though?) used by e.g. zoom
+    // 3 = continuation of message from <ADD> tag (used in cutscenes where the)
+    //     textbox normally disappears in between messages
+    // 4 = auto-advance (<AUTO=...>),
+    // 5 = not waiting (written when you respond to a question or when text advances)
+    // 6 = awaiting yes/no or uke/yame choice
+    int pauseType_9a0_;
+    int gyouParameter_9a4_;
+    int fadeFullVisibilityLength_9a8_;
+    int fadeFullVisibilityTimer_9ac_;
+    int fadeRescaledAlpha_9b0_;
+    int numGlyphsInUse_9b4_;
+    // holds data about glyphs that are used in the current message
+    RenderGlyph glyphs_[0x80];
+    // number of times a glyph is used within message
+    unsigned char glyphRefcounts_17b8_[0x80];
+    int npcID_1838_;
+    fix32_t npcPriorRotation_183c_;
+    fix32_t npcAngleToUse_1844_;
+    int unknown_1848_[4]; // probably viewport, and probably a struct
+    int unknown_1858_;
+    int unknown_185c_;
+    int mojiArg1_1860_;
+    int mojiArg2_1864_;
+    int unknown_1868_;
+    unsigned short color_187c_;
+    char partyMemberIndex_1880_;
+    char unk_1881[1];
+    unsigned short indexBuffer_1882_[0x40];
+    char buffer_1902_[0x40];
+    unsigned short unknown_1942_;
+    short speakerNameWidth_1944_;
+    short unknown_1946_;
+    char unknown_1957_;
+    char unknown_1958_;
+    unsigned char npcReactionSoundTimer_1959_;
+    char unknown_195a_;
+    // 0x2: shadow (used e.g. by pickup text)
+    // 0x4: text will fade in & out
+    // --> 0x8: text currently fading in
+    // --> 0x10: text currently fully visible
+    // --> 0x20: text currently fading out
+    // 0x40: vertically centered text
+    // 0x80: outline
+    unsigned char effects_195b_;
+    unsigned char unknown_195c_;
+    // low 2 bits determine which offset among (-2, 0), (0, 0), (0, -3), (0, 0) to apply to speaker name
+    unsigned char boxShakeTimer_195d_;
+    unsigned char unknown_1962_;
+    char unk_1963[1];
+    ClipWindow clipWindows_[2];
+    char unknown_19ac_;
+    char cursorBlinkTimer_19ae_;
+    bool cursorVisibleThisFrame_19af_;
+    unsigned char showWindow_19b1_; // probably bool
+    unsigned char unknown_19b2_; // if 0, voice sound effects don't activate
+    unsigned char voicePlaybackState_19b3_; // 1 while voice sound effect is playing
+    unsigned char unknown_19b4_;
+    char unknown_19b5_;
+    bool npcTurnInProgress_19b6_;
+    unsigned char npcReactionSoundPlaying_19b7_;
+    unsigned char cenTag_19b8_;
+    unsigned char unknown_19b9_;
+    unsigned char unknown_19ba_;
+    char skipTag_19bb_;
+    unsigned char unknown_19bc_;
+    char unknown_19bd_;
+    unsigned char unknown_19be_;
+    unsigned char unknown_19bf_;
+    bool boxShakeActive_19c0_;
+    bool boxShakePending_19c1_;
+    unsigned char speakerDifference_19c2_;
+    unsigned char unknown_19c3_;
+    unsigned char unknown_19c4_;
+    unsigned char unknown_19c5_;
+    unsigned char unknown_19c8_;
+    unsigned char unknown_19c9_;
+    bool cursorPresent_19ca_;
+    unsigned char unknown_19cb_;
+    unsigned char unknown_19cc_;
+    unsigned char unknown_19cd_;
+    bool unknown_19ce_;
+    unsigned char unknown_19cf_;
+    unsigned char unknown_19d0_;
+    unsigned char unknown_19d1_;
+    unsigned char unknown_19d2_;
+    unsigned char unknown_19d3_;
+    char unknown_19d4_;
+    // Q: does this count for a group of enemies too?
+    // I couldn't find any uses of the <IF_TARGET_PARTY> tag anywhere...
+    bool targetIsParty_19d5_;
+    bool actorIsParty_19d6_;
+    bool multipleTargets_19d7_;
+    // used by <IF_TARGET_MIXED> but I see no usage of this tag
+    bool maybeTargetingMultipleGroups_19d8_;
+    char unk_19d9[1];
+    short unknown_19da_;
+    unsigned char fontIndex_19dc_;
+    char unk_19dd[3];
+#endif
 
     static TextManager* GetInstance();
 
@@ -585,8 +853,12 @@ public:
     // converts the text into the 16-bit index encoding (written into outWords)
     // and returns the number of words written
     unsigned short AcquireText16Bit(const char* text, unsigned short* outWords, unsigned char fontIndex);
+#if defined(usa)
     int MeasureText16Bit(const unsigned short* words, int numWords, unsigned char fontIndex);
-    
+#elif defined(jpn)
+    int MeasureText16Bit(int fontSize, const unsigned short* words, int numWords);
+#endif
+
     // usa: func_02045f3c
     // args 5 and 6 are unused, in 2D mode only white and green text is supported,
     // and if you repeat the first character 10 times the function will return early. wtf?
@@ -796,6 +1068,12 @@ public:
     // func_02069fc4: "SHAKE>" // shakes the text box (see e.g. heavy hatchet quest, aquila gets kafrizzled)
     void SubstituteControlTags(char* input, char* output);
     
+#ifdef jpn
+    
+    void SubstituteJpnTags(char* input, char* output);
+    void AdvanceTextCursorTo(char** cursor, const char* target, unsigned int targetLength) const;
+#endif
+
     // Handles tags like <EXC> (play exclamation/alert), <COLOR=r,g,b> (presumably
     // sets text color but I've never seen it) that can be processed immediately, and
     // returns a pointer past the processed tags. (Stops as soon as it sees a tag

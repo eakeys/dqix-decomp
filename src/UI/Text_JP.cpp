@@ -102,6 +102,12 @@ extern char data_020effbc[]; // "<DB=%d,%d,%d>"
 extern char data_020effca[]; // "<TEN=%d,%d>"
 extern char data_020effd6[]; // "<TITLE=%d>%s</TITLE>"
 extern char data_020effeb[]; // "<TALK>%s</TALK>"
+
+
+extern char data_020f008a[]; // 0x82 0x60, shiftJIS "A"
+extern char data_020f008d[]; // shiftJIS "a"
+extern char data_020f0090[]; // shiftJIS "0"
+
 extern char data_EN_020efffc[]; // "<XR=%d>%s</XR>"
 extern char data_EN_020f000b[]; // "/data/ani/windata3.bncg"
 extern char data_EN_020f0023[]; // "/data/pack_lv5/font_lv5.gp2"
@@ -143,11 +149,11 @@ extern "C"
     // close quest screen maybe?
     void func_0208beb4(void*);
 
-    void* func_02094a00();
+    void* func_020952d4();
     void func_02094a10(void*);
     void func_02094a20(void*, SafeAllocator*);
     void func_02094a24(void*);
-    JPNFont* func_02094b44(void*, int);
+    JPNFont* func_02095b40(void*, int);
 
     void func_020bc078(void*);
 
@@ -826,30 +832,112 @@ void* GetFontStagingSpace()
     return data_02107740.stagingSpace;
 }
 
-const void* GetJPNCharacterBitmap(JPNFont* font, const char* sjis)
+struct AsciiConversionRule
+{
+    char ascii;
+    const char* sjis;
+} extern const data_020e848c[];
+
+
+#define WRITE_SJIS_FROM_RANGE(to, sjisBase, asciiBase, asciiChar) do { \
+        const unsigned char* data = (const unsigned char*)sjisBase; \
+        int diff = asciiChar - asciiBase; \
+        to[0] = data[0]; \
+        to[1] = data[1] + diff; \
+    } while (false)
+
+void ConvertAsciiToShiftJIS(unsigned char* output, const char* input)
+{
+    if (output == NULL)
+        return;
+    if (input == NULL)
+    {
+        output[0] = 0;
+        output[1] = 0;
+        return;
+    }
+
+    int ch = input[0];
+    if (ch >= 'A' && ch <= 'Z')
+    {
+        WRITE_SJIS_FROM_RANGE(output, data_020f008a, 'A', ch);
+        return;
+    }
+
+    if (ch >= 'a' && ch <= 'z')
+    {
+        WRITE_SJIS_FROM_RANGE(output, data_020f008d, 'a', ch);
+        return;
+    }
+
+    if (ch >= '0' && ch <= '9')
+    {
+        WRITE_SJIS_FROM_RANGE(output, data_020f0090, '0', ch);
+        return;
+    }
+
+    const char* replacementSjis = input;
+    for (const AsciiConversionRule* rule = data_020e848c;; rule++)
+    {
+        if (rule->ascii == 0)
+            break;
+        if (input[0] == rule->ascii)
+        {
+            replacementSjis = rule->sjis;
+            break;
+        }
+    }
+    output[0] = ((const unsigned char*)replacementSjis)[0];
+    output[1] = ((const unsigned char*)replacementSjis)[1];
+}
+
+int GetJPNFontGlyphIndex(const JPNFont* font, const char* text)
+{
+    if (font == NULL)
+        return -1;
+    if (text == NULL || text[0] == 0)
+        return -1;
+    unsigned char converted[2];
+    ConvertAsciiToShiftJIS(converted, text);
+    int numEntries = font->numEntries;
+    const unsigned char* keyLookup = font->sjisKeys;
+    for (int i = 0; i < numEntries; i++)
+    {
+        if (converted[0] == keyLookup[0] && converted[1] == keyLookup[1])
+        {
+            return i;
+        }
+        keyLookup += 2;
+    }
+    return -1;
+}
+
+int GetJPNFontGlyphIndex(int fontSize, const char* text)
+{
+    if (text == NULL || text[0] == 0)
+        return -1;
+    JPNFont* font = GetJPNFont(fontSize);
+    int index = GetJPNFontGlyphIndex(font, text);
+    if (index >= 0)
+        return index;
+    // fallback font or something?
+    font = func_02095b40(func_020952d4(), fontSize);
+    return GetJPNFontGlyphIndex(font, text) | 0x40000000;
+}
+
+const void* GetJPNCharacterBitmap(JPNFont* font, const char* text)
 {
     if (font == NULL)
         return NULL;
-    int numEntries;
-    const unsigned char* keyLookup;
-    int i;
-    unsigned char byte0, byte1;
-    if (sjis == NULL)
-    {
-        byte0 = 0;
-        byte1 = 0;
-    }
-    else
-    {
-        byte0 = sjis[0];
-        byte1 = sjis[1];
-    }
 
-    numEntries = font->numEntries;
-    keyLookup = font->sjisKeys;
-    for (i = 0; i < numEntries; keyLookup += 2, i++)
+    unsigned char sjis[2];
+    ConvertAsciiToShiftJIS(sjis, text);
+    
+    int numEntries = font->numEntries;
+    const unsigned char* keyLookup = font->sjisKeys;
+    for (int i = 0; i < numEntries; keyLookup += 2, i++)
     {
-        if (byte0 == keyLookup[0] && byte1 == keyLookup[1])
+        if (sjis[0] == keyLookup[0] && sjis[1] == keyLookup[1])
             return font->pixelData + i * font->stride;
     }
 
@@ -866,11 +954,33 @@ const void* GetJPNCharacterBitmap(int size, const char* sjis)
     if (bitmap != NULL)
         return bitmap;
 
-    font = func_02094b44(func_02094a00(), size);
+    font = func_02095b40(func_020952d4(), size);
     bitmap = GetJPNCharacterBitmap(font, sjis);
     return bitmap;
 }
 
+const void* GetJPNCharacterBitmap(int size, int index)
+{
+    if (index < 0)
+        return NULL;
+    JPNFont* font;
+    if (index & 0x40000000)
+    {
+        font = func_02095b40(func_020952d4(), size);
+        index &= ~0x40000000;
+    }
+    else
+        font = GetJPNFont(size);
+
+    if (font == NULL)
+        return NULL;
+    if (font->numEntries <= index)
+        return NULL;
+    else
+        return font->pixelData + index * font->stride;
+}
+
+// keep, it looks like 0204316c
 int TextManager::MaybeAcquireGlyphVRAM(unsigned char *bitfield, unsigned int numBytes)
 {
     for (unsigned int byteIdx = 0; byteIdx < numBytes; bitfield++, byteIdx++)

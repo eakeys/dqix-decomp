@@ -35,12 +35,18 @@ public:
     int BlitText(short x, short y, const char* text,
         unsigned char colorIndex, unsigned char fontIndex);
 #elif defined(jpn)
-    int BlitText(short x, short y, const char* text,
+    void BlitText(short x, short y, const char* text,
         unsigned char fontSize, unsigned char colorIndex);
 #endif
 
+#if defined(usa)
     void BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y,
         unsigned char colorIndex, unsigned char fontIndex);
+#elif defined(jpn)
+    // in jpn a glyph is just a 1bpp bitmap with arbitrary size
+    void BlitGlyph(const void* argGlyphBytes, short x, short y,
+        unsigned char fontSize, unsigned char colorIndex);
+#endif
 
     // colorIndex completely unused as pixel data provides colors.
     // fontSize unused in international version, all tiles assumed 8x8

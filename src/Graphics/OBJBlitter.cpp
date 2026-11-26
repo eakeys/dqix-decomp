@@ -1,8 +1,6 @@
 #include "Graphics/OBJBlitter.h"
 #include "UI/Text.h"
 
-extern char data_020f0518[];
-
 static OBJBlitter::BlitRegion* GetBlitRegion(OBJBlitter::BlitRegion* regions, unsigned int count, int x, int y)
 {
     OBJBlitter::BlitRegion* candidate = regions;
@@ -71,13 +69,34 @@ int OBJBlitter::BlitText(short x, short y,
 
     return drawX - x;
 }
+#elif defined(jpn)
+void OBJBlitter::BlitText(short x, short y,
+    const char* text, unsigned char fontSize, unsigned char colorIndex)
+{
+    if (destination_ == NULL || regions_ == NULL || numRegions_ == 0 || text == NULL)
+        return;
+
+    int fontSizeWide = fontSize;
+    while (*text != 0)
+    {
+        const void* glyphBitmap = GetJPNCharacterBitmap(fontSize, text);
+        if (glyphBitmap != NULL)
+            BlitGlyph(glyphBitmap, x, y, fontSizeWide, colorIndex);
+        unsigned char ch = *text;
+        if ((ch >= 0x81 && ch <= 0x9f) || (ch >= 0xe0 && ch <= 0xea))
+            text++;
+        text++;
+        x += fontSizeWide;
+    }
+}
 #endif
 
+#if defined(usa)
 void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     unsigned char colorIndex, unsigned char fontIndex)
 {
     FontDataFile* dataFile = GetFontDataFile(fontIndex);
-    short maybeOffset = glyph->dataOffset;
+    short dataOffset = glyph->dataOffset;
     unsigned char colorMaskHigh = colorIndex << 4;
     unsigned char colorMaskLow = colorIndex & 15;
     int srcScanlineStride = dataFile->bitsPerScanline >> 3;
@@ -90,7 +109,7 @@ void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     {
         short targetY = y + srcY;
         char bitShift = initialBitShift;
-        unsigned char* sourceBits = dataFile->ptr_c + srcScanlineStride * srcY + (maybeOffset >> 3);
+        unsigned char* sourceBits = dataFile->ptr_c + srcScanlineStride * srcY + (dataOffset >> 3);
         for (int srcX = 0; srcX < glyph->width; srcX++)
         {
             if (*sourceBits & (1 << bitShift))
@@ -131,6 +150,72 @@ void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
         }
     }
 }
+#elif defined(jpn)
+void OBJBlitter::BlitGlyph(const void* argGlyphBytes, short x, short y,
+    unsigned char fontSize, unsigned char colorIndex)
+{
+    const unsigned char* glyphBytes = (const unsigned char*)argGlyphBytes;
+    if (glyphBytes == NULL)
+        return;
+
+    JPNFont* font = GetJPNFont(fontSize);
+    if (font == NULL)
+        return;
+        
+    short glyphWidth = font->glyphWidth;
+    short glyphHeight = font->glyphHeight;
+
+    unsigned int numRegions = numRegions_;
+    BlitRegion* regionList = regions_;
+
+    unsigned char colorMaskHigh = colorIndex << 4;
+    unsigned char colorMaskLow = colorIndex & 15;
+    
+    unsigned char bitShift = 0;
+    for (short srcY = 0; srcY < glyphHeight; srcY++)
+    {
+        short targetY = y + srcY;
+        for (short srcX = 0; srcX < glyphWidth; srcX++)
+        {
+            if (*glyphBytes & (1 << bitShift))
+            {
+                short targetX = x + srcX;
+                BlitRegion* region = GetBlitRegion(regionList, numRegions, targetX, targetY);
+                if (region != NULL)
+                {
+                    unsigned char* tilePtr = destination_ + region->offset;
+                    short relativeX = targetX - region->originX;
+                    short relativeY = targetY - region->originY;
+                    short relativeTileX = relativeX >> 3;
+                    short relativeTileY = relativeY >> 3;
+                    short regionNumTilesX = region->width >> 3;
+                    short firstWriteTile = relativeTileY * regionNumTilesX + relativeTileX;
+                    tilePtr += firstWriteTile * 32;
+                    short xWithinTile = relativeX & 7;
+                    short yWithinTile = relativeY & 7;
+                    unsigned char* writePtr = tilePtr + ((yWithinTile << 2) + (xWithinTile >> 1));
+                    if (targetX & 1)
+                    {
+                        *writePtr &= 0x0f;
+                        *writePtr |= colorMaskHigh;
+                    }
+                    else
+                    {
+                        *writePtr &= 0xf0;
+                        *writePtr |= colorMaskLow;
+                    }
+                }
+            }
+            bitShift++;
+            if (bitShift >= 8)
+            {
+                glyphBytes++;
+                bitShift = 0;
+            }
+        }
+    }
+}
+#endif
 
 void OBJBlitter::BlitTile(const void *pixels, short left, short top, unsigned char fontSize, unsigned char colorIndex)
 {
@@ -138,14 +223,14 @@ void OBJBlitter::BlitTile(const void *pixels, short left, short top, unsigned ch
         return;
 
 #if defined(usa)
-    const unsigned char tileWidth = 8;
-    const unsigned char tileHeight = 8;
+    unsigned char tileWidth = 8;
+    unsigned char tileHeight = 8;
 #elif defined(jpn)
     JPNFont* font = GetJPNFont(fontSize);
     if (font == NULL)
         return;
-    const unsigned char tileWidth = font->glyphWidth;
-    const unsigned char tileHeight = font->glyphHeight;
+    unsigned char tileWidth = font->glyphWidth;
+    unsigned char tileHeight = font->glyphHeight;
 #endif
 
     const unsigned char* sourcePixels = (const unsigned char*)pixels;
@@ -234,7 +319,7 @@ void OBJBlitter::BlitNumber(short x, short y, int number, unsigned char fontSize
     }
 
     char buffer[10] = {0};
-    sprintf(buffer, data_020f0518, number);
+    sprintf(buffer, "%d", number);
     BlitText(x, y, buffer, colorIndex, fontIndex);
 #elif defined(jpn)
     if (alignment == 1)

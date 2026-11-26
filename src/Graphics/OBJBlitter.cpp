@@ -132,10 +132,22 @@ void OBJBlitter::BlitGlyph(const FontIndexFile::Glyph *glyph, short x, short y,
     }
 }
 
-void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top, int, int)
+void OBJBlitter::BlitTile(const void *pixels, short left, short top, unsigned char fontSize, unsigned char colorIndex)
 {
     if (pixels == NULL)
         return;
+
+#if defined(usa)
+    const unsigned char tileWidth = 8;
+    const unsigned char tileHeight = 8;
+#elif defined(jpn)
+    JPNFont* font = GetJPNFont(fontSize);
+    if (font == NULL)
+        return;
+    const unsigned char tileWidth = font->glyphWidth;
+    const unsigned char tileHeight = font->glyphHeight;
+#endif
+
     const unsigned char* sourcePixels = (const unsigned char*)pixels;
     unsigned int numRegions = numRegions_;
     unsigned char* dest = destination_;
@@ -143,26 +155,28 @@ void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top, int, int
     
     short drawX;
     short drawY = top;
-    for (short y = 0; y < 8; drawY++, y++)
+    for (short y = 0; y < tileHeight; drawY++, y++)
     {
         drawX = left;
-        for (short x = 0; x < 8; drawX++, x++)
+        for (short x = 0; x < tileWidth; drawX++, x++)
         {
             BlitRegion* region = GetBlitRegion(regionList, numRegions, drawX, drawY);
+
             if (region == NULL)
                 continue;
 
+            unsigned char* destTileStart = dest + region->offset;
             short relativeX = drawX - region->originX;
             short relativeY = drawY - region->originY;
             short regionNumTilesX = region->width >> 3;
-            unsigned char* destRegionStart = dest + region->offset;
-            short xWithinTileByteOffset = (short)(relativeX & 7) >> 1;
-            short yWithinTile = (relativeY & 7);
-            int offsetInTile;
-            unsigned char* tilePtr = destRegionStart + ((short)(relativeY >> 3) * regionNumTilesX + (relativeX >> 3)) * 32;
-            offsetInTile = (yWithinTile << 2) + xWithinTileByteOffset;
 
-            int sourceByte = sourcePixels[x >> 1];
+            destTileStart += ((relativeY >> 3) * regionNumTilesX + (relativeX >> 3)) * 32;
+
+            short xWithinTileByteOffset = relativeX & 7;
+            short yWithinTile = (relativeY & 7);
+            int offsetInTile = (yWithinTile << 2) + (xWithinTileByteOffset >> 1);
+            unsigned char* destByte = destTileStart + offsetInTile;
+            unsigned char sourceByte = sourcePixels[x >> 1];
             unsigned char writeColorMask;
 
             if (relativeX & 1)
@@ -174,8 +188,8 @@ void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top, int, int
 
                 if (writeColorMask != 0)
                 {
-                    tilePtr[offsetInTile] &= 0x0f;
-                    tilePtr[offsetInTile] |= writeColorMask;
+                    *destByte &= 0x0f;
+                    *destByte |= writeColorMask;
                 }
             }
             else
@@ -187,18 +201,23 @@ void OBJBlitter::BlitTile8x8(const void *pixels, short left, short top, int, int
                 
                 if (writeColorMask != 0)
                 {
-                    tilePtr[offsetInTile] &= 0xf0;
-                    tilePtr[offsetInTile] |= writeColorMask;
+                    *destByte &= 0xf0;
+                    *destByte |= writeColorMask;
                 }
             }
         }
 
-        sourcePixels += 4;
+        sourcePixels += tileWidth >> 1;
     }
 }
 
+#if defined(usa)
 void OBJBlitter::BlitNumber(short x, short y, int number, unsigned char colorIndex,
     unsigned char widthTiles, unsigned char alignment, unsigned char fontIndex)
+#elif defined(jpn)
+void OBJBlitter::BlitNumber(short x, short y, int number, unsigned char fontSize,
+    unsigned char colorIndex, unsigned char widthInChars, unsigned char alignment)
+#endif
 {
     if (destination_ == NULL || regions_ == NULL)
         return;
@@ -206,6 +225,7 @@ void OBJBlitter::BlitNumber(short x, short y, int number, unsigned char colorInd
     int useless = number;
     while (useless /= 10) {}
 
+#if defined(usa)
     int textWidth = MeasureNumberTextWidth(fontIndex, number);
     if (alignment == 1)
     {
@@ -216,6 +236,25 @@ void OBJBlitter::BlitNumber(short x, short y, int number, unsigned char colorInd
     char buffer[10] = {0};
     sprintf(buffer, data_020f0518, number);
     BlitText(x, y, buffer, colorIndex, fontIndex);
+#elif defined(jpn)
+    if (alignment == 1)
+    {
+        short offset = (widthInChars - 1) * fontSize;
+        x += offset;
+    }
+
+    do
+    {
+        char textBuffer[2] = {0};
+        textBuffer[0] = '0';
+        char digit = number % 10;
+        textBuffer[0] += digit;
+        BlitText(x, y, textBuffer, fontSize, colorIndex);
+        x -= fontSize;
+
+        number /= 10;
+    } while (number != 0);
+#endif
 }
 
 void OBJBlitter::FillRectangle(short left, short top, short right, short bottom, unsigned char colorIndex)

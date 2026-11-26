@@ -36,7 +36,13 @@ struct Struct_02107740
 {
     char unk_0[4];
     unsigned char* windowBorderTiles;
-    char unk_8[0x28];
+    char unk_8[0xc];
+    JPNFont* f6MesFile;
+    char unk_18[8];
+    JPNFont* f8MesFile;
+    JPNFont* f10MesFile;
+    JPNFont* f12MesFile;
+    char unk_2c[4];
     StagingSpace* stagingSpace;
     char unk_34[4];
     TextManager* manager;
@@ -45,7 +51,6 @@ struct Struct_02107740
     
     unsigned short* glyphIndexBuffer;
     char* secondaryScratchBuffer;
-    JPNFont* f8MesFile;
     char* fullMessageBuffer;
     char* primaryScratchBuffer;
     char unk_20[4]; // something related to sound
@@ -798,8 +803,21 @@ void FixJPNFontPointers(void* fileData)
 JPNFont* GetJPNFont(int size)
 {
     JPNFont* font = NULL;
-    if (size == 8)
+    switch (size)
+    {
+    case 6:
+        font = data_02107740.f6MesFile;
+        break;
+    case 8:
         font = data_02107740.f8MesFile;
+        break;
+    case 10:
+        font = data_02107740.f10MesFile;
+        break;
+    case 12:
+        font = data_02107740.f12MesFile;
+        break;
+    }
     return font;
 }
 

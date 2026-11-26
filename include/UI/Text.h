@@ -170,7 +170,9 @@ enum ControlWord
 struct JPNFont
 {
     uint16_t stride;
-    char unk_2[4];
+    unsigned char glyphWidth;
+    unsigned char glyphHeight;
+    char unk_4[2];
     int16_t numEntries;
     unsigned char* sjisKeys;
     unsigned char* pixelData;
@@ -254,6 +256,7 @@ void LoadCustomFont(SafeAllocator* alloc, const char* name, FontIndexFile** ppIn
 void LoadCustomFonts(SafeAllocator* alloc);
 // usa: func_020429d4
 void* GetFontStagingSpace();
+JPNFont* GetJPNFont(int size);
 
 // usa: func_02042a50
 const void* GetJPNCharacterBitmap(int size, const char* sjis);

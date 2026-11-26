@@ -42,13 +42,18 @@ public:
     void BlitGlyph(const FontIndexFile::Glyph* glyph, short x, short y,
         unsigned char colorIndex, unsigned char fontIndex);
 
-    // last two args unused but were probably intended to be tile dimensions
-    // (always 8) and color (15)
-    void BlitTile8x8(const void* pixels, short x, short y, int, int);
+    // colorIndex completely unused as pixel data provides colors.
+    // fontSize unused in international version, all tiles assumed 8x8
+    void BlitTile(const void* pixels, short x, short y, unsigned char fontSize, unsigned char colorIndex);
 
     // alignment: 0 = left, 1 = right
+#if defined(usa)
     void BlitNumber(short x, short y, int number, unsigned char colorIndex,
         unsigned char widthTiles, unsigned char alignment, unsigned char fontIndex);
+#elif defined(jpn)
+    void BlitNumber(short x, short y, int number, unsigned char fontSize,
+        unsigned char colorIndex, unsigned char widthInChars, unsigned char alignment);
+#endif
 
     void FillRectangle(short left, short top, short right, short bottom, unsigned char colorIndex);
 

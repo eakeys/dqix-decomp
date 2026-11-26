@@ -634,8 +634,8 @@ void OBJTextUI::DrawTextBoxBorder()
         int numTiles = (width - 9) >> 3;
         for (int x = 8, i = 0; i < numTiles; x += 8, i++)
         {
-            blitter->BlitTile8x8(topTile, x, 0, 8, 15);
-            blitter->BlitTile8x8(bottomTile, x, height - 8, 8, 15);
+            blitter->BlitTile(topTile, x, 0, 8, 15);
+            blitter->BlitTile(bottomTile, x, height - 8, 8, 15);
         }
     }
 
@@ -646,8 +646,8 @@ void OBJTextUI::DrawTextBoxBorder()
         int numTiles = (height - 9) >> 3;
         for (int y = 8, i = 0; i < numTiles; y += 8, i++)
         {
-            blitter->BlitTile8x8(leftTile, 0, y, 8, 15);
-            blitter->BlitTile8x8(rightTile, width - 8, y, 8, 15);
+            blitter->BlitTile(leftTile, 0, y, 8, 15);
+            blitter->BlitTile(rightTile, width - 8, y, 8, 15);
         }
     }
 
@@ -658,7 +658,7 @@ void OBJTextUI::DrawTextBoxBorder()
     {
         const void* cornerTile = GetWindowBorderTile(data_020ee94c[i]);
         if (cornerTile != NULL)
-            blitter->BlitTile8x8(cornerTile, cornerX[i], cornerY[i], 8, 15);
+            blitter->BlitTile(cornerTile, cornerX[i], cornerY[i], 8, 15);
     }
 }
 

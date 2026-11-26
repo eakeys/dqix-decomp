@@ -170,12 +170,12 @@ extern const char data_020e885e[21];
 extern const char* data_020e8874[6];
 extern const char data_020e888c[25];
 
-extern char data_020f07b4[]; // "ã¯ã„" (yes)
-extern char data_020f07b9[]; // "ã„ã„ãˆ" (no)
-extern char data_020f07c0[]; // "ã†ã‘ã‚‹" (accept?)
-extern char data_020f07c7[]; // "ã‚„ã‚ã‚‹" (decline?)
-extern char data_020f07ce[]; // "ã€Œ"
-extern char data_020f07d1[]; // "â—‹"
+extern char data_020f07b4[]; // "‚Í‚¢" (yes)
+extern char data_020f07b9[]; // "‚¢‚¢‚¦" (no)
+extern char data_020f07c0[]; // "‚¤‚¯‚é" (accept?)
+extern char data_020f07c7[]; // "‚â‚ß‚é" (decline?)
+extern char data_020f07ce[]; // "u"
+extern char data_020f07d1[]; // "›"
 extern char data_020f07d4[]; // "[WPN"
 extern char data_020f07d9[]; // "[ACTER"
 extern char data_020f07e0[]; // "[SEL"
@@ -184,14 +184,14 @@ extern char data_020f07ed[]; // "[ACTION"
 extern char data_020f07f5[]; // "[REFLEX"
 extern char data_020f07fd[]; // "[VAL"
 extern char data_020f0802[]; // "%d"
-extern char data_020f0805[]; // "[æ–‡å­—åˆ—"
-extern char data_020f080d[]; // "[ã‚¢ã‚¤ãƒ†ãƒ "
+extern char data_020f0805[]; // "[•¶š—ñ"
+extern char data_020f080d[]; // "[ƒAƒCƒeƒ€"
 extern char data_020f0817[]; // "[NUMBER]"
 extern char data_020f0820[]; // "[Number]"
-extern char data_020f0829[]; // "[æ•°å€¤"
+extern char data_020f0829[]; // "[”’l"
 extern char data_020f082f[]; // "%d<W=%d>"
 extern char data_020f0838[]; // "<W=%d>%d"
-extern char data_020f0841[]; // "ã‚¨ãƒ©ãƒ¼"
+extern char data_020f0841[]; // "ƒGƒ‰["
 extern char data_020f0848[]; // "<SIZE="
 extern char data_020f084f[]; // "<SELECT_ITEM>"
 extern char data_020f085d[]; // "<PAGE_T="
@@ -260,9 +260,9 @@ extern char data_020f0a8e[]; // "<N_WEST>"
 extern char data_020f0a97[]; // "<S_WEST>"
 extern char data_020f0aa0[]; // "<N_EAST>"
 extern char data_020f0aa9[]; // "<S_EAST>"
-extern char data_020f0ab2[]; // "ï¼¡" (jpn letter)
-extern char data_020f0ab5[]; // "ï½" (jpn letter)
-extern char data_020f0ab8[]; // "ï¼" (jpn letter)
+extern char data_020f0ab2[]; // "‚`" (jpn letter)
+extern char data_020f0ab5[]; // "‚" (jpn letter)
+extern char data_020f0ab8[]; // "‚O" (jpn letter)
 extern char data_020f0abb[]; // "<RECT="
 extern char data_020f0ac2[]; // "<WIN>"
 extern char data_020f0ac8[]; // "<CEN>"
@@ -270,7 +270,7 @@ extern char data_020f0ace[]; // "<GYOU="
 extern char data_020f0ad5[]; // "<MOJI="
 extern char data_020f0adc[]; // "<COLOR="
 extern char data_020f0ae4[]; // "<SKIP>"
-extern char data_020f0aeb[]; // "ã€"
+extern char data_020f0aeb[]; // "v"
 
 
 void ShowBinaryOptionDialogue(DialogueOptionManager* dialogue, int defaultOption, const char* optionA, const char* optionB)
